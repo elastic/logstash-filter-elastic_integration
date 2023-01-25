@@ -1,0 +1,50 @@
+:plugin: elastic_integration
+:type: filter
+
+///////////////////////////////////////////
+START - GENERATED VARIABLES, DO NOT EDIT!
+///////////////////////////////////////////
+:version: %VERSION%
+:release_date: %RELEASE_DATE%
+:changelog_url: %CHANGELOG_URL%
+:include_path: ../../../../logstash/docs/include
+///////////////////////////////////////////
+END - GENERATED VARIABLES, DO NOT EDIT!
+///////////////////////////////////////////
+
+:elastic-integration-name: Elastic Integration
+
+[id="plugins-{type}s-{plugin}"]
+
+=== {elastic-integration-name} filter plugin
+
+include::{include_path}/plugin_header.asciidoc[]
+
+==== Description
+
+Using this filter you can process Elastic integrations in Logstash.
+
+.Technology Preview
+****
+This {elastic-integration-name} filter plugin is part of a _Technology Preview_, which means that both configuration options and implementation details are subject to change in minor releases without being preceded by deprecation warnings.
+
+Before upgrading this plugin or Logstash itself, please pay special attention to the changelogs to avoid being caught by surprise.
+****
+
+[id="plugins-{type}s-{plugin}-options"]
+==== {elastic-integration-name} Input Configuration Options
+
+This plugin supports the following configuration options plus the <<plugins-{type}s-{plugin}-common-options>> described later.
+
+[cols="<,<,<",options="header",]
+|=======================================================================
+|Setting |Input type|Required
+|=======================================================================
+
+Also see <<plugins-{type}s-{plugin}-common-options>> for a list of options supported by all
+{type} plugins.
+
+&nbsp;
+
+[id="plugins-{type}s-{plugin}-common-options"]
+include::{include_path}/{type}.asciidoc[]

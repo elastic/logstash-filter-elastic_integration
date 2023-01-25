@@ -1,0 +1,8 @@
+*~
+.idea
+.bundle
+Gemfile.lock
+vendor
+*.gem
+build
+target
