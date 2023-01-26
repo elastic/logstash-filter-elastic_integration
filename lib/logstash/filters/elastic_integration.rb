@@ -6,23 +6,77 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   config_name "elastic_integration"
 
-  include(LogStash::PluginMixins::ElasticSearch::APIConfigs)
+  # Sets the host(s) of the remote instance. If given an array it will load balance requests across the hosts specified in the `hosts` parameter.
+  # Remember the `http` protocol uses the http://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html#modules-http[http] address (eg. 9200, not 9300).
+  #     `"127.0.0.1"`
+  #     `["127.0.0.1:9200","127.0.0.2:9200"]`
+  #     `["http://127.0.0.1"]`
+  #     `["https://127.0.0.1:9200"]`
+  #     `["https://127.0.0.1:9200/mypath"]` (If using a proxy on a subpath)
+  # It is important to exclude http://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html[dedicated master nodes] from the `hosts` list
+  # to prevent LS from sending bulk requests to the master nodes. So this parameter should only reference either data or client nodes in Elasticsearch.
+  #
+  # Any special characters present in the URLs here MUST be URL escaped! This means `#` should be put in as `%23` for instance.
+  config :hosts, :validate => :uri, :list => true
 
-  def initialize
-    super
+  # Cloud ID, from the Elastic Cloud web console. If set `hosts` should not be used.
+  #
+  # For more details, check out the https://www.elastic.co/guide/en/logstash/current/connecting-to-cloud.html#_cloud_id[cloud documentation]
+  config :cloud_id, :validate => :string
 
-    # this filter doesn't use codec
-    if original_params.include?('codec')
-      fail LogStash::ConfigurationError, 'The `elastic_integration` filter does not have an externally-configurable `codec`'
-    end
-  end
+  # Enable SSL/TLS secured communication to Elasticsearch cluster
+  config :ssl, :validate => :boolean, :default => true
+
+  # This option needs to be used with `ssl_certificate_authorities` and a defined list of CAs
+  config :ssl_verification_mode, :validate => %w(full certificate none), :default => "full"
+
+  # A path to truststore
+  config :truststore, :validate => :path
+
+  # A password for truststore
+  config :truststore_password, :validate => :password
+
+  # list of paths for SSL certificate authorities
+  config :ssl_certificate_authorities, :validate => :path, :list => true
+
+  # a path for SSL certificate which will be used when SSL is enabled
+  config :ssl_certificate, :validate => :path
+
+  # a path for SSL certificate key
+  config :ssl_key, :validate => :path
+
+  # SSL keyphrase
+  config :ssl_key_passphrase, :validate => :password
+
+  # The keystore used to present a certificate to the server
+  config :keystore, :validate => :path
+
+  # A password for keystore
+  config :keystore_password, :validate => :password
+
+  # Username for basic authentication
+  config :auth_basic_username, :validate => :string
+
+  # Password for basic authentication
+  config :auth_basic_password, :validate => :password
+
+  # Cloud authentication string ("<username>:<password>" format) to connect to Elastic cloud.
+  #
+  # For more details, check out the https://www.elastic.co/guide/en/logstash/current/connecting-to-cloud.html#_cloud_auth[cloud documentation]
+  config :cloud_auth, :validate => :password
+
+  # A key to authenticate when connecting to Elasticsearch
+  config :api_key, :validate => :password
+
+  # Advanced TLS/SSL configuration
+  config :ssl_cipher_suites, :validate => :string, :list => true
+  config :ssl_supported_protocols, :validate => :string, :list => true
 
   def register
     logger.debug("Registering `filter-elastic_integration` plugin.")
 
     validate_ssl_settings!
-    validate_authentication
-    parse_user_password_from_cloud_auth(@cloud_auth) if @cloud_auth
+    validate_connection_settings!
 
   end # def register
 
@@ -31,125 +85,74 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   private
-  ## Validates provided SSL options and
-  # @raise [LogStash::ConfigurationError] if any options mismatch
+
+  def validate_connection_settings!
+    validate_host_settings!
+    validate_basic_auth!
+
+    @@cloud_auth  = @cloud_auth ? @cloud_auth.freeze : nil
+    @@api_key     = @api_key    ? @api_key.freeze : nil
+  end
+
+  def validate_host_settings!
+    return unless @hosts
+
+    scheme = @@ssl ? "https" : "http"
+    agree_with = @hosts.all? { |host| host && host.scheme == scheme }
+    raise_config_error! "All hosts must agree with #{scheme} schema when #{@@ssl ? '' : 'NOT'} using `ssl`." unless agree_with
+
+    # TODO: for each given URI, validate hostname, apply default 9200 port, apply default / path
+    #   and do individual freeze
+    #   assign to @@hosts
+  end
+
+  def validate_basic_auth!
+    @@auth_basic_username = @auth_basic_username ? @auth_basic_username.freeze : nil
+    @@auth_basic_password = @auth_basic_password ? @auth_basic_password.freeze : nil
+
+    raise_config_error! "Using `auth_basic_username` requires `auth_basic_password`" if @@auth_basic_username && !@@auth_basic_password
+    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") if !@@ssl
+  end
+
   def validate_ssl_settings!
-    if !@ssl
-      ignored_params = original_params.keys.select { |param_key| param_key.start_with?('ssl_', 'tls_', 'keystore', 'cipher_suites', 'verify_mode') }
-      @logger.warn("SSL-related config `#{ignored_params.join('`,`')}` will not be used because `ssl` is disabled") unless ignored_params.empty?
-      return # code below assumes `ssl => true`
-    end
+    @@ssl                     = @ssl.freeze
+    @@ssl_verification_mode   = @ssl_verification_mode.freeze
+    @@truststore              = @truststore               ? @truststore.freeze : nil
+    @@truststore_password     = @truststore_password      ? @truststore_password.freeze : nil
+    @@ssl_certificate         = @ssl_certificate          ? @ssl_certificate.freeze : nil
+    @@ssl_key                 = @ssl_key                  ? @ssl_key.freeze : nil
+    @@keystore                = @keystore                 ? @keystore.freeze : nil
+    @@keystore_password       = @keystore_password        ? @keystore_password.freeze : nil
+    @@ssl_cipher_suites       = @ssl_cipher_suites        ? @ssl_cipher_suites.freeze : nil
+    @@ssl_supported_protocols = @ssl_supported_protocols  ? @ssl_supported_protocols.freeze : nil
 
-    # IDENTITY-CENTRIC SETTINGS
-    raise_config_error! "`ssl_certificate` or `keystore` must be configured when `ssl` is enabled" unless @ssl_certificate || @keystore
-    raise_config_error! "`ssl_certificate` and `keystore` cannot both be configured" if @ssl_certificate && @keystore
+    # Category: Establishing trust of the server we connect to (requires ssl: true)
+    raise_config_error! "Using `ssl_verification_mode` #{@@ssl_verification_mode} requires `ssl` enabled" if @@ssl_verification_mode != "none" && !@@ssl
+    if @@ssl_verification_mode != "none"
+      raise_config_error! "Using `truststore` requires `truststore_password`" if @@truststore && !@@truststore_password
 
-    raise_config_error! "`ssl_key` is required when `ssl_certificate` is present" if @ssl_certificate && !@ssl_key
-    raise_config_error! "`ssl_key` is not allowed unless `ssl_certificate` is provided" if @ssl_key && !@ssl_certificate
-    raise_config_error! "`ssl_key_passphrase` is not allowed unless `ssl_key` is provided" if @ssl_key_passphrase && !@ssl_key
+      #if @ssl_certificate_authorities
+        # @ssl_certificate_authorities.each do |certificate_authority|
+          # TODO: error if !File.readable?(certificate_authority) || File.writable?(certificate_authority)
+          #   and need individual freeze
+        # end
+      #end
+    end # end of category
 
-    raise_config_error! "`keystore_password` is required when `keystore` is present" if @keystore && !@keystore_password
-    raise_config_error! "`keystore_password` is not allowed unless `keystore` is present" if @keystore_password && !@keystore
-
-    # TRUST-CENTRIC SETTINGS
-    raise_config_error! "`truststore_password` is required when `truststore` is present" if @truststore && !@truststore_password
-    raise_config_error! "`truststore_password` is not allowed unless `truststore` is present" if @truststore_password && !@truststore
-
-    if @ssl_verification_mode != "none"
-      raise_config_error! "`ssl_certificate_authorities` and `truststore` cannot both be configured" if @ssl_certificate_authoritie&.any? && @truststore
-
-      # if certificate authorities were NOT provided, but a keystore was, use it as a default trust store.
-      if !@ssl_certificate_authorities&.any? && @keystore && @truststore.nil?
-        @logger.warn("Using provided `keystore` as a default `truststore`")
-        @truststore, @truststore_password = @keystore, @keystore_password
+    # Category: Presenting our identity (optional)
+    if @@ssl
+      if @@ssl_certificate
+        # TODO: error if !File.readable?(@ssl_certificate) || File.writable?(@ssl_certificate)
+        # TODO: error if @ssl_key && (!File.readable?(@ssl_key) || writable_path(@ssl_key))
+        raise_config_error! "Using `ssl_key` requires `ssl_key_passphrase`" if @@ssl_key && !@@ssl_key_passphrase
       end
 
-      raise_config_error! "Using `ssl_verification_mode` set to `full` or `certificate` requires the configuration of trust with `ssl_certificate_authorities` or `truststore`" unless @ssl_certificate_authorities.any? || @truststore
-    elsif @truststore
-      raise_config_error! "The configuration of `truststore` requires setting `ssl_verification_mode` to `full` or `certificate`"
-    elsif @ssl_certificate_authorities&.any?
-      raise_config_error! "The configuration of `ssl_certificate_authorities` requires setting `ssl_verification_mode` to `full` or `certificate`"
-    end
+      if @@keystore
+        # TODO: error if !File.readable?(@keystore) || File.writable?(@keystore)
+        raise_config_error! "Using `keystore` requires `keystore_password`" if !@@keystore_password
+      end
+    end # end of category
   end
-
-  ## Validates available auth options and
-  # @raise [LogStash::ConfigurationError] if any options mismatch
-  def validate_authentication
-    possible_auth_options = 0
-    possible_auth_options += 1 if @cloud_auth
-    possible_auth_options += 1 if (@api_key && @api_key.value)
-    possible_auth_options += 1 if (@user || (@password && @password.value))
-
-    if possible_auth_options > 1
-      raise_config_error! "Multiple authentication options are specified, please only use one of user/password, cloud_auth or api_key"
-    end
-
-    if @api_key && @api_key.value && !effectively_ssl?
-      raise_config_error! "Using api_key authentication requires SSL/TLS secured communication using the `ssl => true` option"
-    end
-
-    if @user && (!@password || !@password.value)
-      raise_config_error! "Using basic authentication requires both user and password."
-    end
-
-    if @cloud_auth
-      @user, @password = parse_user_password_from_cloud_auth(@cloud_auth)
-      # params is the plugin global params hash which can be passed to ES client builder
-      params['user'], params['password'] = @user, @password
-    end
-  end
-
-  ## Makes sure to keep HTTPS when SSL is considered
-  # @return [hosts] list of hosts contain HTTPS
-  def effectively_ssl?
-    return @ssl unless @ssl.nil?
-
-    hosts = Array(@hosts)
-    return false if hosts.nil? || hosts.empty?
-
-    hosts.all? { |host| host && host.scheme == "https" }
-  end
-
-  ## Parses the cloud_id from the provided host uri
-  # @raise [LogStash::ConfigurationError] if any exception occurs
-  # @return [LogStash::Util::SafeURI] safe URI
-  def parse_host_uri_from_cloud_id(cloud_id)
-    begin # might not be available on older LS
-      require 'logstash/util/cloud_setting_id'
-    rescue LoadError
-      raise raise_config_error! "The cloud_id setting is not supported by your version of Logstash, " +
-        "please upgrade your installation (or set hosts instead)."
-    end
-
-    begin
-      cloud_id = LogStash::Util::CloudSettingId.new(cloud_id) # already does append ":{port}' to host
-    rescue ArgumentError => e
-      raise_config_error! e.message.to_s.sub(/Cloud Id/i, 'cloud_id')
-    end
-    cloud_uri = "#{cloud_id.elasticsearch_scheme}://#{cloud_id.elasticsearch_host}"
-    LogStash::Util::SafeURI.new(cloud_uri)
-  end
-
-  ## Parses the cloud auth credentials from the provided cloud_auth config
-  # @raise [LogStash::ConfigurationError] if any exception occurs
-  # @return [username, password] pair
-  def parse_user_password_from_cloud_auth(cloud_auth)
-    begin # might not be available on older LS
-      require 'logstash/util/cloud_setting_auth'
-    rescue LoadError
-      raise raise_config_error! "The cloud_auth setting is not supported by your version of Logstash, " +
-        "please upgrade your installation (or set user/password instead)."
-    end
-
-    cloud_auth = cloud_auth.value if cloud_auth.is_a?(LogStash::Util::Password)
-    begin
-      cloud_auth = LogStash::Util::CloudSettingAuth.new(cloud_auth)
-    rescue ArgumentError => e
-      raise raise_config_error! e.message.to_s.sub(/Cloud Auth/i, 'cloud_auth')
-    end
-    [ cloud_auth.username, cloud_auth.password ]
-  end
-
   ##
   # @param message [String]
   # @raise [LogStash::ConfigurationError]
