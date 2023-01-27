@@ -7,6 +7,8 @@ describe LogStash::Filters::ElasticIntegration do
   let(:config) {{ }}
   let(:paths) do
     {
+      # paths have to be created, otherwise config :path validation fails
+      # and since we cannot control the chmod operations on paths, we should stub file readable? and writable? operations
       :readable => "spec/filters/resources/readable_path",
       :non_readable => "spec/filters/resources/non_readable_path",
       :writable => "spec/filters/resources/writable_path",
@@ -72,11 +74,18 @@ describe LogStash::Filters::ElasticIntegration do
             let(:config) { super().merge("truststore_password" => "truststore_pa$sword") }
 
             describe "with non-readable path" do
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(false)
+              end
               include_examples "non-readable path", path_name: "truststore",
                                path: -> {paths[:non_readable]},
                                expected_message: -> {"SSL credentials cannot be loaded from the specified #{paths[:non_readable]} path. Please make the path readable."}
             end
+
             describe "with writable path" do
+              before(:each) do
+                allow(File).to receive(:writable?).and_return(true)
+              end
               include_examples "writable path", path_name: "truststore",
                                path: -> {paths[:writable]},
                                expected_message: -> {"Specified truststore #{paths[:writable]} cannot be writable for security reasons."}
@@ -85,23 +94,35 @@ describe LogStash::Filters::ElasticIntegration do
         end
 
         describe "with SSL certificate" do
-          let(:config) { super().merge("ssl_certificate" => "spec/filters/resources/readable_path") }
+          let(:config) { super().merge("ssl_certificate" => paths[:readable]) }
 
           describe "with non-readable path" do
+            before(:each) do
+              allow(File).to receive(:readable?).and_return(false)
+            end
             include_examples "non-readable path", path_name: "ssl_certificate",
                              path: -> {paths[:non_readable]},
                              expected_message: -> {"SSL certificate from the #{paths[:non_readable]} path cannot be loaded. Please make the path readable."}
           end
 
           describe "with writable path" do
+            before(:each) do
+              allow(File).to receive(:writable?).and_return(true)
+            end
             include_examples "writable path", path_name: "ssl_certificate",
                              path: -> {paths[:writable]},
                              expected_message: -> {"Specified SSL certificate #{paths[:writable]} path cannot be writable for security reasons."}
           end
 
           describe "with `ssl_key`" do
+
             describe "without `ssl_key_passphrase`" do
-              let(:config) { super().merge("ssl_key" => "spec/filters/resources/readable_path") }
+              let(:config) { super().merge("ssl_key" => paths[:readable]) }
+
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(true)
+                allow(File).to receive(:writable?).and_return(false)
+              end
 
               it "throws key phrase required error" do
                 expected_message = "Using `ssl_key` requires `ssl_key_passphrase`"
@@ -113,11 +134,20 @@ describe LogStash::Filters::ElasticIntegration do
               let(:config) { super().merge("ssl_key_passphrase" => "ssl_key_pa$$phrase") }
 
               describe "with non-readable path" do
+                before(:each) do
+                  allow(File).to receive(:readable?).and_return(true, false)
+                  allow(File).to receive(:writable?).and_return(false)
+                end
                 include_examples "non-readable path", path_name: "ssl_key",
                                  path: -> {paths[:non_readable]},
                                  expected_message: -> {"SSL key cannot be loaded from the specified #{paths[:non_readable]} path. Please make the path readable."}
               end
+
               describe "with writable path" do
+                before(:each) do
+                  allow(File).to receive(:readable).and_return(true)
+                  allow(File).to receive(:writable?).and_return(false, true)
+                end
                 include_examples "writable path", path_name: "ssl_key",
                                  path: -> {paths[:writable]},
                                  expected_message: -> {"Specified SSL key #{paths[:writable]} path cannot be writable for security reasons."}
@@ -127,24 +157,32 @@ describe LogStash::Filters::ElasticIntegration do
         end
 
         describe "with keystore" do
-          describe "without `truststore_password`" do
-            let(:config) { super().merge("keystore" => "spec/filters/resources/readable_path") }
 
-            it "throws an error when using `keystore`" do
+          describe "without `truststore_password`" do
+            let(:config) { super().merge("keystore" => paths[:readable]) }
+
+            it "throws an error" do
               expected_message = "Using `keystore` requires `keystore_password`"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
 
           context "load from path" do
+
             let(:config) { super().merge("keystore_password" => "keystore_pa$sword") }
 
             describe "with non-readable path" do
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(false)
+              end
               include_examples "non-readable path", path_name: "keystore",
                                path: -> {paths[:non_readable]},
                                expected_message: -> {"Key(s) from the #{paths[:non_readable]} path cannot be loaded. Please make the path readable."}
             end
             describe "with writable path" do
+              before(:each) do
+                allow(File).to receive(:writable).and_return(true)
+              end
               include_examples "writable path", path_name: "keystore",
                                path: -> {paths[:writable]},
                                expected_message: -> {"Specified keystore #{paths[:writable]} path cannot be writable for security reasons."}

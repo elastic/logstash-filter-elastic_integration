@@ -93,18 +93,18 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_host_settings!
     validate_basic_auth!
 
-    @@cloud_auth  = @cloud_auth ? @cloud_auth.freeze : nil
-    @@api_key     = @api_key    ? @api_key.freeze : nil
+    @cloud_auth  = @cloud_auth&.freeze
+    @api_key     = @api_key&.freeze
   end
 
   def validate_host_settings!
     return unless @hosts
 
-    scheme = @@ssl ? "https" : "http"
+    scheme = @ssl ? "https" : "http"
     agree_with = @hosts.all? { |host| host && host.scheme == scheme }
-    raise_config_error! "All hosts must agree with #{scheme} schema when #{@@ssl ? '' : 'NOT'} using `ssl`." unless agree_with
+    raise_config_error! "All hosts must agree with #{scheme} schema when #{@ssl ? '' : 'NOT'} using `ssl`." unless agree_with
 
-    @@hosts = @hosts.each do |host_uri|
+    @hosts = @hosts.each do |host_uri|
       # no need to validate hostname, uri validates it at initialize
       host_uri.port=(ELASTICSEARCH_DEFAULT_PORT) if host_uri.port.nil?
       host_uri.path=(ELASTICSEARCH_DEFAULT_PATH) if host_uri.path.length == 0 # host_uri.path may return empty array and will not be nil
@@ -113,57 +113,57 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def validate_basic_auth!
-    @@auth_basic_username = @auth_basic_username ? @auth_basic_username.freeze : nil
-    @@auth_basic_password = @auth_basic_password ? @auth_basic_password.freeze : nil
+    @auth_basic_username = @auth_basic_username&.freeze
+    @auth_basic_password = @auth_basic_password&.freeze
 
-    raise_config_error! "Using `auth_basic_username` requires `auth_basic_password`" if @@auth_basic_username && !@@auth_basic_password
-    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") if !@@ssl
+    raise_config_error! "Using `auth_basic_username` requires `auth_basic_password`" if @auth_basic_username && !@auth_basic_password
+    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") unless @ssl
   end
 
   def validate_ssl_settings!
-    @@ssl                         = @ssl.freeze
-    @@ssl_verification_mode       = @ssl_verification_mode.freeze
-    @@truststore                  = @truststore                   ? @truststore.freeze : nil
-    @@truststore_password         = @truststore_password          ? @truststore_password.freeze : nil
-    @@ssl_certificate             = @ssl_certificate              ? @ssl_certificate.freeze : nil
-    @@ssl_key                     = @ssl_key                      ? @ssl_key.freeze : nil
-    @@ssl_key_passphrase          = @ssl_key_passphrase           ? @ssl_key_passphrase.freeze : nil
-    @@keystore                    = @keystore                     ? @keystore.freeze : nil
-    @@keystore_password           = @keystore_password            ? @keystore_password.freeze : nil
-    @@ssl_cipher_suites           = @ssl_cipher_suites            ? @ssl_cipher_suites.freeze : nil
-    @@ssl_supported_protocols     = @ssl_supported_protocols      ? @ssl_supported_protocols.freeze : nil
-    @@ssl_certificate_authorities = @ssl_certificate_authorities  ? @ssl_certificate_authorities.freeze : nil
+    @ssl                         = @ssl.freeze # has a default value
+    @ssl_verification_mode       = @ssl_verification_mode.freeze # has a default value
+    @truststore                  = @truststore&.freeze
+    @truststore_password         = @truststore_password&.freeze
+    @ssl_certificate             = @ssl_certificate&.freeze
+    @ssl_key                     = @ssl_key&.freeze
+    @ssl_key_passphrase          = @ssl_key_passphrase&.freeze
+    @keystore                    = @keystore&.freeze
+    @keystore_password           = @keystore_password&.freeze
+    @ssl_cipher_suites           = @ssl_cipher_suites&.freeze
+    @ssl_supported_protocols     = @ssl_supported_protocols&.freeze
+    @ssl_certificate_authorities = @ssl_certificate_authorities&.freeze
 
     # Category: Establishing trust of the server we connect to (requires ssl: true)
-    raise_config_error! "Using `ssl_verification_mode` #{@@ssl_verification_mode} requires `ssl` enabled" if @@ssl_verification_mode != "none" && !@@ssl
-    if @@ssl_verification_mode != "none"
-      if @@truststore
-        raise_config_error! "Using `truststore` requires `truststore_password`" if !@@truststore_password
-        raise_config_error! "SSL credentials cannot be loaded from the specified #{@@truststore} path. Please make the path readable." if !File.readable?(@@truststore)
-        raise_config_error! "Specified truststore #{@@truststore} cannot be writable for security reasons." if File.writable?(@@truststore)
+    raise_config_error! "Using `ssl_verification_mode` #{@ssl_verification_mode} requires `ssl` enabled" if @ssl_verification_mode != "none" && !@ssl
+    if @ssl_verification_mode != "none"
+      if @truststore
+        raise_config_error! "Using `truststore` requires `truststore_password`" unless @truststore_password
+        raise_config_error! "SSL credentials cannot be loaded from the specified #{@truststore} path. Please make the path readable." unless File.readable?(@truststore)
+        raise_config_error! "Specified truststore #{@truststore} cannot be writable for security reasons." if File.writable?(@truststore)
       end
 
-      @@ssl_certificate_authorities&.each do |certificate_authority|
-        raise_config_error! "Certificate authority cannot be loaded from the specified #{certificate_authority} path. Please make the path readable." if !File.readable?(certificate_authority)
+      @ssl_certificate_authorities&.each do |certificate_authority|
+        raise_config_error! "Certificate authority cannot be loaded from the specified #{certificate_authority} path. Please make the path readable." unless File.readable?(certificate_authority)
         raise_config_error! "Specified certificate authority #{certificate_authority} cannot be writable for security reasons." if File.writable?(certificate_authority)
       end
     end # end of category
 
     # Category: Presenting our identity
-    if @@ssl
-      if @@ssl_certificate
-        raise_config_error! "SSL certificate from the #{@@ssl_certificate} path cannot be loaded. Please make the path readable." if !File.readable?(@@ssl_certificate)
-        raise_config_error! "Specified SSL certificate #{@@ssl_certificate} path cannot be writable for security reasons." if File.writable?(@@ssl_certificate)
+    if @ssl
+      if @ssl_certificate
+        raise_config_error! "SSL certificate from the #{@ssl_certificate} path cannot be loaded. Please make the path readable." unless File.readable?(@ssl_certificate)
+        raise_config_error! "Specified SSL certificate #{@ssl_certificate} path cannot be writable for security reasons." if File.writable?(@ssl_certificate)
 
-        raise_config_error! "Using `ssl_key` requires `ssl_key_passphrase`" if @@ssl_key && !@@ssl_key_passphrase
-        raise_config_error! "SSL key cannot be loaded from the specified #{@@ssl_key} path. Please make the path readable." if @@ssl_key && !File.readable?(@@ssl_key)
-        raise_config_error! "Specified SSL key #{@@ssl_key} path cannot be writable for security reasons." if @@ssl_key && File.writable?(@@ssl_key)
+        raise_config_error! "Using `ssl_key` requires `ssl_key_passphrase`" if @ssl_key && !@ssl_key_passphrase
+        raise_config_error! "SSL key cannot be loaded from the specified #{@ssl_key} path. Please make the path readable." if @ssl_key && !File.readable?(@ssl_key)
+        raise_config_error! "Specified SSL key #{@ssl_key} path cannot be writable for security reasons." if @ssl_key && File.writable?(@ssl_key)
       end
 
-      if @@keystore
-        raise_config_error! "Key(s) from the #{@@keystore} path cannot be loaded. Please make the path readable." if !File.readable?(@@keystore)
-        raise_config_error! "Specified keystore #{@@keystore} path cannot be writable for security reasons." if File.writable?(@@keystore)
-        raise_config_error! "Using `keystore` requires `keystore_password`" if !@@keystore_password
+      if @keystore
+        raise_config_error! "Using `keystore` requires `keystore_password`" unless @keystore_password
+        raise_config_error! "Key(s) from the #{@keystore} path cannot be loaded. Please make the path readable." unless File.readable?(@keystore)
+        raise_config_error! "Specified keystore #{@keystore} path cannot be writable for security reasons." if File.writable?(@keystore)
       end
     end # end of category
   end
