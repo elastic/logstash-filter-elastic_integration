@@ -95,6 +95,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     @cloud_auth  = @cloud_auth&.freeze
     @api_key     = @api_key&.freeze
+
+    # TODO: required one of [hosts, cloud_id]
+    # TODO: required one of [auth_basic_username, cloud_auth, api_key]
   end
 
   def validate_host_settings!
@@ -137,6 +140,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     # Category: Establishing trust of the server we connect to (requires ssl: true)
     raise_config_error! "Using `ssl_verification_mode` #{@ssl_verification_mode} requires `ssl` enabled" if @ssl_verification_mode != "none" && !@ssl
     if @ssl_verification_mode != "none"
+      # TODO: zero or one of [@truststore, @ssl_certificate_authorities]
       if @truststore
         raise_config_error! "Using `truststore` requires `truststore_password`" unless @truststore_password
         raise_config_error! "SSL credentials cannot be loaded from the specified #{@truststore} path. Please make the path readable." unless File.readable?(@truststore)
@@ -151,6 +155,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     # Category: Presenting our identity
     if @ssl
+      # TODO: zero or one of [@ssl_certificate, @keystore]
       if @ssl_certificate
         raise_config_error! "SSL certificate from the #{@ssl_certificate} path cannot be loaded. Please make the path readable." unless File.readable?(@ssl_certificate)
         raise_config_error! "Specified SSL certificate #{@ssl_certificate} path cannot be writable for security reasons." if File.writable?(@ssl_certificate)

@@ -31,6 +31,41 @@ This {elastic-integration-name} filter plugin is part of a _Technology Preview_,
 Before upgrading this plugin or Logstash itself, please pay special attention to the changelogs to avoid being caught by surprise.
 ****
 
+[id="plugins-{type}s-{plugin}-security"]
+==== Security
+
+SSL is enabled by default in the plugin.
+
+At a minimum, in order to establish secured SSL connection, you will need to either configure the plugin to trust to the server it is connecting to, or present its own identity.
+You can also disable SSL which is not recommended.
+
+===== SSL Identity
+
+As an SSL identity, this plugin will need to present the SSL certificate that the server trusts and have access to the associated key.
+These are configurable with <<plugins-{type}s-{plugin}-ssl_certificate>>, <<plugins-{type}s-{plugin}-ssl_key>>, and <<plugins-{type}s-{plugin}-ssl_key_passphrase>>.
+
+===== SSL Server Authentication
+
+When connection to a server, the trust criteria can be proceeded based on <<plugins-{type}s-{plugin}-ssl_verification_mode>>.
+For example, if `certificate` mode, the plugin validates the dates of server certificate as well as it verifies the CA that issued server certificate is legitimate and trustworthy based on <<plugins-{type}s-{plugin}-ssl_certificate_authorities>>.
+Refer to <<plugins-{type}s-{plugin}-ssl_verification_mode>> explanation section for more information.
+
+===== SSL Advanced Configuration
+
+This plugin exposes following advanced SSL configurations:
+
+* <<plugins-{type}s-{plugin}-ssl_cipher_suites>>
+* <<plugins-{type}s-{plugin}-ssl_supported_protocols>>
+
+
+===== HTTP Basic Authentication
+
+You can use HTTP Basic authentication by configuring <<plugins-{type}s-{plugin}-auth_basic_username>> and <<plugins-{type}s-{plugin}-auth_basic_password>>.
+
+NOTE: Basic Authentication is not a substitute for SSL, as it provides neither secrecy nor security on its own.
+When used with SSL disabled, HTTP Basic credentials are transmitted in effectively clear-text and can be easily recovered by an adversary.
+
+
 [id="plugins-{type}s-{plugin}-options"]
 ==== {elastic-integration-name} Input Configuration Options
 
@@ -39,7 +74,217 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 [cols="<,<,<",options="header",]
 |=======================================================================
 |Setting |Input type|Required
+| <<plugins-{type}s-{plugin}-hosts>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-cloud_id>> | <<string,string>>|No
+| <<plugins-{type}s-{plugin}-ssl>> | <<boolean,boolean>>|No
+| <<plugins-{type}s-{plugin}-ssl_verification_mode>> | <<string,string>>, one of `["full", "certificate", "none"]`|No
+| <<plugins-{type}s-{plugin}-truststore>> | <<path,path>>|No
+| <<plugins-{type}s-{plugin}-truststore_password>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-ssl_certificate>> | <<path,path>>|No
+| <<plugins-{type}s-{plugin}-ssl_key>> | <<path,path>>|No
+| <<plugins-{type}s-{plugin}-ssl_key_passphrase>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-keystore>> | <<path,path>>|No
+| <<plugins-{type}s-{plugin}-keystore_password>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-auth_basic_username>> | <<string,string>>|No
+| <<plugins-{type}s-{plugin}-auth_basic_password>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-cloud_auth>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-api_key>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-ssl_cipher_suites>> | <<array,array>>|No
+| <<plugins-{type}s-{plugin}-ssl_supported_protocols>> | <<array,array>>|No
 |=======================================================================
+
+[id="plugins-{type}s-{plugin}-hosts"]
+===== `hosts`
+
+* Value type is <<array,array>>
+* There is no default value for this setting.
+
+A list of Elasticsearch hosts to connect.
+
+Examples:
+
+    `"127.0.0.1"`
+    `["127.0.0.1:9200","127.0.0.2:9200"]`
+    `["http://127.0.0.1"]`
+    `["https://127.0.0.1:9200"]`
+    `["https://127.0.0.1:9200/subpath"]` (If using a proxy on a subpath)
+
+Set HTTPS to each entry when using SSL or HTTP when not using.
+When port is not specified, the plugin uses default 9200. Similarly, it uses default `/` path.
+
+Any special characters present in the URLs here MUST be URL escaped! This means
+`#` should be put in as `%23` for instance.
+
+
+[id="plugins-{type}s-{plugin}-cloud_id"]
+===== `cloud_id`
+
+* Value type is <<string,string>>
+* There is no default value for this setting.
+
+Cloud ID, from the Elastic Cloud web console.
+This setting should not be used when `hosts` are specified.
+
+For more details, check out the
+{logstash-ref}/connecting-to-cloud.html[Logstash-to-Cloud documentation].
+
+[id="plugins-{type}s-{plugin}-ssl"]
+===== `ssl`
+
+* Value type is <<boolean,boolean>>
+* Default value is `true`.
+
+Enable or disable secured SSL communication to Elasticsearch cluster.
+
+
+[id="plugins-{type}s-{plugin}-ssl_verification_mode"]
+===== `ssl_verification_mode`
+
+* Value type is <<array,array>>
+* Default value is `full`.
+
+Type of verification.
+
+* Available modes:
+** `certificate`: validates the specified certificate that it is signed by provided Certificate Authority (CA).
+** `full`: validates `certificate` mode, and IP address that matches the ones certificate carries.
+** `none`: verification process will not be proceeded.
+
+[id="plugins-{type}s-{plugin}-truststore"]
+===== `truststore`
+
+* Value type is <<path,path>>
+* There is no default value for this setting.
+
+A path to truststore where trusted certificates are located.
+
+
+[id="plugins-{type}s-{plugin}-truststore_password"]
+===== `truststore_password`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+
+Password for the truststore.
+
+
+[id="plugins-{type}s-{plugin}-ssl_certificate_authorities"]
+===== `ssl_certificate_authorities`
+
+* Value type is <<array,array>>
+* There is no default value for this setting.
+
+A list of paths to SSL certificate authorities.
+Specified certificates will be validated by these authorities.
+
+
+[id="plugins-{type}s-{plugin}-ssl_certificate"]
+===== `ssl_certificate`
+
+* Value type is <<path,path>>
+* There is no default value for this setting.
+
+Path to PEM encoded certificate or certificate chain that is associated with the key.
+You cannot use this setting with `keystore`.
+
+[id="plugins-{type}s-{plugin}-ssl_key"]
+===== `ssl_key`
+
+* Value type is <<path,path>>
+* There is no default value for this setting.
+
+A path to SSL certificate key.
+
+
+[id="plugins-{type}s-{plugin}-ssl_key_passphrase"]
+===== `ssl_key_passphrase`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+
+A password or passphrase of the SSL certificate.
+
+
+[id="plugins-{type}s-{plugin}-keystore"]
+===== `keystore`
+
+* Value type is <<path,path>>
+* There is no default value for this setting.
+
+A path to keystore.
+You cannot use this setting with `ssl_certificate`.
+
+
+[id="plugins-{type}s-{plugin}-keystore_password"]
+===== `keystore_password`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+
+Password for the keystore.
+
+
+[id="plugins-{type}s-{plugin}-auth_basic_username"]
+===== `auth_basic_username`
+
+* Value type is <<string,string>>
+* There is no default value for this setting.
+
+A user name when using basic authentication to connect to Elasticsearch.
+This setting requires `auth_basic_password`.
+
+
+[id="plugins-{type}s-{plugin}-auth_basic_password"]
+===== `auth_basic_password`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+
+A password when using basic authentication to connect to Elasticsearch.
+This setting is usually used together with `auth_basic_username`.
+
+
+[id="plugins-{type}s-{plugin}-cloud_auth"]
+===== `cloud_auth`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+
+Cloud authentication string ("<username>:<password>" format) is an alternative
+for the `auth_basic_username`/`auth_basic_password` pair and can be obtained from Elastic Cloud web console.
+
+
+[id="plugins-{type}s-{plugin}-api_key"]
+===== `api_key`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+
+API keys enable programmatic access to Elasticsearch.
+This option requires SSL, which can be enabled by supplying a <<plugins-{type}s-{plugin}-cloud_id>>, a list of HTTPS <<plugins-{type}s-{plugin}-hosts>>.
+
+Format is `id:api_key` where `id` and `api_key` are as obtained by the
+Elasticsearch {ref}/security-api-create-api-key.html[Create API key API].
+
+
+[id="plugins-{type}s-{plugin}-ssl_cipher_suites"]
+===== `cloud_auth`
+
+* Value type is <<array,array>>
+* There is no default value for this setting.
+
+#TODO: Add a description#
+
+
+[id="plugins-{type}s-{plugin}-ssl_supported_protocols"]
+===== `ssl_supported_protocols`
+
+* Value type is <<array,array>>
+* There is no default value for this setting.
+
+#TODO: Add a description#
+
 
 Also see <<plugins-{type}s-{plugin}-common-options>> for a list of options supported by all
 {type} plugins.
