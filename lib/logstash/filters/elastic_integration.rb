@@ -93,11 +93,18 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_host_settings!
     validate_basic_auth!
 
+    @cloud_id    = @cloud_id&.freeze
     @cloud_auth  = @cloud_auth&.freeze
     @api_key     = @api_key&.freeze
 
-    # TODO: required one of [hosts, cloud_id]
-    # TODO: required one of [auth_basic_username, cloud_auth, api_key]
+    if (@hosts && @cloud_id) || (!@hosts && !@cloud_id)
+      raise_config_error! "Connection to Elasticsearch requires either `hosts` or `cloud_id` to be set."
+    end
+
+    possible_auth_options = [@auth_basic_username, @cloud_auth, @api_key].compact
+    if possible_auth_options.length != 1
+      raise_config_error! "Authentication to Elasticsearch requires ONLY ONE of [`auth_basic_username`, `cloud_auth`, `api_key`] options to be set."
+    end
   end
 
   def validate_host_settings!
@@ -140,7 +147,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     # Category: Establishing trust of the server we connect to (requires ssl: true)
     raise_config_error! "Using `ssl_verification_mode` #{@ssl_verification_mode} requires `ssl` enabled" if @ssl_verification_mode != "none" && !@ssl
     if @ssl_verification_mode != "none"
-      # TODO: zero or one of [@truststore, @ssl_certificate_authorities]
+      # @truststore with @ssl_certificate_authorities.length == 0 will be valid
+      # but we encourage users to set meaningful config
+      if (@truststore && @ssl_certificate_authorities) || (!@truststore && !@ssl_certificate_authorities) || (!@truststore && @ssl_certificate_authorities && @ssl_certificate_authorities.length == 0)
+        raise_config_error! "`ssl_verification_mode` #{@ssl_verification_mode} requires either `truststore` or `ssl_certificate_authorities` to be set."
+      end
+
       if @truststore
         raise_config_error! "Using `truststore` requires `truststore_password`" unless @truststore_password
         raise_config_error! "SSL credentials cannot be loaded from the specified #{@truststore} path. Please make the path readable." unless File.readable?(@truststore)
@@ -155,7 +167,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     # Category: Presenting our identity
     if @ssl
-      # TODO: zero or one of [@ssl_certificate, @keystore]
+      if (@ssl_certificate && @keystore) || (!@ssl_certificate && !@keystore)
+        raise_config_error! "SSL requires either `ssl_certificate` or `keystore` to be set."
+      end
+
       if @ssl_certificate
         raise_config_error! "SSL certificate from the #{@ssl_certificate} path cannot be loaded. Please make the path readable." unless File.readable?(@ssl_certificate)
         raise_config_error! "Specified SSL certificate #{@ssl_certificate} path cannot be writable for security reasons." if File.writable?(@ssl_certificate)
