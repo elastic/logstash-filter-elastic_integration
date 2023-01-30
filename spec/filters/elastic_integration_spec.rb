@@ -7,11 +7,9 @@ describe LogStash::Filters::ElasticIntegration do
   let(:config) {{ }}
   let(:paths) do
     {
-      # paths have to be created, otherwise config :path validation fails
+      # path has to be created, otherwise config :path validation fails
       # and since we cannot control the chmod operations on paths, we should stub file readable? and writable? operations
-      :readable => "spec/filters/resources/readable_path",
-      :non_readable => "spec/filters/resources/non_readable_path",
-      :writable => "spec/filters/resources/writable_path",
+      :test_path => "spec/filters/resources/do_not_remove_path"
     }
   end
 
@@ -38,301 +36,409 @@ describe LogStash::Filters::ElasticIntegration do
   context "plugin register" do
     let(:registered_plugin) { plugin.tap(&:register) }
 
-    shared_examples "raises an error" do |expected_message:|
-      it "raises an error" do
-        expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(instance_exec(&expected_message))
-      end
-    end
+    describe "when SSL enabled" do
+      let(:config) { super().merge("ssl" => true) }
 
-    describe "with SSL enabled" do
-      let(:config) { super().merge("ssl_verification_mode" => "none") }
+      describe "with `ssl_certificate`" do
+        let(:config) { super().merge("ssl_certificate" => paths[:test_path]) }
 
-      include_examples "raises an error",
-                       expected_message: -> { "SSL requires either `ssl_certificate` or `keystore` to be set." }
+        describe "with `keystore`" do
+          let(:config) { super().merge("keystore" => paths[:test_path]) }
 
-      shared_examples "non-readable path" do |path_name:, path:, expected_message:|
-        # path & expected_message are dynamic [Proc], make sure to get the value by executing with instance_exec(&)
-        let(:config) { super().merge(path_name => instance_exec(&path)) }
-        it "raises cannot read from path error" do
-          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(instance_exec(&expected_message))
+          it "doesn't allow to use together" do
+            expected_message = "`ssl_certificate` and `keystore` cannot be used together."
+            expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
         end
+
+        it "requires `ssl_key`" do
+          expected_message = "`ssl_certificate` requires `ssl_key`"
+          expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+        end
+
+        describe "with `ssl_key`" do
+          let(:config) { super().merge("ssl_key" => paths[:test_path]) }
+
+          it "requires `ssl_key_passphrase`" do
+            expected_message = "`ssl_key` requires `ssl_key_passphrase`"
+            expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+
+          describe "with empty `ssl_key_passphrase`" do
+            let(:config) { super().merge("ssl_key_passphrase" => "") }
+
+            it "requires non-empty passphrase" do
+              expected_message = "`ssl_key_passphrase` cannot be empty"
+              expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with non-empty `ssl_key_passphrase`" do
+            let(:config) { super().merge("ssl_key_passphrase" => "ssl_key_pa$$phrase") }
+
+            describe "with non readable path" do
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(false)
+              end
+              it "requires readable path" do
+                expected_message = "Specified ssl_certificate spec/filters/resources/do_not_remove_path path must be readable."
+                expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+              end
+            end
+
+            describe "with readable and writable path" do
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(true)
+                allow(File).to receive(:writable?).and_return(true)
+              end
+              it "requires non-writable path" do
+                expected_message = "Specified ssl_certificate spec/filters/resources/do_not_remove_path path must not be writable."
+                expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+              end
+            end
+
+          end
+        end
+
       end
 
-      shared_examples "writable path" do |path_name:, path:, expected_message:|
-        # path & expected_message are dynamic[Proc], make sure to get the value by executing with instance_exec(&)
-        let(:config) { super().merge(path_name => instance_exec(&path)) }
-        it "raises a security risk error since path is writable" do
-          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(instance_exec(&expected_message))
+      describe "without `ssl_certificate`" do
+
+        describe "with `ssl_key`" do
+          let(:config) { super().merge("ssl_key" => paths[:test_path]) }
+
+          it "requires `ssl_certificate`" do
+            expected_message = "`ssl_key` is not allowed unless `ssl_certificate` is specified"
+            expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "without `ssl_key`" do
+
+          describe "with `ssl_key_passphrase`" do
+
+            describe "with `ssl_key_passphrase`" do
+              let(:config) { super().merge("ssl_key_passphrase" => "ssl_key_pa&$phrase") }
+
+              it "requires `ssl_key`" do
+                expected_message = "`ssl_key_passphrase` is not allowed unless `ssl_key` is specified"
+                expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+              end
+            end
+
+          end
         end
       end
 
       describe "with `keystore`" do
-        let(:config) { super().merge("keystore" => paths[:readable])}
+        let(:config) { super().merge("keystore" => paths[:test_path]) }
 
-        describe "without `truststore_password`" do
-          let(:config) { super().merge("keystore" => paths[:readable]) }
-
-          include_examples "raises an error",
-                           expected_message: -> { "Using `keystore` requires `keystore_password`" }
-        end
-
-        context "load from path" do
-
-          let(:config) { super().merge("keystore_password" => "keystore_pa$sword") }
-
-          describe "with non-readable path" do
-            before(:each) do
-              allow(File).to receive(:readable?).and_return(false)
-            end
-            include_examples "non-readable path", path_name: "keystore",
-                             path: -> {paths[:non_readable]},
-                             expected_message: -> {"Key(s) from the #{paths[:non_readable]} path cannot be loaded. Please make the path readable."}
-          end
-
-          describe "with writable path" do
-            before(:each) do
-              allow(File).to receive(:writable).and_return(true)
-            end
-            include_examples "writable path", path_name: "keystore",
-                             path: -> {paths[:writable]},
-                             expected_message: -> {"Specified keystore #{paths[:writable]} path cannot be writable for security reasons."}
-          end
-        end
-      end
-
-      describe "with `ssl_certificate`" do
-        let(:config) { super().merge("ssl_certificate" => paths[:readable])}
-
-        describe "with non-readable path" do
-
-          before(:each) do
-            allow(File).to receive(:readable?).and_return(false)
-          end
-          include_examples "non-readable path", path_name: "ssl_certificate",
-                           path: -> {paths[:non_readable]},
-                           expected_message: -> {"SSL certificate from the #{paths[:non_readable]} path cannot be loaded. Please make the path readable."}
-        end
-
-        describe "with writable path" do
-          before(:each) do
-            allow(File).to receive(:writable?).and_return(true)
-          end
-          include_examples "writable path", path_name: "ssl_certificate",
-                           path: -> {paths[:writable]},
-                           expected_message: -> {"Specified SSL certificate #{paths[:writable]} path cannot be writable for security reasons."}
-        end
-
-        describe "with `ssl_key`" do
-
-          describe "without `ssl_key_passphrase`" do
-            let(:config) { super().merge("ssl_key" => paths[:readable]) }
-
-            before(:each) do
-              allow(File).to receive(:readable?).and_return(true)
-              allow(File).to receive(:writable?).and_return(false)
-            end
-
-            include_examples "raises an error",
-                             expected_message: -> {"Using `ssl_key` requires `ssl_key_passphrase`"}
-          end
-
-          context "load from path" do
-            let(:config) { super().merge("ssl_key_passphrase" => "ssl_key_pa$$phrase") }
-
-            describe "with non-readable path" do
-              before(:each) do
-                allow(File).to receive(:readable?).and_return(true, false)
-                allow(File).to receive(:writable?).and_return(false)
-              end
-              include_examples "non-readable path", path_name: "ssl_key",
-                               path: -> {paths[:non_readable]},
-                               expected_message: -> {"SSL key cannot be loaded from the specified #{paths[:non_readable]} path. Please make the path readable."}
-            end
-
-            describe "with writable path" do
-              before(:each) do
-                allow(File).to receive(:readable).and_return(true)
-                allow(File).to receive(:writable?).and_return(false, true)
-              end
-              include_examples "writable path", path_name: "ssl_key",
-                               path: -> {paths[:writable]},
-                               expected_message: -> {"Specified SSL key #{paths[:writable]} path cannot be writable for security reasons."}
-            end
-          end
-        end
-      end
-
-      describe "with `ssl_verification_mode` (not `none`)" do
-        let(:config) { super().merge("ssl_verification_mode" => "certificate")}
-
-        include_examples "raises an error",
-                         expected_message: -> {"`ssl_verification_mode` certificate requires either `truststore` or `ssl_certificate_authorities` to be set."}
-
-        describe "with `truststore`" do
-          let(:config) { super().merge("truststore" => paths[:readable]) }
-
-          describe "without `truststore_password`" do
-            include_examples "raises an error",
-                             expected_message: -> {"Using `truststore` requires `truststore_password`"}
-          end
-
-          context "load from path" do
-            let(:config) { super().merge("truststore_password" => "truststore_pa$sword") }
-
-            describe "with non-readable path" do
-              before(:each) do
-                allow(File).to receive(:readable?).and_return(false)
-              end
-              include_examples "non-readable path", path_name: "truststore",
-                               path: -> {paths[:non_readable]},
-                               expected_message: -> {"SSL credentials cannot be loaded from the specified #{paths[:non_readable]} path. Please make the path readable."}
-            end
-
-            describe "with writable path" do
-              before(:each) do
-                allow(File).to receive(:writable?).and_return(true)
-              end
-              include_examples "writable path", path_name: "truststore",
-                               path: -> {paths[:writable]},
-                               expected_message: -> {"Specified truststore #{paths[:writable]} cannot be writable for security reasons."}
-            end
-          end
-        end
-
-        describe "with `ssl_certificate_authorities`" do
-
-          context "load from path" do
-
-            describe "with non-readable path" do
-              let(:config) { super().merge("ssl_certificate_authorities" => [paths[:non_readable]]) }
-              before(:each) do
-                allow(File).to receive(:readable?).and_return(false)
-              end
-              include_examples "non-readable path", path_name: "ssl_certificate_authorities",
-                               path: -> {paths[:non_readable]},
-                               expected_message: -> { "Certificate authority cannot be loaded from the specified #{paths[:non_readable]} path. Please make the path readable." }
-            end
-
-            describe "with writable path" do
-              let(:config) { super().merge("ssl_certificate_authorities" => [paths[:writable]]) }
-              before(:each) do
-                allow(File).to receive(:writable?).and_return(true)
-              end
-              include_examples "writable path", path_name: "ssl_certificate_authorities",
-                               path: -> {paths[:writable]},
-                               expected_message: -> {"Specified certificate authority #{paths[:writable]} cannot be writable for security reasons."}
-            end
-          end
-        end
-      end
-    end
-
-    describe "with SSL disabled" do
-      let(:config) {{ "ssl" => false }}
-
-      it "throws an error if `ssl_verification_mode` is `full` or `certificate`" do
-        expected_message = "Using `ssl_verification_mode` full requires `ssl` enabled"
-        expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
-      end
-
-      describe "with hosts" do
-        let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"], "ssl_verification_mode" => "none") }
-
-        it "throws an error if any host of hosts is not HTTP" do
-          expected_message = "All hosts must agree with http schema when NOT using `ssl`."
+        it "requires `keystore_password`" do
+          expected_message = "`keystore` requires `keystore_password`"
           expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
         end
-      end
 
-      describe "with basic auth" do
-        let(:config) {super().merge({"auth_basic_username" => "test_user", "ssl_verification_mode" => "none"})}
+        describe "with empty `keystore_password`" do
+          let(:config) { super().merge("keystore_password" => "") }
 
-        describe "without password" do
-          it "throws an error if `auth_basic_username` is specified but `auth_basic_password` isn't provided." do
-            expected_message = "Using `auth_basic_username` requires `auth_basic_password`"
+          it "doesn't allow empty `keystore_password`" do
+            expected_message = "`keystore_password` cannot be empty"
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
         end
 
-        describe "with password" do
-          let(:config) { super().merge(config.merge({"auth_basic_username" => "uname", "auth_basic_password" => "test_user_p@s$code", "hosts" => ["http://my-es.com"]})) }
+        describe "with non-empty `keystore_password`" do
+          let(:config) { super().merge("keystore_password" => "keystore_pa$$word") }
 
-          it "warns about security risk when sending credentials" do
-            expected_message = "Credentials are being sent over unencrypted HTTP. This may bring security risk."
-            allow(plugin.logger).to receive(:warn).with(any_args)
-            expect(registered_plugin.logger).to have_received(:warn).with(expected_message)
+          describe "with non readable path" do
+            before(:each) do
+              allow(File).to receive(:readable?).and_return(false)
+            end
+            it "requires readable path" do
+              expected_message = "Specified keystore spec/filters/resources/do_not_remove_path path must be readable."
+              expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with readable and writable path" do
+            before(:each) do
+              allow(File).to receive(:readable?).and_return(true)
+              allow(File).to receive(:writable?).and_return(true)
+            end
+            it "requires non-writable path" do
+              expected_message = "Specified keystore spec/filters/resources/do_not_remove_path path must not be writable."
+              expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+        end
+        end
+
+      describe "without `keystore`" do
+
+        describe "with `keystore_password`" do
+          let(:config) { super().merge("keystore_password" => "keystore_pa$$word") }
+
+          it "doesn't allow" do
+            expected_message = "`keystore_password` is not allowed unless `keystore` is specified"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+      end
+
+      describe "with `ssl_verification_mode` is `none`" do
+        let(:config) { super().merge("ssl_verification_mode" => "none") }
+
+        describe "with `truststore`" do
+          let(:config) { super().merge("truststore" => paths[:test_path]) }
+
+          it "requires full or certificate `ssl_verification_mode`" do
+            expected_message = "`truststore` requires either `full` or `certificate` of `ssl_verification_mode`"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "with `truststore_password`" do
+          let(:config) { super().merge("truststore_password" => "truststore_pa$$word") }
+
+          it "requires `truststore_password` and full or certificate `ssl_verification_mode`" do
+            expected_message = "`truststore_password` requires `truststore` and `full` or `certificate` of `ssl_verification_mode`"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "with `ssl_certificate_authorities`" do
+          let(:config) { super().merge("ssl_certificate_authorities" => [paths[:test_path]]) }
+
+          it "requires full or certificate `ssl_verification_mode`" do
+            expected_message = "`ssl_certificate_authorities` requires either `full` or `certificate` of `ssl_verification_mode`"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+      end
+
+      describe "with `ssl_verification_mode` is not `none`" do
+        let(:config) { super().merge("ssl_verification_mode" => "certificate") }
+
+        describe "with `truststore` and `ssl_certificate_authorities`" do
+          let(:config) { super().merge("truststore" => paths[:test_path], "ssl_certificate_authorities" => [paths[:test_path]]) }
+          it "doesn't allow to use together" do
+            expected_message = "`truststore` and `ssl_certificate_authorities` cannot be used together."
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "without `truststore` and empty `ssl_certificate_authorities`" do
+          let(:config) { super().merge("ssl_certificate_authorities" => []) }
+          it "doesn't allow empty `ssl_certificate_authorities`" do
+            expected_message = "`ssl_certificate_authorities` cannot be empty"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "with `truststore`" do
+          let(:config) { super().merge("truststore" => paths[:test_path]) }
+
+          it "requires `truststore_password`" do
+            expected_message = "`truststore` requires `truststore_password`"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+
+          describe "with empty `truststore_password`" do
+            let(:config) { super().merge("truststore_password" => "") }
+
+            it "doesn't accept empty `truststore_password`" do
+              expected_message = "`truststore_password` cannot be empty"
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with non-empty `truststore_password`" do
+            let(:config) { super().merge("truststore_password" => "truststore_pa$$word") }
+
+            describe "with non readable path" do
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(false)
+              end
+              it "requires readable path" do
+                expected_message = "Specified truststore spec/filters/resources/do_not_remove_path path must be readable."
+                expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+              end
+            end
+
+            describe "with readable and writable path" do
+              before(:each) do
+                allow(File).to receive(:readable?).and_return(true)
+                allow(File).to receive(:writable?).and_return(true)
+              end
+              it "requires non-writable path" do
+                expected_message = "Specified truststore spec/filters/resources/do_not_remove_path path must not be writable."
+                expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+              end
+            end
+          end
+        end
+
+        describe "with `truststore_password`" do
+          let(:config) { super().merge("truststore_password" => "truststore_pa$$word") }
+
+          it "requires `truststore`" do
+            expected_message = "`truststore_password` is not allowed unless `truststore` is specified"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "with `ssl_certificate_authorities`" do
+          let(:config) { super().merge("ssl_certificate_authorities" => [paths[:test_path]]) }
+
+          describe "with non readable path" do
+            before(:each) do
+              allow(File).to receive(:readable?).and_return(false)
+            end
+            it "requires readable path" do
+              expected_message = "Specified ssl_certificate_authorities spec/filters/resources/do_not_remove_path path must be readable."
+              expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with readable and writable path" do
+            before(:each) do
+              allow(File).to receive(:readable?).and_return(true)
+              allow(File).to receive(:writable?).and_return(true)
+            end
+            it "requires non-writable path" do
+              expected_message = "Specified ssl_certificate_authorities spec/filters/resources/do_not_remove_path path must not be writable."
+              expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+        end
+      end
+
+      describe "connection prerequisites" do
+
+        describe "with both `hosts` and `cloud_id`" do
+          let(:config) {super().merge("hosts" => ["https://my-es-host:9200"], "cloud_id" => "my_cloud_id")}
+
+          it "requires either of them" do
+            expected_message = "`hosts` and `cloud_id` cannot be used together."
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "with `hosts`" do
+
+          describe "with HTTP scheme" do
+            let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "http://cloud-test.es.us-west-2.aws.found.io"])}
+
+            it "enforces to agree with scheme" do
+              expected_message = "All hosts must agree with https schema when  using `ssl`."
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+
+            end
+          end
+
+          describe "with HTTPS scheme" do
+            let(:config) { super().merge("hosts" => ["https://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"])}
+
+            it "accepts" do
+              expect{ registered_plugin }.not_to raise_error
+            end
+          end
+
+        end
+      end
+    end
+
+    describe "when SSL disabled" do
+      let(:config) { super().merge("ssl" => false) }
+
+      describe "when `ssl_verification_mode` is not `none`" do
+        let(:config) { super().merge("ssl_verification_mode" => "certificate") }
+
+        it "raises an error" do
+          expected_message = "`ssl_verification_mode` certificate requires `ssl` enabled"
+          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+        end
+      end
+
+      describe "wen SSL related configs are specified" do
+        let(:config) { super().merge("ssl_verification_mode" => "none", "keystore" => paths[:test_path], "cloud_id" => "my-es-cloud:id_", "ssl_certificate_authorities" => [paths[:test_path]]) }
+
+        it "does not allow and raises an error" do
+          expected_message = 'When ssl is disabled, the following provided parameters are not allowed: ["keystore", "cloud_id", "ssl_certificate_authorities"]'
+          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+        end
+      end
+
+      context "connection prerequisites" do
+        let(:config) { super().merge("ssl_verification_mode" => "none") }
+
+        describe "when no `hosts` or `cloud_id is specified" do
+          it "requires either of them" do
+            expected_message = "Either `hosts` or `cloud_id` is required"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "when either `hosts` or `cloud_id is specified" do
+          let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "http://cloud-test.es.us-west-2.aws.found.io"]) }
+          it "accepts" do
+            expect{ registered_plugin }.not_to raise_error
+          end
+        end
+
+        describe "when multiple auth options are specified" do
+          let(:config) {super().merge("cloud_auth" => "my_cloud_auth", "api_key" => "api_key", "hosts" => ["http://my-es-cluster:1111"])}
+
+          it "does not allow" do
+            expected_message = 'Multiple authentication ["cloud_auth", "api_key"] options cannot be used together. Please provide ONLY one.'
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "with `hosts`" do
+
+          describe "with HTTP scheme" do
+            let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "http://cloud-test.es.us-west-2.aws.found.io"])}
+
+            it "accepts" do
+              expect{ registered_plugin }.not_to raise_error
+            end
+          end
+
+          describe "with HTTPS scheme" do
+            let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"])}
+
+            it "enforces to agree with scheme" do
+              expected_message = "All hosts must agree with http schema when NOT using `ssl`."
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+        end
+
+        describe "with basic auth" do
+
+          describe "with `auth_basic_username`" do
+            let(:config) { super().merge("auth_basic_username" => "test_user") }
+
+            it "requires `auth_basic_password`" do
+              expected_message = "`auth_basic_username` requires `auth_basic_password`"
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with `auth_basic_password`" do
+            let(:config) { super().merge("auth_basic_password" => "pa$$") }
+
+            it "requires `auth_basic_username`" do
+              expected_message = "`auth_basic_password` is not allowed unless `auth_basic_username` is specified"
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
           end
         end
       end
     end
 
-    context "connection prerequisites" do
-      let(:config) { super().merge("ssl" => false, "ssl_verification_mode" => "none") }
-
-      describe "with `hosts` and `cloud_id`" do
-
-        describe "when no option specified" do
-          include_examples "raises an error",
-                           expected_message: -> {"Connection to Elasticsearch requires either `hosts` or `cloud_id` to be set."}
-        end
-
-        describe "when multiple options are specified" do
-          let(:config) {super().merge("hosts" => ["http://my-es-host:9200"], "cloud_id" => "my_cloud_id")}
-
-          include_examples "raises an error",
-                           expected_message: -> {"Connection to Elasticsearch requires either `hosts` or `cloud_id` to be set."}
-        end
-
-      end
-
-      describe "with [`auth_basic_username`, `cloud_auth`, `api_key`] auth options" do
-
-        describe "when no option specified" do
-          let(:config) {super().merge("cloud_id" => "my_cloud_id")}
-
-          include_examples "raises an error",
-                           expected_message: -> {"Authentication to Elasticsearch requires ONLY ONE of [`auth_basic_username`, `cloud_auth`, `api_key`] options to be set."}
-        end
-
-        describe "when multiple options are specified" do
-          let(:config) {super().merge("cloud_id" => "my_cloud_id", "cloud_auth" => "my_cloud_auth", "api_key" => "api_key")}
-
-          include_examples "raises an error",
-                           expected_message: -> {"Authentication to Elasticsearch requires ONLY ONE of [`auth_basic_username`, `cloud_auth`, `api_key`] options to be set."}
-        end
-
-      end
-
-      describe "with hosts" do
-        let(:config) { super().merge("ssl_verification_mode" =>"none", "hosts" => ["http://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"])}
-
-        before(:each) do
-          allow(File).to receive(:readable?).and_return(true)
-          allow(File).to receive(:writable?).and_return(false )
-        end
-
-        include_examples "raises an error",
-                         expected_message: -> {"All hosts must agree with http schema when NOT using `ssl`."}
-
-        describe "with SSL" do
-          let(:config) { super().merge("ssl" => true, "keystore" => paths[:readable], "keystore_password" => "keystore_pa$$word")}
-
-          include_examples "raises an error",
-                           expected_message: -> {"All hosts must agree with https schema when  using `ssl`."}
-        end
-      end
-
-      describe "with basic auth" do
-        let(:config) { super().merge("ssl_verification_mode" =>"none", "auth_basic_username" => "test_user", "truststore" => paths[:readable], "truststore_password" => "truststore_pa$$word")}
-
-        before(:each) do
-          allow(File).to receive(:readable?).and_return(true)
-          allow(File).to receive(:writable?).and_return(false )
-        end
-
-        include_examples "raises an error",
-                         expected_message: -> {"Using `auth_basic_username` requires `auth_basic_password`"}
-      end
-    end
   end
 end

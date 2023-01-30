@@ -71,12 +71,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A key to authenticate when connecting to Elasticsearch
   config :api_key, :validate => :password
 
-  # Advanced TLS/SSL configuration
-  config :ssl_cipher_suites, :validate => :string, :list => true
-  config :ssl_supported_protocols, :validate => :string, :list => true
-
   def register
-    logger.debug("Registering `filter-elastic_integration` plugin.")
+    @logger.debug("Registering `filter-elastic_integration` plugin.")
 
     validate_ssl_settings!
     validate_connection_settings!
@@ -97,14 +93,13 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @cloud_auth  = @cloud_auth&.freeze
     @api_key     = @api_key&.freeze
 
-    if (@hosts && @cloud_id) || (!@hosts && !@cloud_id)
-      raise_config_error! "Connection to Elasticsearch requires either `hosts` or `cloud_id` to be set."
-    end
+    raise_config_error! "`hosts` and `cloud_id` cannot be used together." if @hosts && @cloud_id
+    raise_config_error! "Either `hosts` or `cloud_id` is required" unless @hosts || @cloud_id
 
-    possible_auth_options = [@auth_basic_username, @cloud_auth, @api_key].compact
-    if possible_auth_options.length != 1
-      raise_config_error! "Authentication to Elasticsearch requires ONLY ONE of [`auth_basic_username`, `cloud_auth`, `api_key`] options to be set."
-    end
+    possible_auth_options = original_params.keys & %w(auth_basic_password cloud_auth api_key)
+    raise_config_error!("Multiple authentication #{possible_auth_options} options cannot be used together. Please provide ONLY one.") if possible_auth_options.size > 1
+    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") if possible_auth_options.size == 1 && !@ssl
+
   end
 
   def validate_host_settings!
@@ -126,8 +121,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @auth_basic_username = @auth_basic_username&.freeze
     @auth_basic_password = @auth_basic_password&.freeze
 
-    raise_config_error! "Using `auth_basic_username` requires `auth_basic_password`" if @auth_basic_username && !@auth_basic_password
-    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") unless @ssl
+    raise_config_error! "`auth_basic_username` requires `auth_basic_password`" if @auth_basic_username && !@auth_basic_password
+    raise_config_error! "`auth_basic_password` is not allowed unless `auth_basic_username` is specified" if !@auth_basic_username && @auth_basic_password
   end
 
   def validate_ssl_settings!
@@ -140,52 +135,75 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @ssl_key_passphrase          = @ssl_key_passphrase&.freeze
     @keystore                    = @keystore&.freeze
     @keystore_password           = @keystore_password&.freeze
-    @ssl_cipher_suites           = @ssl_cipher_suites&.freeze
-    @ssl_supported_protocols     = @ssl_supported_protocols&.freeze
     @ssl_certificate_authorities = @ssl_certificate_authorities&.freeze
 
-    # Category: Establishing trust of the server we connect to (requires ssl: true)
-    raise_config_error! "Using `ssl_verification_mode` #{@ssl_verification_mode} requires `ssl` enabled" if @ssl_verification_mode != "none" && !@ssl
-    if @ssl_verification_mode != "none"
-      # @truststore with @ssl_certificate_authorities.length == 0 will be valid
-      # but we encourage users to set meaningful config
-      if (@truststore && @ssl_certificate_authorities) || (!@truststore && !@ssl_certificate_authorities) || (!@truststore && @ssl_certificate_authorities && @ssl_certificate_authorities.length == 0)
-        raise_config_error! "`ssl_verification_mode` #{@ssl_verification_mode} requires either `truststore` or `ssl_certificate_authorities` to be set."
-      end
-
-      if @truststore
-        raise_config_error! "Using `truststore` requires `truststore_password`" unless @truststore_password
-        raise_config_error! "SSL credentials cannot be loaded from the specified #{@truststore} path. Please make the path readable." unless File.readable?(@truststore)
-        raise_config_error! "Specified truststore #{@truststore} cannot be writable for security reasons." if File.writable?(@truststore)
-      end
-
-      @ssl_certificate_authorities&.each do |certificate_authority|
-        raise_config_error! "Certificate authority cannot be loaded from the specified #{certificate_authority} path. Please make the path readable." unless File.readable?(certificate_authority)
-        raise_config_error! "Specified certificate authority #{certificate_authority} cannot be writable for security reasons." if File.writable?(certificate_authority)
-      end
-    end # end of category
-
-    # Category: Presenting our identity
     if @ssl
-      if (@ssl_certificate && @keystore) || (!@ssl_certificate && !@keystore)
-        raise_config_error! "SSL requires either `ssl_certificate` or `keystore` to be set."
-      end
+      # SSL requires "Zero or One of [ssl_certificate, keystore]"
+      #   if ssl_certificate: ssl_certificate & ssl_key & ssl_key_passphrase are tightly bound altogether
+      #     ssl_certificate & ssl_key paths are readable and not writable
+      #     ssl_key_passphrase cannot be empty
+      #   if keystore: keystore & keystore_password are tightly bound together
+      #     keystore path is readable and not writable
+      #     keystore_password cannot be empty
+      raise_config_error! "`ssl_certificate` and `keystore` cannot be used together." if @ssl_certificate && @keystore
+      raise_config_error! "`ssl_certificate` requires `ssl_key`" if @ssl_certificate && !@ssl_key
+      raise_config_error! "`ssl_key` is not allowed unless `ssl_certificate` is specified" if @ssl_key && !@ssl_certificate
+      raise_config_error! "`ssl_key` requires `ssl_key_passphrase`" if @ssl_key && !@ssl_key_passphrase
+      raise_config_error! "`ssl_key_passphrase` is not allowed unless `ssl_key` is specified" if @ssl_key_passphrase && !@ssl_key
+      raise_config_error! "`ssl_key_passphrase` cannot be empty" if @ssl_key_passphrase && @ssl_key_passphrase.value.empty?
 
-      if @ssl_certificate
-        raise_config_error! "SSL certificate from the #{@ssl_certificate} path cannot be loaded. Please make the path readable." unless File.readable?(@ssl_certificate)
-        raise_config_error! "Specified SSL certificate #{@ssl_certificate} path cannot be writable for security reasons." if File.writable?(@ssl_certificate)
+      ensure_readable_and_non_writable! "ssl_certificate", @ssl_certificate if @ssl_certificate
+      ensure_readable_and_non_writable! "ssl_key", @ssl_key if @ssl_key
 
-        raise_config_error! "Using `ssl_key` requires `ssl_key_passphrase`" if @ssl_key && !@ssl_key_passphrase
-        raise_config_error! "SSL key cannot be loaded from the specified #{@ssl_key} path. Please make the path readable." if @ssl_key && !File.readable?(@ssl_key)
-        raise_config_error! "Specified SSL key #{@ssl_key} path cannot be writable for security reasons." if @ssl_key && File.writable?(@ssl_key)
-      end
+      raise_config_error! "`keystore` requires `keystore_password`" if @keystore && !@keystore_password
+      raise_config_error! "`keystore_password` is not allowed unless `keystore` is specified" if @keystore_password && !@keystore
+      raise_config_error! "`keystore_password` cannot be empty" if @keystore_password && @keystore_password.value.empty?
 
-      if @keystore
-        raise_config_error! "Using `keystore` requires `keystore_password`" unless @keystore_password
-        raise_config_error! "Key(s) from the #{@keystore} path cannot be loaded. Please make the path readable." unless File.readable?(@keystore)
-        raise_config_error! "Specified keystore #{@keystore} path cannot be writable for security reasons." if File.writable?(@keystore)
+      ensure_readable_and_non_writable!"keystore", @keystore if @keystore
+
+      # `ssl_verification_mode` != "none" requires `truststore` or `ssl_certificate_authorities`
+      #   if truststore: truststore & truststore_password are tightly bound together
+      #     truststore path is readable and not writable
+      #     truststore_password cannot be empty
+      #   if ssl_certificate_authorities: each path
+      #     not nil & not empty
+      #     is readable and not writable
+      # `ssl_verification_mode` == "none"
+      #   does not allow to set `truststore`, `truststore_password`, `ssl_certificate_authorities`
+      if @ssl_verification_mode != "none"
+        raise_config_error! "`truststore` and `ssl_certificate_authorities` cannot be used together." if @truststore && @ssl_certificate_authorities
+        if !@truststore && @ssl_certificate_authorities && @ssl_certificate_authorities.length == 0
+          raise_config_error! "`ssl_certificate_authorities` cannot be empty"
+        end
+
+        raise_config_error! "`truststore` requires `truststore_password`" if @truststore && !@truststore_password
+        raise_config_error! "`truststore_password` is not allowed unless `truststore` is specified" if !@truststore && @truststore_password
+        raise_config_error! "`truststore_password` cannot be empty" if @truststore_password && @truststore_password.value.empty?
+        ensure_readable_and_non_writable!"truststore", @truststore if @truststore
+
+        @ssl_certificate_authorities&.each do |certificate_authority|
+          ensure_readable_and_non_writable!"ssl_certificate_authorities", certificate_authority
+        end
+      else
+        raise_config_error! "`truststore` requires either `full` or `certificate` of `ssl_verification_mode`" if @truststore
+        raise_config_error! "`truststore_password` requires `truststore` and `full` or `certificate` of `ssl_verification_mode`" if @truststore_password
+        raise_config_error! "`ssl_certificate_authorities` requires either `full` or `certificate` of `ssl_verification_mode`" if @ssl_certificate_authorities
       end
-    end # end of category
+    else
+      # Disabled SSL does not allow to set SSL related configs
+      raise_config_error! "`ssl_verification_mode` #{@ssl_verification_mode} requires `ssl` enabled" if @ssl_verification_mode != "none"
+      ssl_config_provided = original_params.keys.select {|k| k.start_with?("ssl_", "keystore", "truststore", "cloud_id") }
+      # we need to pull out `ssl_verification_mode` since it has a default value and can be `none`
+      ssl_config_provided = ssl_config_provided.select {|config| config != "ssl_verification_mode" }
+      if ssl_config_provided.any?
+        raise_config_error! "When ssl is disabled, the following provided parameters are not allowed: #{ssl_config_provided}"
+      end
+    end
+  end
+
+  def ensure_readable_and_non_writable!(name, path)
+    raise_config_error! "Specified #{name} #{path} path must be readable." unless File.readable?(path)
+    raise_config_error! "Specified #{name} #{path} path must not be writable." if File.writable?(path)
   end
 
   ##

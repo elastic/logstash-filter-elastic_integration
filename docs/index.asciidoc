@@ -50,13 +50,6 @@ When connection to a server, the trust criteria can be proceeded based on <<plug
 For example, if `certificate` mode, the plugin validates the dates of server certificate as well as it verifies the CA that issued server certificate is legitimate and trustworthy based on <<plugins-{type}s-{plugin}-ssl_certificate_authorities>>.
 Refer to <<plugins-{type}s-{plugin}-ssl_verification_mode>> explanation section for more information.
 
-===== SSL Advanced Configuration
-
-This plugin exposes following advanced SSL configurations:
-
-* <<plugins-{type}s-{plugin}-ssl_cipher_suites>>
-* <<plugins-{type}s-{plugin}-ssl_supported_protocols>>
-
 
 ===== HTTP Basic Authentication
 
@@ -90,8 +83,6 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-auth_basic_password>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-cloud_auth>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-api_key>> | <<password,password>>|No
-| <<plugins-{type}s-{plugin}-ssl_cipher_suites>> | <<array,array>>|No
-| <<plugins-{type}s-{plugin}-ssl_supported_protocols>> | <<array,array>>|No
 |=======================================================================
 
 [id="plugins-{type}s-{plugin}-hosts"]
@@ -266,24 +257,6 @@ This option requires SSL, which can be enabled by supplying a <<plugins-{type}s-
 
 Format is `id:api_key` where `id` and `api_key` are as obtained by the
 Elasticsearch {ref}/security-api-create-api-key.html[Create API key API].
-
-
-[id="plugins-{type}s-{plugin}-ssl_cipher_suites"]
-===== `cloud_auth`
-
-* Value type is <<array,array>>
-* There is no default value for this setting.
-
-#TODO: Add a description#
-
-
-[id="plugins-{type}s-{plugin}-ssl_supported_protocols"]
-===== `ssl_supported_protocols`
-
-* Value type is <<array,array>>
-* There is no default value for this setting.
-
-#TODO: Add a description#
 
 
 Also see <<plugins-{type}s-{plugin}-common-options>> for a list of options supported by all
