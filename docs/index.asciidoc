@@ -36,28 +36,33 @@ Before upgrading this plugin or Logstash itself, please pay special attention to
 
 SSL is enabled by default in the plugin.
 
-At a minimum, in order to establish secured SSL connection, you will need to either configure the plugin to trust to the server it is connecting to, or present its own identity.
-You can also disable SSL which is not recommended.
 
-===== SSL Identity
+===== SSL Identity Configuration
 
-As an SSL identity, this plugin will need to present the SSL certificate that the server trusts and have access to the associated key.
-These are configurable with <<plugins-{type}s-{plugin}-ssl_certificate>>, <<plugins-{type}s-{plugin}-ssl_key>>, and <<plugins-{type}s-{plugin}-ssl_key_passphrase>>.
+This plugin can optionally be configured to present a certificate-based proof-of-identity to the Elasticsearch cluster it connects to:
 
-===== SSL Server Authentication
+* A PKCS8 Certificate/Key pair (see <<plugins-{type}s-{plugin}-ssl_certificate>>)
+* A JKS- or PKCS12-formatted Keystore (see <<plugins-{type}s-{plugin}-keystore>>)
 
-When connection to a server, the trust criteria can be proceeded based on <<plugins-{type}s-{plugin}-ssl_verification_mode>>.
-For example, if `certificate` mode, the plugin validates the dates of server certificate as well as it verifies the CA that issued server certificate is legitimate and trustworthy based on <<plugins-{type}s-{plugin}-ssl_certificate_authorities>>.
-Refer to <<plugins-{type}s-{plugin}-ssl_verification_mode>> explanation section for more information.
+===== SSL Trust Configuration
+
+When communicating over SSL, this plugin fully-validates the proof-of-identity presented by Elasticsearch using the system trust store. An alternate source of trust can be provided with one of:
+
+* A PEM-formatted list of certificate authorities (see <<plugins-{type}s-{plugin}-ssl_certificate_authorities>>)
+* A JKS- or PKCS12-formatted Keystore(see <<plugins-{type}s-{plugin}-truststore>>)
 
 
-===== HTTP Basic Authentication
 
-You can use HTTP Basic authentication by configuring <<plugins-{type}s-{plugin}-auth_basic_username>> and <<plugins-{type}s-{plugin}-auth_basic_password>>.
+===== Request Identity
 
-NOTE: Basic Authentication is not a substitute for SSL, as it provides neither secrecy nor security on its own.
-When used with SSL disabled, HTTP Basic credentials are transmitted in effectively clear-text and can be easily recovered by an adversary.
+You can configure this plugin to present authentication credentials to Elasticsearch in one of several ways:
 
+* ApiKey: (see <<plugins-{type}s-{plugin}-api_key>>)
+* Cloud Auth: (see <<plugins-{type}s-{plugin}-cloud_auth>>)
+* HTTP Basic Auth: (see <<plugins-{type}s-{plugin}-auth_basic_username>> and <<plugins-{type}s-{plugin}-auth_basic_password>>)
+
+NOTE: Request authentication is not a substitute for SSL, as it provides neither secrecy nor security on its own.
+When used with SSL disabled, these auth credentials are transmitted in effectively clear-text and can be easily recovered by an adversary.
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== {elastic-integration-name} Input Configuration Options
@@ -138,9 +143,9 @@ Enable or disable secured SSL communication to Elasticsearch cluster.
 Type of verification.
 
 * Available modes:
-** `certificate`: validates the specified certificate that it is signed by provided Certificate Authority (CA).
-** `full`: validates `certificate` mode, and IP address that matches the ones certificate carries.
-** `none`: verification process will not be proceeded.
+** `none`: performs no validation, implicitly trusting any server that this plugin connects to (insecure)
+** `certificate`: validates the server-provided certificate is signed by a trusted certificate authority and that the server can prove possession of its the associated private key (less secure)
+** `full`: performs the same validations as `certificate` and also that the provided certificate has an identity claim matching the server we are attempting to connect to (most secure)
 
 [id="plugins-{type}s-{plugin}-truststore"]
 ===== `truststore`
