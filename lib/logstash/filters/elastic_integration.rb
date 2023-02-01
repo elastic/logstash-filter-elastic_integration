@@ -105,16 +105,17 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def validate_host_settings!
     return unless @hosts
 
-    scheme = @ssl ? "https" : "http"
-    agree_with = @hosts.all? { |host| host && host.scheme == scheme }
-    raise_config_error! "All hosts must agree with #{scheme} schema when #{@ssl ? '' : 'NOT'} using `ssl`." unless agree_with
-
+    default_scheme = @ssl ? "https".freeze : "http".freeze
     @hosts = @hosts.each do |host_uri|
       # no need to validate hostname, uri validates it at initialize
       host_uri.port=(ELASTICSEARCH_DEFAULT_PORT) if host_uri.port.nil?
       host_uri.path=(ELASTICSEARCH_DEFAULT_PATH) if host_uri.path.length == 0 # host_uri.path may return empty array and will not be nil
+      host_uri.update(:scheme, default_scheme) if host_uri.scheme.nil? || host_uri.scheme.empty?
       host_uri.freeze
     end.freeze
+
+    agree_with = @hosts.all? { |host| host && host.scheme == default_scheme }
+    raise_config_error! "All hosts must agree with #{scheme} schema when #{@ssl ? '' : 'NOT'} using `ssl`." unless agree_with
   end
 
   def validate_basic_auth!
