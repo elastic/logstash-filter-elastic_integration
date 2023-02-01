@@ -329,7 +329,7 @@ describe LogStash::Filters::ElasticIntegration do
         describe "with `hosts`" do
 
           describe "with HTTP scheme" do
-            let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "http://cloud-test.es.us-west-2.aws.found.io"])}
+            let(:config) { super().merge("hosts" => ["htt://my-es-cluster:1111", "https://cloud-test.es.us-west-2.aws.found.io"])}
 
             it "enforces to agree with scheme" do
               expected_message = "All hosts must agree with https schema when  using `ssl`."
@@ -346,6 +346,17 @@ describe LogStash::Filters::ElasticIntegration do
             end
           end
 
+          describe "with multiple hosts" do
+            let(:config) { super().merge("hosts" => ["my-es-cluster.com", "127.0.0.1:9200", "https://127.0.0.2", "https://127.0.0.3:9300", "https://127.0.0.3:9200/sub-path"]) }
+            it "applies default value" do
+              # makes sure the list in-order traverse
+              expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("https://my-es-cluster.com:9200/"))).to be_truthy
+              expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.1:9200/"))).to be_truthy
+              expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.2:9200/"))).to be_truthy
+              expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9300/"))).to be_truthy
+              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9200/sub-path"))).to be_truthy
+            end
+          end
         end
       end
     end
@@ -413,6 +424,25 @@ describe LogStash::Filters::ElasticIntegration do
             it "enforces to agree with scheme" do
               expected_message = "All hosts must agree with http schema when NOT using `ssl`."
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with single host" do
+            let(:config) { super().merge("hosts" => "my-es-cluster.com") }
+            it "applies default values" do
+              expect(registered_plugin.hosts.include?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
+            end
+          end
+
+          describe "with multiple hosts" do
+            let(:config) { super().merge("hosts" => ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200/sub-path"]) }
+            it "applies default value" do
+              # makes sure the list in-order traverse
+              expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
+              expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.1:9200/"))).to be_truthy
+              expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.2:9200/"))).to be_truthy
+              expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9300/"))).to be_truthy
+              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9200/sub-path"))).to be_truthy
             end
           end
         end
