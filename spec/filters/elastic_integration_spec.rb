@@ -33,13 +33,13 @@ describe LogStash::Filters::ElasticIntegration do
     it { is_expected.to have_attributes(:ssl_verification_mode => "full") }
   end
 
-  context "plugin register" do
+  describe "plugin register" do
     let(:registered_plugin) { plugin.tap(&:register) }
 
-    describe "when SSL enabled" do
+    context "when SSL enabled" do
       let(:config) { super().merge("ssl" => true) }
 
-      describe "with `ssl_certificate`" do
+      context "with `ssl_certificate`" do
         let(:config) { super().merge("ssl_certificate" => paths[:test_path]) }
 
         describe "with `keystore`" do
@@ -60,6 +60,7 @@ describe LogStash::Filters::ElasticIntegration do
           let(:config) { super().merge("ssl_key" => paths[:test_path]) }
 
           it "requires `ssl_key_passphrase`" do
+            allow(File).to receive(:writable?).and_return(false)
             expected_message = "`ssl_key` requires `ssl_key_passphrase`"
             expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
@@ -68,6 +69,7 @@ describe LogStash::Filters::ElasticIntegration do
             let(:config) { super().merge("ssl_key_passphrase" => "") }
 
             it "requires non-empty passphrase" do
+              allow(File).to receive(:writable?).and_return(false)
               expected_message = "`ssl_key_passphrase` cannot be empty"
               expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
@@ -81,7 +83,7 @@ describe LogStash::Filters::ElasticIntegration do
                 allow(File).to receive(:readable?).and_return(false)
               end
               it "requires readable path" do
-                expected_message = "Specified ssl_certificate spec/filters/resources/do_not_remove_path path must be readable."
+                expected_message = "Specified ssl_certificate #{paths[:test_path]} path must be readable."
                 expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
               end
             end
@@ -92,7 +94,7 @@ describe LogStash::Filters::ElasticIntegration do
                 allow(File).to receive(:writable?).and_return(true)
               end
               it "requires non-writable path" do
-                expected_message = "Specified ssl_certificate spec/filters/resources/do_not_remove_path path must not be writable."
+                expected_message = "Specified ssl_certificate #{paths[:test_path]} path must not be writable."
                 expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
               end
             end
@@ -102,7 +104,7 @@ describe LogStash::Filters::ElasticIntegration do
 
       end
 
-      describe "without `ssl_certificate`" do
+      context "without `ssl_certificate`" do
 
         describe "with `ssl_key`" do
           let(:config) { super().merge("ssl_key" => paths[:test_path]) }
@@ -130,7 +132,7 @@ describe LogStash::Filters::ElasticIntegration do
         end
       end
 
-      describe "with `keystore`" do
+      context "with `keystore`" do
         let(:config) { super().merge("keystore" => paths[:test_path]) }
 
         it "requires `keystore_password`" do
@@ -155,7 +157,7 @@ describe LogStash::Filters::ElasticIntegration do
               allow(File).to receive(:readable?).and_return(false)
             end
             it "requires readable path" do
-              expected_message = "Specified keystore spec/filters/resources/do_not_remove_path path must be readable."
+              expected_message = "Specified keystore #{paths[:test_path]} path must be readable."
               expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
@@ -166,14 +168,14 @@ describe LogStash::Filters::ElasticIntegration do
               allow(File).to receive(:writable?).and_return(true)
             end
             it "requires non-writable path" do
-              expected_message = "Specified keystore spec/filters/resources/do_not_remove_path path must not be writable."
+              expected_message = "Specified keystore #{paths[:test_path]} path must not be writable."
               expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
         end
         end
 
-      describe "without `keystore`" do
+      context "without `keystore`" do
 
         describe "with `keystore_password`" do
           let(:config) { super().merge("keystore_password" => "keystore_pa$$word") }
@@ -193,7 +195,7 @@ describe LogStash::Filters::ElasticIntegration do
           let(:config) { super().merge("truststore" => paths[:test_path]) }
 
           it "requires full or certificate `ssl_verification_mode`" do
-            expected_message = "`truststore` requires either `full` or `certificate` of `ssl_verification_mode`"
+            expected_message = "`truststore` requires `ssl_verification_mode` to be either `full` or `certificate`"
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
         end
@@ -202,7 +204,7 @@ describe LogStash::Filters::ElasticIntegration do
           let(:config) { super().merge("truststore_password" => "truststore_pa$$word") }
 
           it "requires `truststore_password` and full or certificate `ssl_verification_mode`" do
-            expected_message = "`truststore_password` requires `truststore` and `full` or `certificate` of `ssl_verification_mode`"
+            expected_message = "`truststore_password` requires `truststore` and `ssl_verification_mode` (either `full` or `certificate`)"
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
         end
@@ -211,7 +213,7 @@ describe LogStash::Filters::ElasticIntegration do
           let(:config) { super().merge("ssl_certificate_authorities" => [paths[:test_path]]) }
 
           it "requires full or certificate `ssl_verification_mode`" do
-            expected_message = "`ssl_certificate_authorities` requires either `full` or `certificate` of `ssl_verification_mode`"
+            expected_message = "`ssl_certificate_authorities` requires `ssl_verification_mode` to be either `full` or `certificate`"
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
         end
@@ -249,6 +251,7 @@ describe LogStash::Filters::ElasticIntegration do
             let(:config) { super().merge("truststore_password" => "") }
 
             it "doesn't accept empty `truststore_password`" do
+              allow(File).to receive(:writable?).and_return(false)
               expected_message = "`truststore_password` cannot be empty"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
@@ -262,7 +265,7 @@ describe LogStash::Filters::ElasticIntegration do
                 allow(File).to receive(:readable?).and_return(false)
               end
               it "requires readable path" do
-                expected_message = "Specified truststore spec/filters/resources/do_not_remove_path path must be readable."
+                expected_message = "Specified truststore #{paths[:test_path]} path must be readable."
                 expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
               end
             end
@@ -273,7 +276,7 @@ describe LogStash::Filters::ElasticIntegration do
                 allow(File).to receive(:writable?).and_return(true)
               end
               it "requires non-writable path" do
-                expected_message = "Specified truststore spec/filters/resources/do_not_remove_path path must not be writable."
+                expected_message = "Specified truststore #{paths[:test_path]} path must not be writable."
                 expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
               end
             end
@@ -297,7 +300,7 @@ describe LogStash::Filters::ElasticIntegration do
               allow(File).to receive(:readable?).and_return(false)
             end
             it "requires readable path" do
-              expected_message = "Specified ssl_certificate_authorities spec/filters/resources/do_not_remove_path path must be readable."
+              expected_message = "Specified ssl_certificate_authorities #{paths[:test_path]} path must be readable."
               expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
@@ -308,19 +311,19 @@ describe LogStash::Filters::ElasticIntegration do
               allow(File).to receive(:writable?).and_return(true)
             end
             it "requires non-writable path" do
-              expected_message = "Specified ssl_certificate_authorities spec/filters/resources/do_not_remove_path path must not be writable."
+              expected_message = "Specified ssl_certificate_authorities #{paths[:test_path]} path must not be writable."
               expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
         end
       end
 
-      describe "connection prerequisites" do
+      context "connection prerequisites" do
 
         describe "with both `hosts` and `cloud_id`" do
           let(:config) {super().merge("hosts" => ["https://my-es-host:9200"], "cloud_id" => "my_cloud_id")}
 
-          it "requires either of them" do
+          it "raises an error" do
             expected_message = "`hosts` and `cloud_id` cannot be used together."
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
@@ -332,7 +335,7 @@ describe LogStash::Filters::ElasticIntegration do
             let(:config) { super().merge("hosts" => ["htt://my-es-cluster:1111", "https://cloud-test.es.us-west-2.aws.found.io"])}
 
             it "enforces to agree with scheme" do
-              expected_message = "All hosts must agree with https schema when  using `ssl`."
+              expected_message = "All hosts must agree with https schema when using `ssl`."
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
 
             end
@@ -361,20 +364,11 @@ describe LogStash::Filters::ElasticIntegration do
       end
     end
 
-    describe "when SSL disabled" do
+    context "when SSL disabled" do
       let(:config) { super().merge("ssl" => false) }
 
-      describe "when `ssl_verification_mode` is not `none`" do
-        let(:config) { super().merge("ssl_verification_mode" => "certificate") }
-
-        it "raises an error" do
-          expected_message = "`ssl_verification_mode` certificate requires `ssl` enabled"
-          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
-        end
-      end
-
-      describe "wen SSL related configs are specified" do
-        let(:config) { super().merge("ssl_verification_mode" => "none", "keystore" => paths[:test_path], "cloud_id" => "my-es-cloud:id_", "ssl_certificate_authorities" => [paths[:test_path]]) }
+      describe "when SSL related configs are specified" do
+        let(:config) { super().merge("keystore" => paths[:test_path], "cloud_id" => "my-es-cloud:id_", "ssl_certificate_authorities" => [paths[:test_path]]) }
 
         it "does not allow and raises an error" do
           expected_message = 'When ssl is disabled, the following provided parameters are not allowed: ["keystore", "cloud_id", "ssl_certificate_authorities"]'
@@ -383,7 +377,6 @@ describe LogStash::Filters::ElasticIntegration do
       end
 
       context "connection prerequisites" do
-        let(:config) { super().merge("ssl_verification_mode" => "none") }
 
         describe "when no `hosts` or `cloud_id is specified" do
           it "requires either of them" do
@@ -408,10 +401,20 @@ describe LogStash::Filters::ElasticIntegration do
           end
         end
 
-        describe "with `hosts`" do
+        describe "when empty auth option is specified" do
+          let(:config) { super().merge("cloud_auth" => "", "hosts" => "my-es-cluster.com:1111") }
+
+          it "does not allow" do
+            expected_message = "Empty `cloud_auth` is not allowed"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        context "with `hosts`" do
+          let(:config) { super().merge("hosts" => hosts) }
 
           describe "with HTTP scheme" do
-            let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "http://cloud-test.es.us-west-2.aws.found.io"])}
+            let(:hosts) { ["http://my-es-cluster:1111", "http://cloud-test.es.us-west-2.aws.found.io"] }
 
             it "accepts" do
               expect{ registered_plugin }.not_to raise_error
@@ -419,7 +422,7 @@ describe LogStash::Filters::ElasticIntegration do
           end
 
           describe "with HTTPS scheme" do
-            let(:config) { super().merge("hosts" => ["http://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"])}
+            let(:hosts) { ["http://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"] }
 
             it "enforces to agree with scheme" do
               expected_message = "All hosts must agree with http schema when NOT using `ssl`."
@@ -428,14 +431,14 @@ describe LogStash::Filters::ElasticIntegration do
           end
 
           describe "with single host" do
-            let(:config) { super().merge("hosts" => "my-es-cluster.com") }
+            let(:hosts) { "my-es-cluster.com" }
             it "applies default values" do
               expect(registered_plugin.hosts.include?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
             end
           end
 
           describe "with multiple hosts" do
-            let(:config) { super().merge("hosts" => ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200/sub-path"]) }
+            let(:hosts) { ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200/sub-path"] }
             it "applies default value" do
               # makes sure the list in-order traverse
               expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
@@ -447,7 +450,8 @@ describe LogStash::Filters::ElasticIntegration do
           end
         end
 
-        describe "with basic auth" do
+        context "with basic auth" do
+          let(:config) { super().merge("hosts" => "my-es-cluster.com") }
 
           describe "with `auth_basic_username`" do
             let(:config) { super().merge("auth_basic_username" => "test_user") }
@@ -463,6 +467,24 @@ describe LogStash::Filters::ElasticIntegration do
 
             it "requires `auth_basic_username`" do
               expected_message = "`auth_basic_password` is not allowed unless `auth_basic_username` is specified"
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "when `auth_basic_username` is an empty" do
+            let(:config) { super().merge("auth_basic_username" => "", "auth_basic_password" => "p$d") }
+
+            it "requires non-empty `auth_basic_username`" do
+              expected_message = "Empty `auth_basic_username` or `auth_basic_password` is not allowed"
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "when `auth_basic_password` is an empty" do
+            let(:config) { super().merge("auth_basic_username" => "test_user", "auth_basic_password" => "") }
+
+            it "requires non-empty `auth_basic_username`" do
+              expected_message = "Empty `auth_basic_username` or `auth_basic_password` is not allowed"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
