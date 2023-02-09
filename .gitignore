@@ -5,4 +5,6 @@ Gemfile.lock
 vendor
 *.gem
 build
-target
+.gradle
+local_libs
+lib/logstash/filters/elastic_integration/jar_dependencies.rb

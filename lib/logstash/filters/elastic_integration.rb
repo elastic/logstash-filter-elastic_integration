@@ -2,6 +2,8 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
+require_relative "elastic_integration/jar_dependencies"
+
 class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   config_name "elastic_integration"
