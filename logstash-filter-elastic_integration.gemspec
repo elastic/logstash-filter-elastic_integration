@@ -1,8 +1,9 @@
 # encoding: utf-8
+ELASTIC_INTEGRATION_VERSION = File.read(File.expand_path(File.join(File.dirname(__FILE__), "VERSION"))).strip unless defined?(ELASTIC_INTEGRATION_VERSION)
 
 Gem::Specification.new do |s|
   s.name = 'logstash-filter-elastic_integration'
-  s.version = '0.0.1'
+  s.version = ELASTIC_INTEGRATION_VERSION
   s.licenses = ['NONE']
   s.summary = "Processes Elastic Integrations"
   s.description = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
