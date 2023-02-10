@@ -5,7 +5,6 @@ import org.elasticsearch.ingest.Pipeline;
 import org.elasticsearch.ingest.PipelineConfiguration;
 
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.BiConsumer;
 
 /**
@@ -14,8 +13,6 @@ import java.util.function.BiConsumer;
 public class IngestPipeline {
     private final PipelineConfiguration pipelineConfiguration;
     private final Pipeline innerPipeline;
-
-    private transient Set<String> referencedPipelines;
 
     public IngestPipeline(final PipelineConfiguration pipelineConfiguration,
                           final Pipeline innerPipeline) {
@@ -40,7 +37,7 @@ public class IngestPipeline {
     }
 
     @Override
-    public boolean equals(Object o) {
+    public boolean equals(final Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         IngestPipeline that = (IngestPipeline) o;
