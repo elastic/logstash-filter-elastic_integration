@@ -1,5 +1,6 @@
 package co.elastic.logstash.filters.elasticintegration;
 
+import co.elastic.logstash.filters.elasticintegration.ingest.PipelineProcessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ingest.Pipeline;
@@ -47,5 +48,17 @@ public class IngestPipelineFactory {
             LOGGER.error(() -> String.format("failed to create ingest pipeline `%s` from pipeline configuration", pipelineConfiguration.getId()), e);
             return Optional.empty();
         }
+    }
+
+    /**
+     *
+     * @param ingestPipelineResolver the {@link IngestPipelineResolver} to resolve through.
+     * @return a <em>copy</em> of this {@code IngestPipelineFactory} that has a {@link PipelineProcessor.Factory} that can
+     *         resolve pipleines through the provided {@link IngestPipelineResolver}.
+     */
+    public IngestPipelineFactory withIngestPipelineResolver(final IngestPipelineResolver ingestPipelineResolver) {
+        final Map<String, Processor.Factory> modifiedProcessorFactories = new HashMap<>(this.processorFactories);
+        modifiedProcessorFactories.put(PipelineProcessor.TYPE, new PipelineProcessor.Factory(ingestPipelineResolver, this.scriptService));
+        return new IngestPipelineFactory(scriptService, modifiedProcessorFactories);
     }
 }

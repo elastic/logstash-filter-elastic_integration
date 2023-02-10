@@ -1,0 +1,18 @@
+{
+  "description": "An inner pipeline that is typically called from the outer pipeline",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-inner",
+        "value": true
+      }
+    },
+    {
+      "pipeline": {
+        "name": "outer{{ intentional_template_miss }}",
+        "if": "ctx?.recursive != null"
+      }
+    }
+  ]
+}

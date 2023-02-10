@@ -17,6 +17,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import static co.elastic.logstash.filters.elasticintegration.EventMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -45,7 +46,7 @@ public class SmokeTest {
             final Collection<Event> outputEvents = eventProcessor.processEvents(inputEvents);
             assertThat("event count is unchanged", outputEvents, hasSize(inputEvents.size()));
 
-            validateEvent(outputEvents.stream().filter(e -> e.getField("id").equals("first")).findFirst().orElseThrow(), (firstEvent) -> {
+            validateEvent(outputEvents, eventWithId("first"), (firstEvent) -> {
                 assertAll("untouched elements are unchanged", () -> {
                     assertThat(firstEvent, includesField("[id]").withValue(equalTo("first")));
                     assertThat(firstEvent, includesField("[toplevel]").withValue(equalTo("ok")));
@@ -65,7 +66,7 @@ public class SmokeTest {
                 assertThat(firstEvent, includesField("[@metadata][target_ingest_pipeline]").withValue(equalTo("_none")));
             });
 
-            validateEvent(outputEvents.stream().filter(e -> e.getField("id").equals("second")).findFirst().orElseThrow(), (secondEvent) -> {
+            validateEvent(outputEvents, eventWithId("second"), (secondEvent) -> {
 
                 assertAll("failure tag and metadata injection", () -> {
                     assertThat(secondEvent, isTagged("_ingest_pipeline_failure"));
@@ -91,7 +92,7 @@ public class SmokeTest {
                 assertThat(secondEvent, is(not(in(matchedEvents))));
             });
 
-            validateEvent(outputEvents.stream().filter(e -> e.getField("id").equals("third")).findFirst().orElseThrow(), (thirdEvent) -> {
+            validateEvent(outputEvents, eventWithId("third"), (thirdEvent) -> {
                 assertThat(thirdEvent, includesField("[id]").withValue(equalTo("third")));
                 assertThat(thirdEvent, includesField("[toplevel]").withValue(equalTo("ok")));
 
@@ -110,6 +111,82 @@ public class SmokeTest {
         });
     }
 
+
+    @Test void testMultiplePipelinesMutatingEvents() {
+        final PluginConfiguration pluginConfiguration = PluginConfiguration.builder()
+                .setPipelineField("[@metadata][ingest_pipeline]")
+                .setLocalPipelines(getPreparedPipelinesResourcePath("nesting-pipelines"))
+                .build();
+
+        final List<Event> inputEvents = List.of(
+                newEvent(Map.of("toplevel", "ok", "id", "outer-ignore-missing", "ignore_missing", true), Map.of("ingest_pipeline", "outer")),
+                newEvent(Map.of("toplevel", "ok", "id", "explicit-none", "ignore_missing", true), Map.of("ingest_pipeline", "_none")),
+                newEvent(Map.of("toplevel", "ok", "id", "implicit-none", "ignore_missing", true), Map.of("no_ingest_pipeline", "ok")),
+                newEvent(Map.of("toplevel", "ok", "id", "inner-only", "ignore_missing", true), Map.of("ingest_pipeline", "inner")),
+                newEvent(Map.of("toplevel", "ok", "id", "outer-no-ignore-missing", "ignore_missing", false), Map.of("ingest_pipeline", "outer")),
+                newEvent(Map.of("toplevel", "ok", "id", "outer-recursive", "ignore_missing", true, "recursive", true), Map.of("ingest_pipeline", "outer"))
+        );
+
+        final List<Event> matchedEvents = new ArrayList<>();
+
+        withEventProcessor(pluginConfiguration, matchedEvents::add, (eventProcessor -> {
+            final Collection<Event> outputEvents = eventProcessor.processEvents(inputEvents);
+            assertThat("event count is unchanged", outputEvents, hasSize(inputEvents.size()));
+
+            validateEvent(outputEvents, eventWithId("outer-ignore-missing"), (event) -> {
+                assertAll("outer fully handled", () -> {
+                    assertThat(event, includesField("[handled-by-outer-init]").withValue(equalTo(true)));
+                    assertThat(event, includesField("[handled-by-outer-done]").withValue(equalTo(true)));
+                });
+
+                assertAll("inner handled", () -> {
+                    assertThat(event, includesField("[handled-by-inner]").withValue(equalTo(true)));
+                });
+
+                assertAll("event tagged", () -> {
+                    assertThat(event, is(in(matchedEvents)));
+                    assertThat(event, includesField("[@metadata][target_ingest_pipeline]").withValue(equalTo("_none")));
+                });
+            });
+
+            validateEvent(outputEvents, eventWithId("explicit-none"), (event) -> {
+                System.err.format("EXPLICIT-NONE: %s//%s\n", event.toMap(), event.getMetadata());
+                assertThat(event, excludesField("[@metadata][target_ingest_pipeline]"));
+            });
+
+            validateEvent(outputEvents, eventWithId("implicit-none"), (event) -> {
+                assertThat(event, excludesField("[@metadata][target_ingest_pipeline]"));
+            });
+
+            validateEvent(outputEvents, eventWithId("inner-only"), (event) -> {
+                assertThat(event, includesField("[handled-by-inner]").withValue(equalTo(true)));
+
+                assertThat(event, excludesField("[handled-by-outer-init]"));
+                assertThat(event, excludesField("[handled-by-outer-done]"));
+            });
+
+            validateEvent(outputEvents, eventWithId("outer-no-ignore-missing"), (event) -> {
+                assertThat(event, isTagged("_ingest_pipeline_failure"));
+                assertThat(event, includesField("[@metadata][_ingest_pipeline_failure][pipeline]").withValue(equalTo("outer")));
+                assertThat(event, includesField("[@metadata][_ingest_pipeline_failure][exception]").withValue(containsString("org.elasticsearch.ingest.IngestProcessorException")));
+                assertThat(event, includesField("[@metadata][_ingest_pipeline_failure][message]").withValue(stringContainsInOrder("Pipeline processor configured for non-existent pipeline", "my-undefined-pipeline")));
+
+                assertThat(event, excludesField("[@metadata][target_ingest_pipeline]"));
+            });
+
+
+            validateEvent(outputEvents, eventWithId("outer-recursive"), (event) -> {
+                assertThat(event, isTagged("_ingest_pipeline_failure"));
+                assertThat(event, includesField("[@metadata][_ingest_pipeline_failure][pipeline]").withValue(equalTo("outer")));
+                assertThat(event, includesField("[@metadata][_ingest_pipeline_failure][exception]").withValue(containsString("org.elasticsearch.ingest.IngestProcessorException")));
+                assertThat(event, includesField("[@metadata][_ingest_pipeline_failure][message]").withValue(stringContainsInOrder("Cycle detected for pipeline:", "outer")));
+
+                assertThat(event, excludesField("[@metadata][target_ingest_pipeline]"));
+            });
+
+        }));
+    }
+
     static void withEventProcessor(final PluginConfiguration pluginConfiguration, final Consumer<Event> filterMatchListener, final Consumer<EventProcessor> eventProcessorConsumer) {
         try (EventProcessor eventProcessor = EventProcessor.fromPluginConfiguration(pluginConfiguration, filterMatchListener)) {
             eventProcessorConsumer.accept(eventProcessor);
@@ -120,6 +197,20 @@ public class SmokeTest {
 
     static void validateEvent(final Event event, final Consumer<Event> eventConsumer) {
         eventConsumer.accept(event);
+    }
+
+    static void validateEvent(final Collection<Event> events, final Predicate<Event> predicate, final Consumer<Event> eventConsumer) {
+        validateEvent(findExactlyOneEvent(events, predicate), eventConsumer);
+    }
+
+    static Event findExactlyOneEvent(final Collection<Event> events, final Predicate<Event> predicate) {
+        final Event[] matchedEvents = events.stream().filter(predicate).toArray(Event[]::new);
+        assertThat(matchedEvents, arrayWithSize(1));
+        return matchedEvents[0];
+    }
+
+    static Predicate<Event> eventWithId(final Object id) {
+        return (event -> Objects.equals(event.getField("id"), id));
     }
 
     static Event newEvent(final Map<String,Object> data, final Map<String,Object> metadata) {

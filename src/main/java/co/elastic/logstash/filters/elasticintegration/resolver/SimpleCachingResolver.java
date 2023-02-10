@@ -16,8 +16,13 @@ public class SimpleCachingResolver<K,V> implements CachingResolver<K,V> {
 
     public SimpleCachingResolver(final ResolverCache<K,V> cache,
                                  final CacheableResolver<K,V> cacheMissResolver) {
+        this(cache, Bindable.constant(cacheMissResolver::resolve));
+    }
+
+    public SimpleCachingResolver(final ResolverCache<K, V> cache,
+                                 final Bindable<K,V> bindable) {
         this.cache = cache;
-        this.cacheMissResolver = cacheMissResolver::resolve;
+        this.cacheMissResolver = bindable.withCachingResolverBinding(this);
     }
 
     @Override
@@ -26,4 +31,12 @@ public class SimpleCachingResolver<K,V> implements CachingResolver<K,V> {
         return cache.resolve(resolveKey, cacheMissResolver, exceptionHandler);
     }
 
+    @FunctionalInterface
+    public interface Bindable<K,V> {
+        CacheableResolver.Ephemeral<K,V> withCachingResolverBinding(final SimpleCachingResolver<K,V> cachingResolver);
+
+        static <KK,VV> Bindable<KK,VV> constant(final CacheableResolver.Ephemeral<KK,VV> unboundEphemeral) {
+            return (ignoredBinding) -> unboundEphemeral;
+        }
+    }
 }

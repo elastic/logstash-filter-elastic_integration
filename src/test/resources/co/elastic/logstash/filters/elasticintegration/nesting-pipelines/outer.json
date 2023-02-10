@@ -1,0 +1,40 @@
+{
+  "description": "An outer pipeline that calls other pipelines",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-outer-init",
+        "value": true
+      }
+    },
+    {
+      "pipeline": {
+        "name": "inner"
+      }
+    },
+    {
+      "pipeline": {
+        "description": "optional missing pipeline",
+        "name" : "my-undefined-pipeline",
+        "ignore_missing_pipeline" : true,
+        "if" : "ctx?.ignore_missing"
+      }
+    },
+    {
+      "pipeline": {
+        "description": "required missing pipeline",
+        "name" : "my-undefined-pipeline",
+        "ignore_missing_pipeline" : false,
+        "if" : "!(ctx?.ignore_missing)"
+      }
+    },
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-outer-done",
+        "value": true
+      }
+    }
+  ]
+}
