@@ -38,7 +38,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   #  - none: no validation
   #  - certificate: trustworthy certificate (identity claims NOT validated)
   #  - full (default): trustworthy certificate WITH validated identity claims
-  config :ssl_verification_mode, :validate => %w(full certificate none), :default => "full"
+  config :ssl_verification_mode, :validate => %w(full certificate none)
 
   # A path to truststore, used to _override_ the system truststore
   config :truststore, :validate => :path
@@ -138,7 +138,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def validate_ssl_settings!
     @ssl                         = @ssl.freeze # has a default value
-    @ssl_verification_mode       = @ssl_verification_mode.freeze # has a default value
+    @ssl_verification_mode       = @ssl_verification_mode&.freeze
     @truststore                  = @truststore&.freeze
     @truststore_password         = @truststore_password&.freeze
     @ssl_certificate             = @ssl_certificate&.freeze
@@ -149,6 +149,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @ssl_certificate_authorities = @ssl_certificate_authorities&.freeze
 
     if @ssl
+      # when SSL is enabled, the default ssl_verification_mode is "full"
+      @ssl_verification_mode = "full".freeze if @ssl_verification_mode.nil?
+
       # optional: presenting our identity
       raise_config_error! "`ssl_certificate` and `keystore` cannot be used together." if @ssl_certificate && @keystore
       raise_config_error! "`ssl_certificate` requires `ssl_key`" if @ssl_certificate && !@ssl_key
