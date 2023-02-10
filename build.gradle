@@ -72,6 +72,7 @@ dependencies {
     implementation "com.fasterxml.jackson.core:jackson-databind:2.14.1"
     implementation "com.fasterxml.jackson.core:jackson-annotations:2.14.1"
     implementation "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.14.1"
+    implementation "com.google.guava:guava:30.1-jre"
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
