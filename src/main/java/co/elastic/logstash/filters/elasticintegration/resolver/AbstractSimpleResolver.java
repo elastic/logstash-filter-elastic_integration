@@ -30,5 +30,5 @@ public abstract class AbstractSimpleResolver<K,V> implements Resolver<K,V> {
         }
     }
 
-    abstract Optional<V> resolveSafely(K resolveKey) throws Exception;
+    public abstract Optional<V> resolveSafely(K resolveKey) throws Exception;
 }
