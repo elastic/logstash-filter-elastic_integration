@@ -9,15 +9,19 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
 
-  # Sets the host(s) of the remote instance. If given an array it will load balance requests across the hosts specified in the `hosts` parameter.
-  # Remember the `http` protocol uses the http://www.elastic.co/guide/en/elasticsearch/reference/current/modules-http.html#modules-http[http] address (eg. 9200, not 9300).
+  # Sets the host(s) of the remote instance. If given an array it will load balance
+  # requests across the hosts specified in the `hosts` parameter. Hosts can be any of
+  # the forms:
   #     `"127.0.0.1"`
   #     `["127.0.0.1:9200","127.0.0.2:9200"]`
   #     `["http://127.0.0.1"]`
   #     `["https://127.0.0.1:9200"]`
   #     `["https://127.0.0.1:9200/mypath"]` (If using a proxy on a subpath)
+  # If the protocol is unspecified, this plugin assumes `https` when `ssl => true` (default)
+  # or `http` when `ssl => false`.
+  #
   # It is important to exclude http://www.elastic.co/guide/en/elasticsearch/reference/current/modules-node.html[dedicated master nodes] from the `hosts` list
-  # to prevent LS from sending bulk requests to the master nodes. So this parameter should only reference either data or client nodes in Elasticsearch.
+  # to prevent LS from overloading the master nodes. So this parameter should only reference either data or client nodes in Elasticsearch.
   #
   # Any special characters present in the URLs here MUST be URL escaped! This means `#` should be put in as `%23` for instance.
   config :hosts, :validate => :uri, :list => true
@@ -30,16 +34,19 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # Enable SSL/TLS secured communication to Elasticsearch cluster
   config :ssl, :validate => :boolean, :default => true
 
-  # This option needs to be used with `ssl_certificate_authorities` and a defined list of CAs
+  # Determines how much to verify a presented SSL certificate when `ssl => true`
+  #  - none: no validation
+  #  - certificate: trustworthy certificate (identity claims NOT validated)
+  #  - full (default): trustworthy certificate WITH validated identity claims
   config :ssl_verification_mode, :validate => %w(full certificate none), :default => "full"
 
-  # A path to truststore
+  # A path to truststore, used to _override_ the system truststore
   config :truststore, :validate => :path
 
   # A password for truststore
   config :truststore_password, :validate => :password
 
-  # list of paths for SSL certificate authorities
+  # list of paths for SSL certificate authorities, used to _override_ the system truststore
   config :ssl_certificate_authorities, :validate => :path, :list => true
 
   # a path for SSL certificate which will be used when SSL is enabled
