@@ -72,7 +72,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   config :api_key, :validate => :password
 
   def register
-    @logger.debug("Registering `filter-elastic_integration` plugin.")
+    @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
 
     validate_ssl_settings!
     validate_connection_settings!
