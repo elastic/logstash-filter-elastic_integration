@@ -1,0 +1,37 @@
+{
+  "description": "My optional pipeline description",
+  "processors": [
+    {
+      "set": {
+        "description": "My optional processor description",
+        "field": "my-long-field",
+        "value": 10
+      }
+    },
+    {
+      "set": {
+        "description": "Set 'my-boolean-field' to true",
+        "field": "nested.my-boolean-field",
+        "value": true
+      }
+    },
+    {
+      "lowercase": {
+        "field": "nested.field-to-lowercase",
+        "ignore_missing": true
+      }
+    },
+    {
+      "remove": {
+        "field": "required-field-to-remove",
+        "ignore_missing": false
+      }
+    },
+    {
+      "remove": {
+        "field": "nested.field-to-remove",
+        "ignore_missing": true
+      }
+    }
+  ]
+}
