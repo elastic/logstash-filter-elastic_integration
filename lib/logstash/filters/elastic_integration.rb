@@ -8,6 +8,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   config_name "elastic_integration"
 
+  java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
+
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
 
@@ -80,6 +82,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_connection_settings!
     validate_auth_settings!
 
+    @plugin_config = extract_immutable_config
   end # def register
 
   def filter(event)
@@ -201,6 +204,40 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # @raise [LogStash::ConfigurationError]
   def raise_config_error!(message)
     raise LogStash::ConfigurationError, message
+  end
+
+  ##
+  # Builds a `PluginConfiguration` from the previously-validated config
+  def extract_immutable_config
+    builder = PluginConfiguration::Builder.new
+
+    builder.setId @id
+
+    builder.setHosts @hosts#&.map(&:to_s)
+    builder.setCloudId @cloud_id
+
+    builder.setSslEnabled @ssl
+
+    # ssl trust
+    builder.setSslVerificationMode @ssl_verification_mode
+    builder.setSslTruststorePath @truststore
+    builder.setSslTruststorePassword @truststore_password
+    builder.setSslCertificateAuthorities @ssl_certificate_authorities
+
+    # ssl identity
+    builder.setSslKeystorePath @keystore
+    builder.setSslKeystorePassword @keystore_password
+    builder.setSslCertificate @ssl_certificate
+    builder.setSslKey @ssl_key
+    builder.setSslKeyPassphrase @ssl_key_passphrase
+
+    # request auth
+    builder.setAuthBasicUsername @auth_basic_username
+    builder.setAuthBasicPassword @auth_basic_password
+    builder.setCloudAuth @cloud_auth
+    builder.setApiKey @api_key
+
+    builder.build
   end
 
 end
