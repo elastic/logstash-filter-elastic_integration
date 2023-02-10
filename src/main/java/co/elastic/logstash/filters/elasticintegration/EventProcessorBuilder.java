@@ -2,6 +2,8 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
+import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
+import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCache;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
 import org.elasticsearch.common.settings.Settings;
@@ -64,6 +66,7 @@ public class EventProcessorBuilder {
 
         // add the ingest processors
         builder.addProcessorsFromPlugin(IngestCommonPlugin::new);
+        builder.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
 
         return builder;
     }
@@ -125,6 +128,10 @@ public class EventProcessorBuilder {
         }
         this.filterMatchListener = filterMatchListener;
         return this;
+    }
+
+    public EventProcessorBuilder addProcessor(final String type, final Supplier<Processor.Factory> processorFactorySupplier) {
+        return this.addProcessorsFromPlugin(SingleProcessorIngestPlugin.of(type, processorFactorySupplier));
     }
 
     public synchronized EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPlugin> pluginSupplier) {
