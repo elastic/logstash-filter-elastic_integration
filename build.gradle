@@ -153,7 +153,7 @@ task importMinimalElasticsearch(type: Copy) {
 
     includeEmptyDirs(false)
     eachFile { path = name } // flatten
-    eachFile { println "copying ${it} to local_libs" }
+    eachFile { logger.debug "copying ${it} to local_libs" }
 }
 compileJava.dependsOn(importMinimalElasticsearch)
 shadowJar.dependsOn(importMinimalElasticsearch)
@@ -163,17 +163,6 @@ clean {
     delete "${projectDir}/local_libs/"
     delete "${projectDir}/*.gem"
     delete "${projectDir}/lib/logstash/filters/elastic_integration/jar_dependencies.rb"
-}
-
-gradle.taskGraph.whenReady {taskGraph ->
-    println "Found task graph: " + taskGraph
-    println "Found " + taskGraph.allTasks.size() + " tasks."
-    taskGraph.allTasks.forEach { task ->
-        println task
-        task.dependsOn.forEach { dep ->
-            println "  - " + dep
-        }
-    }
 }
 
 tasks.withType(JavaCompile) {
