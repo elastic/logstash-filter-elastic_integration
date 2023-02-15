@@ -8,6 +8,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
+  HTTP_PROTOCOL = "http".freeze
+  HTTPS_PROTOCOL = "https".freeze
 
   # Sets the host(s) of the remote instance. If given an array it will load balance
   # requests across the hosts specified in the `hosts` parameter. Hosts can be any of
@@ -81,8 +83,17 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def register
     @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
 
+    @cloud_id = @cloud_id&.freeze
+
+    raise_config_error! "`hosts` and `cloud_id` cannot be used together." if @hosts && @cloud_id
+    raise_config_error! "Either `hosts` or `cloud_id` is required" unless @hosts || @cloud_id
+    raise_config_error! "Empty `cloud_id` is not allowed" if @cloud_id && @cloud_id.empty?
+
+    @ssl = infer_ssl_from_connection_settings.freeze unless original_params.keys.include?('ssl')
+    validate_connection_settings! if original_params.keys.include?('ssl')
+
+    normalize_hosts
     validate_ssl_settings!
-    validate_connection_settings!
     validate_auth_settings!
 
   end # def register
@@ -94,10 +105,28 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   private
 
   def validate_connection_settings!
-    @cloud_id = @cloud_id&.freeze
+    @ssl = @ssl.freeze
+    raise_config_error! "`cloud_id` requires `ssl` to be 'true'" if @cloud_id && !@ssl
 
     if @hosts
-      scheme = @ssl ? "https".freeze : "http".freeze
+      scheme = @ssl ? HTTPS_PROTOCOL : HTTP_PROTOCOL
+      agree_with = @hosts.all? { |host| host && (host.scheme == scheme || host.scheme.nil?) } # we accept nil to apply default value
+      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
+    end
+  end
+
+  def infer_ssl_from_connection_settings
+    return true if @cloud_id
+    return true if @hosts.all? { |host| host && (host.scheme.nil? || host.scheme.empty?) }
+    return true if @hosts.all? { |host| host && host.scheme == HTTPS_PROTOCOL }
+    return false if @hosts.all? { |host| host && host.scheme == HTTP_PROTOCOL }
+
+    raise_config_error! "Please provide HTTP or HTTPS protocol to each `hosts` entry. HTTPS will be applied when not specifying protocol."
+  end
+
+  def normalize_hosts
+    if @hosts
+      scheme = @ssl ? HTTPS_PROTOCOL : HTTP_PROTOCOL
       @hosts = @hosts.each do |host_uri|
         # no need to validate hostname, uri validates it at initialize
         host_uri.port=(ELASTICSEARCH_DEFAULT_PORT) if host_uri.port.nil?
@@ -105,14 +134,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
         host_uri.update(:scheme, scheme) if host_uri.scheme.nil? || host_uri.scheme.empty?
         host_uri.freeze
       end.freeze
-
-      agree_with = @hosts.all? { |host| host && host.scheme == scheme }
-      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
     end
-
-    raise_config_error! "`hosts` and `cloud_id` cannot be used together." if @hosts && @cloud_id
-    raise_config_error! "Either `hosts` or `cloud_id` is required" unless @hosts || @cloud_id
-    raise_config_error! "Empty `cloud_id` is not allowed" if @cloud_id && @cloud_id.empty?
   end
 
   def validate_auth_settings!

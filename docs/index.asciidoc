@@ -178,9 +178,13 @@ Password for the <<plugins-{type}s-{plugin}-keystore>>
 ===== `ssl`
 
 * Value type is <<boolean,boolean>>
-* Default value is `true`.
+* There is no default value for this setting.
 
 Enable or disable secured SSL communication to Elasticsearch cluster.
+If no value is specified,
+
+* SSL is enabled when `cloud_id` is provided or all `hosts` entries are either HTTPS protocol or empty
+* SSL is disabled when `cloud_id` isn't provided, all `hosts` entries are either HTTP protocol or empty
 
 [id="plugins-{type}s-{plugin}-ssl_certificate"]
 ===== `ssl_certificate`

@@ -35,8 +35,137 @@ describe LogStash::Filters::ElasticIntegration do
   describe "plugin register" do
     let(:registered_plugin) { plugin.tap(&:register) }
 
+    context "infer SSL from connection settings" do
+
+      describe "when `cloud_id` is provided" do
+        let(:config) { super().merge("cloud_id" => "my-es-cloud.com") }
+
+        it "enables the SSL" do
+          expect(registered_plugin.ssl.eql?(true)).to be_truthy
+        end
+      end
+
+      describe "with `hosts`" do
+
+        describe "when `hosts` entry with HTTPS protocol" do
+          let(:config) { super().merge("hosts" => %w[https://127.0.0.1 https://127.0.0.2:9200 https://my-es-cluster.com/mypath]) }
+
+          it "enables the SSL" do
+            expect(registered_plugin.ssl.eql?(true)).to be_truthy
+          end
+        end
+
+        describe "when `hosts` entry with HTTP protocol" do
+          let(:config) { super().merge("hosts" => %w[http://127.0.0.1 http://127.0.0.2:9200 http://my-es-cluster.com/mypath]) }
+
+          it "disables the SSL" do
+            expect(registered_plugin.ssl.eql?(false)).to be_truthy
+          end
+        end
+
+        describe "when `hosts` entry with empty protocol" do
+          let(:config) { super().merge("hosts" => %w[127.0.0.1 127.0.0.2:9200 my-es-cluster.com]) }
+
+          it "enables the SSL" do
+            expect(registered_plugin.ssl.eql?(true)).to be_truthy
+          end
+        end
+
+        describe "when `hosts` entry with mixed protocols" do
+          let(:config) { super().merge("hosts" => %w[https://127.0.0.1 127.0.0.2:9200 http://my-es-cluster.com]) }
+
+          it "raises an error" do
+            expected_message = "Please provide HTTP or HTTPS protocol to each `hosts` entry. HTTPS will be applied when not specifying protocol."
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+      end
+    end
+
+    context "connection prerequisites" do
+
+      describe "with both `hosts` and `cloud_id`" do
+        let(:config) {super().merge("hosts" => ["https://my-es-host:9200"], "cloud_id" => "my_cloud_id")}
+
+        it "raises an error" do
+          expected_message = "`hosts` and `cloud_id` cannot be used together."
+          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+        end
+      end
+
+      describe "with `hosts`" do
+
+        describe "with HTTP scheme" do
+          let(:config) { super().merge("hosts" => %w[http://my-es-cluster:1111 http://cloud-test.es.us-west-2.aws.found.io])}
+
+          describe "with SSL enabled" do
+            let(:config) { super().merge("ssl" => true)}
+
+            it "enforces to use HTTPS" do
+              expected_message = "All hosts must agree with https schema when using `ssl`."
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+          describe "with SSL disabled" do
+            let(:config) { super().merge("ssl" => false)}
+
+            it "accepts" do
+              expect{ registered_plugin }.not_to raise_error
+            end
+          end
+        end
+
+        describe "with HTTPS scheme" do
+          let(:config) { super().merge("hosts" => %w[https://my-es-cluster:1111 https://my-another-es-cluster:2222 https://cloud-test.es.us-west-2.aws.found.io])}
+
+          describe "when SSL enabled" do
+            let(:config) { super().merge("ssl" => true)}
+
+            it "accepts" do
+              expect{ registered_plugin }.not_to raise_error
+            end
+          end
+
+          describe "when SSL disabled" do
+            let(:config) { super().merge("ssl" => false)}
+
+            it "raises an error" do
+              expected_message = "All hosts must agree with http schema when NOT using `ssl`."
+              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+            end
+          end
+
+        end
+      end
+    end
+
+    context "normalize `hosts`" do
+      let(:config) { super().merge("hosts" => %w[my-es-cluster.com 127.0.0.1 127.0.0.2:9300]) }
+
+      describe "when SSL enabled" do
+        let(:config) { super().merge("ssl" => true) }
+
+        it "applies default value" do
+          expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("https://my-es-cluster.com:9200/"))).to be_truthy
+          expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.1:9200/"))).to be_truthy
+          expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.2:9300/"))).to be_truthy
+        end
+      end
+
+      describe "when SSL disabled" do
+        let(:config) { super().merge("ssl" => false) }
+
+        it "applies default value" do
+          expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
+          expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.1:9200/"))).to be_truthy
+          expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.2:9300/"))).to be_truthy
+        end
+      end
+    end
+
     context "when SSL enabled" do
-      let(:config) { super().merge("ssl" => true) }
+      let(:config) { super().merge("ssl" => true, "cloud_id" => "my-es-cloud-id.com") }
 
       shared_examples "validate ssl_verification_mode" do
         it "has ssl_verification_mode => full" do
@@ -323,54 +452,6 @@ describe LogStash::Filters::ElasticIntegration do
         end
       end
 
-      context "connection prerequisites" do
-
-        describe "with both `hosts` and `cloud_id`" do
-          let(:config) {super().merge("hosts" => ["https://my-es-host:9200"], "cloud_id" => "my_cloud_id")}
-
-          it "raises an error" do
-            expected_message = "`hosts` and `cloud_id` cannot be used together."
-            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
-          end
-        end
-
-        describe "with `hosts`" do
-
-          describe "with HTTP scheme" do
-            let(:config) { super().merge("hosts" => ["htt://my-es-cluster:1111", "https://cloud-test.es.us-west-2.aws.found.io"])}
-
-            it "enforces to agree with scheme" do
-              expected_message = "All hosts must agree with https schema when using `ssl`."
-              expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
-
-            end
-          end
-
-          describe "with HTTPS scheme" do
-            let(:config) { super().merge("hosts" => ["https://my-es-cluster:1111", "https://my-another-es-cluster:2222", "https://cloud-test.es.us-west-2.aws.found.io"])}
-
-            it "accepts" do
-              expect{ registered_plugin }.not_to raise_error
-            end
-
-            include_examples "validate ssl_verification_mode"
-          end
-
-          describe "with multiple hosts" do
-            let(:config) { super().merge("hosts" => ["my-es-cluster.com", "127.0.0.1:9200", "https://127.0.0.2", "https://127.0.0.3:9300", "https://127.0.0.3:9200/sub-path"]) }
-            it "applies default value" do
-              # makes sure the list in-order traverse
-              expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("https://my-es-cluster.com:9200/"))).to be_truthy
-              expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.1:9200/"))).to be_truthy
-              expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.2:9200/"))).to be_truthy
-              expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9300/"))).to be_truthy
-              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9200/sub-path"))).to be_truthy
-            end
-
-            include_examples "validate ssl_verification_mode"
-          end
-        end
-      end
     end
 
     context "when SSL disabled" do
@@ -392,10 +473,19 @@ describe LogStash::Filters::ElasticIntegration do
       end
 
       describe "when SSL related configs are specified" do
-        let(:config) { super().merge("keystore" => paths[:test_path], "cloud_id" => "my-es-cloud:id_", "ssl_certificate_authorities" => [paths[:test_path]]) }
+        let(:config) { super().merge("keystore" => paths[:test_path], "ssl_certificate_authorities" => [paths[:test_path]], "hosts" => "127.0.0.1") }
 
         it "does not allow and raises an error" do
-          expected_message = 'When ssl is disabled, the following provided parameters are not allowed: ["keystore", "cloud_id", "ssl_certificate_authorities"]'
+          expected_message = 'When ssl is disabled, the following provided parameters are not allowed: ["keystore", "ssl_certificate_authorities"]'
+          expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+        end
+      end
+
+      describe "when `cloud_id` is specified" do
+        let(:config) { super().merge("cloud_id" => "my-es-cloud:id_") }
+
+        it "raises an error" do
+          expected_message = "`cloud_id` requires `ssl` to be 'true'"
           expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
         end
       end
