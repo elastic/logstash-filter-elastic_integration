@@ -171,6 +171,18 @@ describe LogStash::Filters::ElasticIntegration do
           expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.2:9300/"))).to be_truthy
         end
       end
+
+      describe "when no SSL specified" do
+
+        include_examples "validate `ssl`"
+        include_examples "validate ssl_verification_mode"
+
+        it "applies default value" do
+          expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("https://my-es-cluster.com:9200/"))).to be_truthy
+          expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.1:9200/"))).to be_truthy
+          expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.2:9300/"))).to be_truthy
+        end
+      end
     end
 
     context "when SSL enabled" do
