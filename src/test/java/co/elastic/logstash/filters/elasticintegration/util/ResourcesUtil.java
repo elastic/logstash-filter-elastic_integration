@@ -1,25 +1,26 @@
 package co.elastic.logstash.filters.elasticintegration.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
 
-import static co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil.getResourcePath;
-
-public class LocalPipelinesUtil {
-    public static Path getPreparedPipelinesResourcePath(final Class<?> resourceProvider, final String packageRelativePath) {
-        return getResourcePath(resourceProvider, packageRelativePath)
-                .map(ResourcesUtil::ensureContentsReadableNonWritable)
-                .orElseThrow(() -> new IllegalArgumentException(String.format("failed to load resource for `%s`", packageRelativePath)));
-    }
-
+public class ResourcesUtil {
     public static Optional<Path> getResourcePath(final Class<?> resourceProvider, final String packageRelativePath) {
         return Optional.ofNullable(resourceProvider.getResource(packageRelativePath))
                 .map(URL::getPath)
                 .map(Paths::get);
+    }
+
+    public static String readResource(final Class<?> resourceProvider, final String packageRelativePath) {
+        return getResourcePath(resourceProvider, packageRelativePath)
+                .filter(Files::isReadable)
+                .map(ResourcesUtil::safelyReadString)
+                .orElseThrow();
     }
 
     static Path ensureContentsReadableNonWritable(Path path) {
@@ -37,11 +38,20 @@ public class LocalPipelinesUtil {
             }
         }
     }
+
     public static void ensureSetFileWritable(File file, boolean desiredState) {
         if (desiredState != file.canWrite()) {
             if (!file.setWritable(desiredState)) {
                 throw new IllegalStateException(String.format("failed to ensure writable=%s for file: %s", desiredState, file));
             }
+        }
+    }
+
+    private static String safelyReadString(Path path) {
+        try {
+            return Files.readString(path);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 }

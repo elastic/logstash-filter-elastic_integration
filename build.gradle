@@ -90,6 +90,7 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.1.1'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
+    testImplementation "com.github.tomakehurst:wiremock-jre8:2.35.0"
     testRuntimeOnly requiredLogstashCoreJar("log4j-core")
 }
 
@@ -271,6 +272,27 @@ task generateRubyJarRequiresFile(dependsOn: shadowJar) {
 test {
     useJUnitPlatform()
 }
+
+task generateTestCertificates(type: Exec) {
+    def sslTestCertsDir = "${projectDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs"
+
+    workingDir sslTestCertsDir
+    commandLine './generate.sh'
+
+    def commonOutputFile = Paths.get("${buildDir}/generateTestCertificates.log")
+    file(commonOutputFile.parent).mkdirs()
+    def commonOutputStream = Files.newOutputStream(commonOutputFile)
+
+    standardOutput = commonOutputStream
+    errorOutput = commonOutputStream
+
+    inputs.file("${sslTestCertsDir}/generate.sh")
+    inputs.file("${sslTestCertsDir}/openssl.cnf")
+
+    outputs.dir("${sslTestCertsDir}/generated")
+    outputs.file(commonOutputFile)
+}
+processTestResources.dependsOn(generateTestCertificates)
 
 tasks.withType(Test) {
     // Add Exports to enable tests to run in JDK17
