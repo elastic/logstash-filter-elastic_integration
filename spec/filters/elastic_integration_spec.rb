@@ -30,7 +30,6 @@ describe LogStash::Filters::ElasticIntegration do
     it { is_expected.to respond_to(:filter).with(1).argument }
 
     it { is_expected.to have_attributes(:ssl => true) }
-    it { is_expected.to have_attributes(:ssl_verification_mode => "full") }
   end
 
   describe "plugin register" do
@@ -38,6 +37,12 @@ describe LogStash::Filters::ElasticIntegration do
 
     context "when SSL enabled" do
       let(:config) { super().merge("ssl" => true) }
+
+      shared_examples "validate ssl_verification_mode" do
+        it "has ssl_verification_mode => full" do
+          expect(registered_plugin).to have_attributes(:ssl_verification_mode => "full")
+        end
+      end
 
       context "with `ssl_certificate`" do
         let(:config) { super().merge("ssl_certificate" => paths[:test_path]) }
@@ -347,6 +352,8 @@ describe LogStash::Filters::ElasticIntegration do
             it "accepts" do
               expect{ registered_plugin }.not_to raise_error
             end
+
+            include_examples "validate ssl_verification_mode"
           end
 
           describe "with multiple hosts" do
@@ -359,6 +366,8 @@ describe LogStash::Filters::ElasticIntegration do
               expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9300/"))).to be_truthy
               expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9200/sub-path"))).to be_truthy
             end
+
+            include_examples "validate ssl_verification_mode"
           end
         end
       end
@@ -366,6 +375,21 @@ describe LogStash::Filters::ElasticIntegration do
 
     context "when SSL disabled" do
       let(:config) { super().merge("ssl" => false) }
+
+      context "with otherwise minimal config" do
+        let(:config) { super().merge("hosts" => "localhost") }
+        it 'does not have a value for meaningless ssl-related settings' do
+          expect(registered_plugin).to have_attributes(ssl_verification_mode: nil,
+                                                       truststore: nil,
+                                                       truststore_password: nil,
+                                                       ssl_certificate_authorities: nil,
+                                                       keystore: nil,
+                                                       keystore_password: nil,
+                                                       ssl_certificate: nil,
+                                                       ssl_key: nil,
+                                                       ssl_key_passphrase: nil)
+        end
+      end
 
       describe "when SSL related configs are specified" do
         let(:config) { super().merge("keystore" => paths[:test_path], "cloud_id" => "my-es-cloud:id_", "ssl_certificate_authorities" => [paths[:test_path]]) }
