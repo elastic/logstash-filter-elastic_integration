@@ -28,11 +28,11 @@ public class SmokeTest {
 
     @Test
     public void testSinglePipelineMutatingEvents() {
-
-        final PluginConfiguration pluginConfiguration = PluginConfiguration.builder()
-                .setPipelineName("simple-mutate")
-                .setLocalPipelines(getPreparedPipelinesResourcePath("simple-mutate-pipelines"))
-                .build();
+        final List<Event> matchedEvents = new ArrayList<>();
+        final EventProcessorBuilder eventProcessorBuilder = EventProcessor.builder()
+                .setEventPipelineNameResolver((event, exceptionConsumer) -> Optional.of("simple-mutate"))
+                .setPipelineConfigurationResolver(new LocalDirectoryPipelineConfigurationResolver(getPreparedPipelinesResourcePath("simple-mutate-pipelines")))
+                .setFilterMatchListener(matchedEvents::add);
 
         final List<Event> inputEvents = List.of(
                 newEvent(Map.of("toplevel", "ok", "id", "first","required-field-to-remove","present","nested", Map.of("field-to-lowercase", "sIlLyCaSe3", "field-to-remove", "nope", "field-to-keep", "ok")), Map.of("meta", "ok")),
@@ -40,9 +40,8 @@ public class SmokeTest {
                 newEvent(Map.of("toplevel", "ok", "id", "third","required-field-to-remove","present","nested", Map.of( "field-to-remove", "nope", "field-to-keep", "ok")), Map.of("meta", "ok"))
         );
 
-        final List<Event> matchedEvents = new ArrayList<>();
 
-        withEventProcessor(pluginConfiguration, matchedEvents::add, (eventProcessor) -> {
+        withEventProcessor(eventProcessorBuilder, (eventProcessor) -> {
             final Collection<Event> outputEvents = eventProcessor.processEvents(inputEvents);
             assertThat("event count is unchanged", outputEvents, hasSize(inputEvents.size()));
 
@@ -113,10 +112,12 @@ public class SmokeTest {
 
 
     @Test void testMultiplePipelinesMutatingEvents() {
-        final PluginConfiguration pluginConfiguration = PluginConfiguration.builder()
-                .setPipelineField("[@metadata][ingest_pipeline]")
-                .setLocalPipelines(getPreparedPipelinesResourcePath("nesting-pipelines"))
-                .build();
+
+        final List<Event> matchedEvents = new ArrayList<>();
+        final EventProcessorBuilder eventProcessorBuilder = EventProcessor.builder()
+                .setEventPipelineNameResolver(new FieldValueEventToPipelineNameResolver("[@metadata][ingest_pipeline]"))
+                .setPipelineConfigurationResolver(new LocalDirectoryPipelineConfigurationResolver(getPreparedPipelinesResourcePath("nesting-pipelines")))
+                .setFilterMatchListener(matchedEvents::add);
 
         final List<Event> inputEvents = List.of(
                 newEvent(Map.of("toplevel", "ok", "id", "outer-ignore-missing", "ignore_missing", true), Map.of("ingest_pipeline", "outer")),
@@ -127,9 +128,8 @@ public class SmokeTest {
                 newEvent(Map.of("toplevel", "ok", "id", "outer-recursive", "ignore_missing", true, "recursive", true), Map.of("ingest_pipeline", "outer"))
         );
 
-        final List<Event> matchedEvents = new ArrayList<>();
 
-        withEventProcessor(pluginConfiguration, matchedEvents::add, (eventProcessor -> {
+        withEventProcessor(eventProcessorBuilder, (eventProcessor -> {
             final Collection<Event> outputEvents = eventProcessor.processEvents(inputEvents);
             assertThat("event count is unchanged", outputEvents, hasSize(inputEvents.size()));
 
@@ -187,8 +187,8 @@ public class SmokeTest {
         }));
     }
 
-    static void withEventProcessor(final PluginConfiguration pluginConfiguration, final Consumer<Event> filterMatchListener, final Consumer<EventProcessor> eventProcessorConsumer) {
-        try (EventProcessor eventProcessor = EventProcessor.fromPluginConfiguration(pluginConfiguration, filterMatchListener)) {
+    static void withEventProcessor(final EventProcessorBuilder eventProcessorBuilder, final Consumer<EventProcessor> eventProcessorConsumer) {
+        try (EventProcessor eventProcessor = eventProcessorBuilder.build("ANONYMOUS")) {
             eventProcessorConsumer.accept(eventProcessor);
         } catch (IOException e) {
             throw new RuntimeException(e);

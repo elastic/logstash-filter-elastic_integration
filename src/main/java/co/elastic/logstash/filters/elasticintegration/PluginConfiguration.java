@@ -22,10 +22,6 @@ import java.util.function.Function;
 final class PluginConfiguration {
     private final String       id;
 
-    private final String       pipelineName;    // api-private extension for testing
-    private final String       pipelineField;   // api-private extension for testing
-    private final String       localPipelines;  // api-private extension for testing
-
     // elasticsearch-source: connection target
     private final String       cloudId;
     private final List<String> hosts;
@@ -53,10 +49,6 @@ final class PluginConfiguration {
 
     private PluginConfiguration(final Builder builder) {
         this.id = builder.id;
-        // local config
-        this.pipelineName = builder.pipelineName;
-        this.pipelineField = builder.pipelineField;
-        this.localPipelines = nullableImmutableCopy(builder.localPipelines, Path::toString);
         // elasticsearch: routing
         this.cloudId = builder.cloudId;
         this.hosts = nullableImmutableCopy(builder.hosts, Function.identity());
@@ -99,18 +91,6 @@ final class PluginConfiguration {
 
     public Optional<String> id() {
         return Optional.ofNullable(id);
-    }
-
-    public Optional<String> pipelineName() {
-        return Optional.ofNullable(pipelineName);
-    }
-
-    public Optional<String> pipelineField() {
-        return Optional.ofNullable(pipelineField);
-    }
-
-    public Optional<Path> localPipelines() {
-        return Optional.ofNullable(localPipelines).map(Paths::get);
     }
 
     public Optional<String> cloudId() {
@@ -183,9 +163,6 @@ final class PluginConfiguration {
     public String toString() {
         final List<String> config = new ArrayList<>();
         if (Objects.nonNull(id)) { config.add(String.format("id=%s", id)); }
-        if (Objects.nonNull(pipelineName)) { config.add(String.format("pipelineName=%s", pipelineName)); }
-        if (Objects.nonNull(pipelineField)) { config.add(String.format("pipelineField=%s", pipelineField)); }
-        if (Objects.nonNull(localPipelines)) { config.add(String.format("localPipelines=%s", localPipelines)); }
         if (Objects.nonNull(cloudId)) { config.add(String.format("cloudId=%s", cloudId)); }
         if (Objects.nonNull(hosts)) { config.add(String.format("hosts=%s", hosts)); }
         if (Objects.nonNull(sslEnabled)) { config.add(String.format("sslEnabled=%s", sslEnabled)); }
@@ -217,9 +194,6 @@ final class PluginConfiguration {
     @SuppressWarnings("unused")
     public static class Builder {
         String id;
-        String pipelineName;
-        String pipelineField;
-        Path localPipelines;
         String cloudId;
         List<String> hosts;
         Boolean sslEnabled;
@@ -243,24 +217,6 @@ final class PluginConfiguration {
 
         public Builder setId(final String id) {
             this.id = id;
-            return this;
-        }
-
-        // package-private for testing
-        Builder setPipelineName(final String pipelineName) {
-            this.pipelineName = pipelineName;
-            return this;
-        }
-
-        // package-private for testing
-        Builder setPipelineField(final String pipelineField) {
-            this.pipelineField = pipelineField;
-            return this;
-        }
-
-        // package-private for testing
-        Builder setLocalPipelines(final Path localPipelines) {
-            this.localPipelines = localPipelines;
             return this;
         }
 

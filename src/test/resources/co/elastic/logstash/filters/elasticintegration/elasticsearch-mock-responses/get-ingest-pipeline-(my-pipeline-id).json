@@ -1,0 +1,14 @@
+{
+  "my-pipeline-id" : {
+    "description" : "describe pipeline",
+    "version" : 123,
+    "processors" : [
+      {
+        "set" : {
+          "field" : "foo",
+          "value" : "bar"
+        }
+      }
+    ]
+  }
+}

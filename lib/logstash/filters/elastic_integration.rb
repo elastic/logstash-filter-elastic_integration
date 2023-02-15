@@ -6,9 +6,15 @@ require_relative "elastic_integration/jar_dependencies"
 
 class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
+  require_relative "elastic_integration/event_api_bridge"
+  include EventApiBridge
+
   config_name "elastic_integration"
 
   java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
+  java_import('co.elastic.logstash.filters.elasticintegration.EventProcessor')
+  java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
+  java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
 
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
@@ -94,11 +100,30 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_auth_settings!
     validate_and_normalize_hosts
 
-    @plugin_config = extract_immutable_config
+    initialize_event_processor!
   end # def register
 
   def filter(event)
-    # bootstrap placeholder no-op
+    fail "#{self.class}#filter is not allowed. Use #{self.class}#multi_filter"
+  end
+
+  def multi_filter(ruby_api_events)
+    LogStash::Util.set_thread_plugin(self)
+
+    incoming_java_api_events = ruby_events_as_java(ruby_api_events)
+
+    outgoing_java_api_events = @event_processor.process_events(incoming_java_api_events)
+
+    java_events_as_ruby(outgoing_java_api_events)
+  end
+
+  def filter_matched_java(java_event)
+    filter_matched(mutable_ruby_view_of_java_event(java_event))
+  end
+
+  def close
+    @elasticsearch_rest_client&.close
+    @event_processor&.close
   end
 
   private
@@ -249,7 +274,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     builder.setId @id
 
-    builder.setHosts @hosts#&.map(&:to_s)
+    builder.setHosts @hosts&.map(&:to_s)
     builder.setCloudId @cloud_id
 
     builder.setSslEnabled @ssl
@@ -274,6 +299,18 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     builder.setApiKey @api_key
 
     builder.build
+  end
+
+  def initialize_event_processor!
+    @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
+                                                               .map(&:build)
+                                                               .orElseThrow() # todo: ruby/java bridge better exception
+
+    @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client)
+                                            .setFilterMatchListener(method(:filter_matched_java).to_proc)
+                                            .build("logstash.filter.elastic_integration.#{id}.#{__id__}")
+  rescue => exception
+    raise_config_error!("configuration did not produce an EventProcessor: #{exception}")
   end
 
 end
