@@ -6,6 +6,7 @@ import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProc
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCache;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
+import org.elasticsearch.client.RestClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.core.TimeValue;
@@ -30,10 +31,12 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -45,30 +48,20 @@ public class EventProcessorBuilder {
         return () -> new SimpleResolverCache<>(description, SimpleResolverCache.Configuration.PERMANENT);
     }
 
-    public static EventProcessorBuilder fromPluginConfiguration(final PluginConfiguration config) {
+    public static EventProcessorBuilder fromElasticsearch(final RestClient elasticsearchRestClient) {
         final EventProcessorBuilder builder = new EventProcessorBuilder();
 
-        // how do we get from an event to the name of the pipeline to run?
-        if (config.pipelineName().isPresent()) {
-            builder.setEventPipelineName(config.pipelineName().get());
-        } else if (config.pipelineField().isPresent()) {
-            builder.setEventPipelineNameFromFieldValue(config.pipelineField().get());
-        } else {
-            throw new IllegalArgumentException("No event-to-pipeline resolver configured");
-        }
+        builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
+                new SimpleResolverCache.Configuration(Duration.ofMinutes(15), Duration.ofSeconds(30)))));
 
-        // how do we load pipelines?
-        if (config.localPipelines().isPresent()) {
-            builder.setPipelineConfigurationsFromDirectory(config.localPipelines().get());
-        } else {
-            throw new IllegalArgumentException("No pipeline provider configured");
-        }
-
-        // add the ingest processors
-        builder.addProcessorsFromPlugin(IngestCommonPlugin::new);
-        builder.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
+        builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
 
         return builder;
+    }
+
+    public EventProcessorBuilder() {
+        this.addProcessorsFromPlugin(IngestCommonPlugin::new);
+        this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
     private PipelineConfigurationResolver pipelineConfigurationResolver;
@@ -79,11 +72,7 @@ public class EventProcessorBuilder {
     private Supplier<ResolverCache<String, IngestPipeline>> pipelineResolverCacheSupplier;
     private final List<Supplier<IngestPlugin>> ingestPlugins = new ArrayList<>();
 
-    public EventProcessorBuilder setPipelineConfigurationsFromDirectory(final Path directoryPath) {
-        return this.setPipelineConfigurationResolver(new LocalDirectoryPipelineConfigurationResolver(directoryPath));
-    }
-
-    private synchronized EventProcessorBuilder setPipelineConfigurationResolver(final PipelineConfigurationResolver pipelineConfigurationResolver) {
+    public synchronized EventProcessorBuilder setPipelineConfigurationResolver(final PipelineConfigurationResolver pipelineConfigurationResolver) {
         if (Objects.nonNull(this.pipelineConfigurationResolver)) {
             throw new IllegalStateException("pipelineConfigurationResolver already set");
         }
@@ -96,21 +85,12 @@ public class EventProcessorBuilder {
         return this.setPipelineResolverCacheSupplier(() -> new SimpleResolverCache<>("pipeline", new SimpleResolverCache.Configuration(maxHitTtl, maxMissTtl)));
     }
 
-    private synchronized EventProcessorBuilder setPipelineResolverCacheSupplier(final Supplier<ResolverCache<String, IngestPipeline>> cacheSupplier) {
+    public synchronized EventProcessorBuilder setPipelineResolverCacheSupplier(final Supplier<ResolverCache<String, IngestPipeline>> cacheSupplier) {
         this.pipelineResolverCacheSupplier = cacheSupplier;
         return this;
     }
 
-    public EventProcessorBuilder setEventPipelineNameFromFieldValue(final String fieldReference) {
-        return this.setEventPipelineNameResolver(new FieldValueEventToPipelineNameResolver(fieldReference));
-    }
-
-    public EventProcessorBuilder setEventPipelineName(final String pipelineName) {
-        final Optional<String> constantResolveResult = Optional.of(pipelineName);
-        return this.setEventPipelineNameResolver((event, handler) -> constantResolveResult);
-    }
-
-    private synchronized EventProcessorBuilder setEventPipelineNameResolver(final EventToPipelineNameResolver eventToPipelineNameResolver) {
+    public synchronized EventProcessorBuilder setEventPipelineNameResolver(final EventToPipelineNameResolver eventToPipelineNameResolver) {
         if (Objects.nonNull(this.eventToPipelineNameResolver)) {
             throw new IllegalStateException("eventToPipelineNameResolver already set");
         }
@@ -150,11 +130,12 @@ public class EventProcessorBuilder {
         return build(defaultSettings);
     }
 
-    EventProcessor build(final Settings settings) {
+    synchronized EventProcessor build(final Settings settings) {
         Objects.requireNonNull(this.pipelineConfigurationResolver, "pipeline configuration resolver is REQUIRED");
         Objects.requireNonNull(this.eventToPipelineNameResolver, "event to pipeline name resolver is REQUIRED");
 
         final List<Closeable> resourcesToClose = new ArrayList<>();
+
         try {
             final ThreadPool threadPool = new ThreadPool(settings);
             resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
@@ -191,7 +172,9 @@ public class EventProcessorBuilder {
             final SimpleCachingIngestPipelineResolver cachingInternalPipelineResolver =
                     new SimpleIngestPipelineResolver(this.pipelineConfigurationResolver, ingestPipelineFactory).withCache(ingestPipelineCache);
 
-            return new EventProcessor(Objects.requireNonNullElse(filterMatchListener, (e)->{}), cachingInternalPipelineResolver, eventToPipelineNameResolver, resourcesToClose);
+            final FilterMatchListener filterMatchListener = Objects.requireNonNullElse(this.filterMatchListener, (event) -> {});
+
+            return new EventProcessor(filterMatchListener, cachingInternalPipelineResolver, eventToPipelineNameResolver, resourcesToClose);
         } catch (Exception e) {
             IOUtils.closeWhileHandlingException(resourcesToClose);
             throw new RuntimeException("Failed to build EventProcessor", e);

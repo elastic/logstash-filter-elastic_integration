@@ -1,26 +1,31 @@
 package co.elastic.logstash.filters.elasticintegration.util;
 
+import joptsimple.internal.Strings;
+import org.apache.http.client.utils.URLEncodedUtils;
+
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 
 public class ResourcesUtil {
     public static Optional<Path> getResourcePath(final Class<?> resourceProvider, final String packageRelativePath) {
         return Optional.ofNullable(resourceProvider.getResource(packageRelativePath))
-                .map(URL::getPath)
-                .map(Paths::get);
+                .map(ResourcesUtil::pathFromURL);
     }
 
     public static String readResource(final Class<?> resourceProvider, final String packageRelativePath) {
         return getResourcePath(resourceProvider, packageRelativePath)
                 .filter(Files::isReadable)
                 .map(ResourcesUtil::safelyReadString)
-                .orElseThrow();
+                .orElseThrow(() -> new NoSuchElementException(String.format("file: `%s`", packageRelativePath)));
     }
 
     static Path ensureContentsReadableNonWritable(Path path) {
@@ -53,5 +58,17 @@ public class ResourcesUtil {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static Path resolvePath(final Path base, final List<String> nodes) {
+        Path current = base;
+        for (String node : nodes) {
+            current = current.resolve(node);
+        }
+        return current;
+    }
+
+    private static Path pathFromURL(final URL url) {
+        return resolvePath(Path.of("/"), URLEncodedUtils.parsePathSegments(url.getPath()));
     }
 }

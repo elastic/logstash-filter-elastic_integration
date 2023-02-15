@@ -52,20 +52,12 @@ public class EventProcessor implements Closeable {
     EventProcessor(final FilterMatchListener filterMatchListener,
                    final IngestPipelineResolver internalPipelineProvider,
                    final EventToPipelineNameResolver eventToPipelineNameResolver,
-                   final List<Closeable> resourcesToClose) {
+                   final Collection<Closeable> resourcesToClose) {
         this.filterMatchListener = filterMatchListener;
         this.internalPipelineProvider = internalPipelineProvider;
         this.eventToPipelineNameResolver = eventToPipelineNameResolver;
         this.resourcesToClose = List.copyOf(resourcesToClose);
         this.eventMarshaller = IngestDuplexMarshaller.defaultInstance();
-    }
-
-    public static EventProcessor fromPluginConfiguration(final PluginConfiguration config, Consumer<Event> filterMatchListener) {
-        final String nodeName = String.format("logstash.filter.elastic_integration.%s.%s", config.id().orElse("ANONYMOUS"), UUID.randomUUID());
-
-        return EventProcessorBuilder.fromPluginConfiguration(config)
-                .setFilterMatchListener(filterMatchListener)
-                .build(nodeName);
     }
 
     public static EventProcessorBuilder builder() {
@@ -76,16 +68,24 @@ public class EventProcessor implements Closeable {
         throw new RuntimeException(e);
     }
 
+    /**
+     * Processes a collection of events, returning the resulting collection
+     * @param incomingEvents the incoming batch
+     * @return the outgoing batch, which <em>may</em> contain cancelled events
+     */
     public Collection<Event> processEvents(final Collection<Event> incomingEvents) {
         final List<Event> outgoingEvents = new ArrayList<>(incomingEvents.size());
 
         for (Event incomingEvent : incomingEvents) {
             processEvent(incomingEvent, outgoingEvents::add);
         }
-        
+
         return outgoingEvents;
     }
-    
+
+    /**
+     * Processes a singular incoming event, passing one or more results to the provided {@code eventConsumer}.
+     */
     private void processEvent(final Event incomingEvent, final Consumer<Event> eventConsumer) {
         try {
             final Optional<String> resolvedPipelineName = eventToPipelineNameResolver.resolve(incomingEvent, EventProcessor::throwingHandler);

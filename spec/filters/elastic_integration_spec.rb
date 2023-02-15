@@ -35,6 +35,7 @@ describe LogStash::Filters::ElasticIntegration do
 
   describe "plugin register" do
     let(:registered_plugin) { plugin.tap(&:register) }
+    after(:each) { plugin.close }
 
     context "when SSL enabled" do
       let(:config) { super().merge("ssl" => true) }
@@ -350,14 +351,14 @@ describe LogStash::Filters::ElasticIntegration do
           end
 
           describe "with multiple hosts" do
-            let(:config) { super().merge("hosts" => ["my-es-cluster.com", "127.0.0.1:9200", "https://127.0.0.2", "https://127.0.0.3:9300", "https://127.0.0.3:9200/sub-path"]) }
+            let(:config) { super().merge("hosts" => ["my-es-cluster.com", "127.0.0.1:9200", "https://127.0.0.2", "https://127.0.0.3:9300", "https://127.0.0.3:9200/"]) }
             it "applies default value" do
               # makes sure the list in-order traverse
               expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("https://my-es-cluster.com:9200/"))).to be_truthy
               expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.1:9200/"))).to be_truthy
               expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.2:9200/"))).to be_truthy
               expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9300/"))).to be_truthy
-              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9200/sub-path"))).to be_truthy
+              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("https://127.0.0.3:9200/"))).to be_truthy
             end
           end
         end
@@ -438,14 +439,14 @@ describe LogStash::Filters::ElasticIntegration do
           end
 
           describe "with multiple hosts" do
-            let(:hosts) { ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200/sub-path"] }
+            let(:hosts) { ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200/"] }
             it "applies default value" do
               # makes sure the list in-order traverse
               expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
               expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.1:9200/"))).to be_truthy
               expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.2:9200/"))).to be_truthy
               expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9300/"))).to be_truthy
-              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9200/sub-path"))).to be_truthy
+              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9200/"))).to be_truthy
             end
           end
         end

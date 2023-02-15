@@ -1,0 +1,9 @@
+{
+  "template" : {
+    "settings": {
+      "index" : {
+        "default_pipeline": "banana"
+      }
+    }
+  }
+}
