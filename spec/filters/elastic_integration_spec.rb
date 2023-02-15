@@ -35,14 +35,25 @@ describe LogStash::Filters::ElasticIntegration do
   describe "plugin register" do
     let(:registered_plugin) { plugin.tap(&:register) }
 
+    shared_examples "validate `ssl`" do
+      it "enables SSL" do
+        expect(registered_plugin.ssl.eql?(true)).to be_truthy
+      end
+    end
+
+    shared_examples "validate ssl_verification_mode" do
+      it "has ssl_verification_mode => full" do
+        expect(registered_plugin).to have_attributes(:ssl_verification_mode => "full")
+      end
+    end
+
     context "infer SSL from connection settings" do
 
       describe "when `cloud_id` is provided" do
         let(:config) { super().merge("cloud_id" => "my-es-cloud.com") }
 
-        it "enables the SSL" do
-          expect(registered_plugin.ssl.eql?(true)).to be_truthy
-        end
+        include_examples "validate `ssl`"
+        include_examples "validate ssl_verification_mode"
       end
 
       describe "with `hosts`" do
@@ -50,9 +61,8 @@ describe LogStash::Filters::ElasticIntegration do
         describe "when `hosts` entry with HTTPS protocol" do
           let(:config) { super().merge("hosts" => %w[https://127.0.0.1 https://127.0.0.2:9200 https://my-es-cluster.com/mypath]) }
 
-          it "enables the SSL" do
-            expect(registered_plugin.ssl.eql?(true)).to be_truthy
-          end
+          include_examples "validate `ssl`"
+          include_examples "validate ssl_verification_mode"
         end
 
         describe "when `hosts` entry with HTTP protocol" do
@@ -66,9 +76,8 @@ describe LogStash::Filters::ElasticIntegration do
         describe "when `hosts` entry with empty protocol" do
           let(:config) { super().merge("hosts" => %w[127.0.0.1 127.0.0.2:9200 my-es-cluster.com]) }
 
-          it "enables the SSL" do
-            expect(registered_plugin.ssl.eql?(true)).to be_truthy
-          end
+          include_examples "validate `ssl`"
+          include_examples "validate ssl_verification_mode"
         end
 
         describe "when `hosts` entry with mixed protocols" do
@@ -167,11 +176,7 @@ describe LogStash::Filters::ElasticIntegration do
     context "when SSL enabled" do
       let(:config) { super().merge("ssl" => true, "cloud_id" => "my-es-cloud-id.com") }
 
-      shared_examples "validate ssl_verification_mode" do
-        it "has ssl_verification_mode => full" do
-          expect(registered_plugin).to have_attributes(:ssl_verification_mode => "full")
-        end
-      end
+      include_examples "validate ssl_verification_mode"
 
       context "with `ssl_certificate`" do
         let(:config) { super().merge("ssl_certificate" => paths[:test_path]) }
@@ -232,10 +237,8 @@ describe LogStash::Filters::ElasticIntegration do
                 expect { registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
               end
             end
-
           end
         end
-
       end
 
       context "without `ssl_certificate`" do

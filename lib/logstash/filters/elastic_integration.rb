@@ -104,6 +104,15 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   private
 
+  def infer_ssl_from_connection_settings
+    return true if @cloud_id
+    return true if @hosts.all? { |host| host && (host.scheme.nil? || host.scheme.empty?) }
+    return true if @hosts.all? { |host| host && host.scheme == HTTPS_PROTOCOL }
+    return false if @hosts.all? { |host| host && host.scheme == HTTP_PROTOCOL }
+
+    raise_config_error! "Please provide HTTP or HTTPS protocol to each `hosts` entry. HTTPS will be applied when not specifying protocol."
+  end
+
   def validate_connection_settings!
     @ssl = @ssl.freeze
     raise_config_error! "`cloud_id` requires `ssl` to be 'true'" if @cloud_id && !@ssl
@@ -113,15 +122,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
       agree_with = @hosts.all? { |host| host && (host.scheme == scheme || host.scheme.nil?) } # we accept nil to apply default value
       raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
     end
-  end
-
-  def infer_ssl_from_connection_settings
-    return true if @cloud_id
-    return true if @hosts.all? { |host| host && (host.scheme.nil? || host.scheme.empty?) }
-    return true if @hosts.all? { |host| host && host.scheme == HTTPS_PROTOCOL }
-    return false if @hosts.all? { |host| host && host.scheme == HTTP_PROTOCOL }
-
-    raise_config_error! "Please provide HTTP or HTTPS protocol to each `hosts` entry. HTTPS will be applied when not specifying protocol."
   end
 
   def normalize_hosts
