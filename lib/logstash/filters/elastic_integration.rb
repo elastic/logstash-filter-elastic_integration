@@ -89,7 +89,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     raise_config_error! "Either `hosts` or `cloud_id` is required" unless @hosts || @cloud_id
     raise_config_error! "Empty `cloud_id` is not allowed" if @cloud_id && @cloud_id.empty?
 
-    @ssl = infer_ssl_from_connection_settings.freeze unless original_params.keys.include?('ssl')
+    @ssl = infer_ssl_from_connection_settings if @ssl.nil?
     validate_connection_settings! if original_params.keys.include?('ssl')
 
     normalize_hosts
@@ -106,11 +106,11 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def infer_ssl_from_connection_settings
     return true if @cloud_id
-    return true if @hosts.all? { |host| host && (host.scheme.nil? || host.scheme.empty?) }
-    return true if @hosts.all? { |host| host && host.scheme == HTTPS_PROTOCOL }
-    return false if @hosts.all? { |host| host && host.scheme == HTTP_PROTOCOL }
+    return true if @hosts.all? { |host| host.scheme.to_s.empty?) }
+    return true if @hosts.all? { |host| host.scheme == HTTPS_PROTOCOL }
+    return false if @hosts.all? { |host| host.scheme == HTTP_PROTOCOL }
 
-    raise_config_error! "Please provide HTTP or HTTPS protocol to each `hosts` entry. HTTPS will be applied when not specifying protocol."
+    raise_config_error! "`hosts` contains entries with mixed protocols, which are unsupported; when any entry includes a protocol, the protocols of all must match each other"
   end
 
   def validate_connection_settings!
