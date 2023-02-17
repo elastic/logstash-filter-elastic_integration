@@ -29,7 +29,6 @@ describe LogStash::Filters::ElasticIntegration do
     it { is_expected.to respond_to(:register).with(0).arguments }
     it { is_expected.to respond_to(:filter).with(1).argument }
 
-    it { is_expected.to have_attributes(:ssl => true) }
   end
 
   describe "plugin register" do
@@ -84,7 +83,7 @@ describe LogStash::Filters::ElasticIntegration do
           let(:config) { super().merge("hosts" => %w[https://127.0.0.1 127.0.0.2:9200 http://my-es-cluster.com]) }
 
           it "raises an error" do
-            expected_message = "Please provide HTTP or HTTPS protocol to each `hosts` entry. HTTPS will be applied when not specifying protocol."
+            expected_message = "`hosts` contains entries with mixed protocols, which are unsupported; when any entry includes a protocol, the protocols of all must match each other"
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
         end
@@ -500,7 +499,7 @@ describe LogStash::Filters::ElasticIntegration do
         let(:config) { super().merge("cloud_id" => "my-es-cloud:id_") }
 
         it "raises an error" do
-          expected_message = "`cloud_id` requires `ssl` to be 'true'"
+          expected_message = 'When ssl is disabled, the following provided parameters are not allowed: ["cloud_id"]'
           expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
         end
       end

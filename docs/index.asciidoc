@@ -129,7 +129,8 @@ for the `auth_basic_username`/`auth_basic_password` pair and can be obtained fro
 * There is no default value for this setting.
 
 Cloud ID, from the Elastic Cloud web console.
-This setting should not be used when `hosts` are specified.
+This setting should not be used when <<plugins-{type}s-{plugin}-hosts>> are specified.
+Using this setting enables SSL if <<plugins-{type}s-{plugin}-ssl>> is not specified or this cannot be used with <<plugins-{type}s-{plugin}-ssl>> 'false'.
 
 For more details, check out the
 {logstash-ref}/connecting-to-cloud.html[Logstash-to-Cloud documentation].
@@ -150,7 +151,9 @@ Examples:
     `["https://127.0.0.1:9200"]`
     `["https://127.0.0.1:9200/subpath"]` (If using a proxy on a subpath)
 
-Set HTTPS to each entry when using SSL or HTTP when not using.
+Host entry protocols decide enabling the SSL if <<plugins-{type}s-{plugin}-ssl>> is not specified. Set HTTPS to each entry when using SSL or HTTP when not using.
+Not specifying entry protocols (example `"127.0.0.1"`) will cause normalizing the host protocols based on <<plugins-{type}s-{plugin}-ssl>> value, HTTP if `ssl => false`, HTTPS otherwise.
+
 When port is not specified, the plugin uses default 9200. Similarly, it uses default `/` path.
 
 Any special characters present in the URLs here MUST be URL escaped! This means
@@ -180,11 +183,12 @@ Password for the <<plugins-{type}s-{plugin}-keystore>>
 * Value type is <<boolean,boolean>>
 * There is no default value for this setting.
 
-Enable or disable secured SSL communication to Elasticsearch cluster.
-If no value is specified,
+Secure SSL communication to {es} is enabled unless:
 
-* SSL is enabled when `cloud_id` is provided or all `hosts` entries are either HTTPS protocol or empty
-* SSL is disabled when `cloud_id` isn't provided, all `hosts` entries are either HTTP protocol or empty
+* it is explicitly disabled with `ssl => false`; OR
+* it is implicitly disabled by providing `http`-protocol <<plugins-{type}s-{plugin}-hosts>>.
+
+Specifying `ssl => true` can be a helpful redundant safeguard to ensure this plugin cannot be configured to use non-ssl communication.
 
 [id="plugins-{type}s-{plugin}-ssl_certificate"]
 ===== `ssl_certificate`
