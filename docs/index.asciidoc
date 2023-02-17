@@ -154,7 +154,8 @@ Examples:
 Host entry protocols decide enabling the SSL if <<plugins-{type}s-{plugin}-ssl>> is not specified. Set HTTPS to each entry when using SSL or HTTP when not using.
 Not specifying entry protocols (example `"127.0.0.1"`) will cause normalizing the host protocols based on <<plugins-{type}s-{plugin}-ssl>> value, HTTP if `ssl => false`, HTTPS otherwise.
 
-When port is not specified, the plugin uses default 9200. Similarly, it uses default `/` path.
+The plugin uses default 9200 port if port is not specified.
+Each host entry must contain same path when using a path, defaults to `/`.
 
 Any special characters present in the URLs here MUST be URL escaped! This means
 `#` should be put in as `%23` for instance.

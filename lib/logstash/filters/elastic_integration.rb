@@ -116,20 +116,26 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def validate_and_normalize_hosts
-    # host normalization expects `ssl` to be resolved (not nil)
-    # and in case let's add a safeguard to make sure we don't break behavior in the future
-    raise_config_error! "`hosts` cannot be normalized with `ssl => nil`" if @ssl.nil?
-    return if @hosts.nil?
+    return if @hosts.nil? || @hosts.size == 0
 
+    # host normalization expects `ssl` to be resolved (not nil)
+    # let's add a safeguard to make sure we don't break the behavior in the future
+    raise_config_error! "`hosts` cannot be normalized with `ssl => nil`" if @ssl.nil?
+
+    root_path = @hosts[0].path.empty? ? ELASTICSEARCH_DEFAULT_PATH : @hosts[0].path
     scheme = @ssl ? HTTPS_PROTOCOL : HTTP_PROTOCOL
-    agree_with = @hosts.all? { |host| host.scheme == scheme || host.scheme.to_s.empty? } # we accept nil/empty to apply default value
-    raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
 
     @hosts = @hosts.each do |host_uri|
       # no need to validate hostname, uri validates it at initialize
       host_uri.port=(ELASTICSEARCH_DEFAULT_PORT) if host_uri.port.nil?
-      host_uri.path=(ELASTICSEARCH_DEFAULT_PATH) if host_uri.path.length == 0 # host_uri.path may return empty array and will not be nil
+      host_uri.path=(ELASTICSEARCH_DEFAULT_PATH) if host_uri.path.to_s.empty?
+      agree_with = host_uri.path == root_path
+      raise_config_error! "All hosts must use same path." unless agree_with
+
       host_uri.update(:scheme, scheme) if host_uri.scheme.to_s.empty?
+      agree_with = host_uri.scheme == scheme
+      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
+
       host_uri.freeze
     end.freeze
   end

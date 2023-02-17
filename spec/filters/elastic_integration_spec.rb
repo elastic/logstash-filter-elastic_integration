@@ -58,14 +58,14 @@ describe LogStash::Filters::ElasticIntegration do
       describe "with `hosts`" do
 
         describe "when `hosts` entry with HTTPS protocol" do
-          let(:config) { super().merge("hosts" => %w[https://127.0.0.1 https://127.0.0.2:9200 https://my-es-cluster.com/mypath]) }
+          let(:config) { super().merge("hosts" => %w[https://127.0.0.1 https://127.0.0.2:9200/ https://my-es-cluster.com/]) }
 
           include_examples "validate `ssl`"
           include_examples "validate ssl_verification_mode"
         end
 
         describe "when `hosts` entry with HTTP protocol" do
-          let(:config) { super().merge("hosts" => %w[http://127.0.0.1 http://127.0.0.2:9200 http://my-es-cluster.com/mypath]) }
+          let(:config) { super().merge("hosts" => %w[http://127.0.0.1 http://127.0.0.2:9200 http://my-es-cluster.com]) }
 
           it "disables the SSL" do
             expect(registered_plugin.ssl.eql?(false)).to be_truthy
@@ -84,6 +84,15 @@ describe LogStash::Filters::ElasticIntegration do
 
           it "raises an error" do
             expected_message = "`hosts` contains entries with mixed protocols, which are unsupported; when any entry includes a protocol, the protocols of all must match each other"
+            expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
+          end
+        end
+
+        describe "when `hosts` entry with multiple paths" do
+          let(:config) { super().merge("hosts" => %w[http://127.0.0.1/a-path http://127.0.0.2:9200/b-path http://my-es-cluster.com/c-path]) }
+
+          it "raises an error" do
+            expected_message = "All hosts must use same path."
             expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
           end
         end
@@ -566,14 +575,14 @@ describe LogStash::Filters::ElasticIntegration do
           end
 
           describe "with multiple hosts" do
-            let(:hosts) { ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200/sub-path"] }
+            let(:hosts) { ["http://my-es-cluster.com", "127.0.0.1:9200", "http://127.0.0.2", "http://127.0.0.3:9300", "http://127.0.0.3:9200"] }
             it "applies default value" do
               # makes sure the list in-order traverse
               expect(registered_plugin.hosts[0].eql?(::LogStash::Util::SafeURI.new("http://my-es-cluster.com:9200/"))).to be_truthy
               expect(registered_plugin.hosts[1].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.1:9200/"))).to be_truthy
               expect(registered_plugin.hosts[2].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.2:9200/"))).to be_truthy
               expect(registered_plugin.hosts[3].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9300/"))).to be_truthy
-              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9200/sub-path"))).to be_truthy
+              expect(registered_plugin.hosts[4].eql?(::LogStash::Util::SafeURI.new("http://127.0.0.3:9200/"))).to be_truthy
             end
           end
         end
