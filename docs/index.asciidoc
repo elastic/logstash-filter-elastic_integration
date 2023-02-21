@@ -232,9 +232,10 @@ A password or passphrase of the <<plugins-{type}s-{plugin}-ssl_key>>.
 ===== `ssl_verification_mode`
 
 * Value type is <<array,array>>
-* Default value is `full`.
+* There is no default value for this setting.
 
 Type of verification.
+If not specified and SSL is enabled, the verification mode becomes `full`. Refer to <<plugins-{type}s-{plugin}-ssl>> to get more information about when SSL can be enabled.
 
 * Available modes:
 ** `none`: performs no validation, implicitly trusting any server that this plugin connects to (insecure)
