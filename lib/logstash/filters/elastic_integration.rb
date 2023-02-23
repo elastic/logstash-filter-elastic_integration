@@ -8,6 +8,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
+  HTTP_PROTOCOL = "http".freeze
+  HTTPS_PROTOCOL = "https".freeze
 
   # Sets the host(s) of the remote instance. If given an array it will load balance
   # requests across the hosts specified in the `hosts` parameter. Hosts can be any of
@@ -32,7 +34,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   config :cloud_id, :validate => :string
 
   # Enable SSL/TLS secured communication to Elasticsearch cluster
-  config :ssl, :validate => :boolean, :default => true
+  config :ssl, :validate => :boolean
 
   # Determines how much to verify a presented SSL certificate when `ssl => true`
   #  - none: no validation
@@ -81,10 +83,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def register
     @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
 
-    validate_ssl_settings!
     validate_connection_settings!
-    validate_auth_settings!
+    @ssl = infer_ssl_from_connection_settings if @ssl.nil?
 
+    validate_ssl_settings!
+    validate_auth_settings!
+    validate_and_normalize_hosts
   end # def register
 
   def filter(event)
@@ -96,23 +100,44 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def validate_connection_settings!
     @cloud_id = @cloud_id&.freeze
 
-    if @hosts
-      scheme = @ssl ? "https".freeze : "http".freeze
-      @hosts = @hosts.each do |host_uri|
-        # no need to validate hostname, uri validates it at initialize
-        host_uri.port=(ELASTICSEARCH_DEFAULT_PORT) if host_uri.port.nil?
-        host_uri.path=(ELASTICSEARCH_DEFAULT_PATH) if host_uri.path.length == 0 # host_uri.path may return empty array and will not be nil
-        host_uri.update(:scheme, scheme) if host_uri.scheme.nil? || host_uri.scheme.empty?
-        host_uri.freeze
-      end.freeze
-
-      agree_with = @hosts.all? { |host| host && host.scheme == scheme }
-      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
-    end
-
     raise_config_error! "`hosts` and `cloud_id` cannot be used together." if @hosts && @cloud_id
     raise_config_error! "Either `hosts` or `cloud_id` is required" unless @hosts || @cloud_id
     raise_config_error! "Empty `cloud_id` is not allowed" if @cloud_id && @cloud_id.empty?
+    raise_config_error! "Empty `hosts` is not allowed" if @hosts && @hosts.size == 0 # let's also catch [""]
+  end
+
+  def infer_ssl_from_connection_settings
+    return true if @cloud_id
+    return true if @hosts.all? { |host| host.scheme.to_s.empty? }
+    return true if @hosts.all? { |host| host.scheme == HTTPS_PROTOCOL }
+    return false if @hosts.all? { |host| host.scheme == HTTP_PROTOCOL }
+
+    raise_config_error! "`hosts` contains entries with mixed protocols, which are unsupported; when any entry includes a protocol, the protocols of all must match each other"
+  end
+
+  def validate_and_normalize_hosts
+    return if @hosts.nil? || @hosts.size == 0
+
+    # host normalization expects `ssl` to be resolved (not nil)
+    # let's add a safeguard to make sure we don't break the behavior in the future
+    raise_config_error! "`hosts` cannot be normalized with `ssl => nil`" if @ssl.nil?
+
+    root_path = @hosts[0].path.empty? ? ELASTICSEARCH_DEFAULT_PATH : @hosts[0].path
+    scheme = @ssl ? HTTPS_PROTOCOL : HTTP_PROTOCOL
+
+    @hosts = @hosts.each do |host_uri|
+      # no need to validate hostname, uri validates it at initialize
+      host_uri.port=(ELASTICSEARCH_DEFAULT_PORT) if host_uri.port.nil?
+      host_uri.path=(ELASTICSEARCH_DEFAULT_PATH) if host_uri.path.to_s.empty?
+      agree_with = host_uri.path == root_path
+      raise_config_error! "All hosts must use same path." unless agree_with
+
+      host_uri.update(:scheme, scheme) if host_uri.scheme.to_s.empty?
+      agree_with = host_uri.scheme == scheme
+      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
+
+      host_uri.freeze
+    end.freeze
   end
 
   def validate_auth_settings!
@@ -137,7 +162,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def validate_ssl_settings!
-    @ssl                         = @ssl.freeze # has a default value
+    @ssl                         = @ssl&.freeze
     @ssl_verification_mode       = @ssl_verification_mode&.freeze
     @truststore                  = @truststore&.freeze
     @truststore_password         = @truststore_password&.freeze
