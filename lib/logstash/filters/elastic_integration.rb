@@ -173,7 +173,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @ssl_keystore_password       = @ssl_keystore_password&.freeze
     @ssl_certificate_authorities = @ssl_certificate_authorities&.freeze
 
-    if !@ssl_enabled.nil? && @ssl_enabled
+    if @ssl_enabled
       # when SSL is enabled, the default ssl_verification_mode is "full"
       @ssl_verification_mode = "full".freeze if @ssl_verification_mode.nil?
 
