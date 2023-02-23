@@ -254,7 +254,7 @@ Password for the <<plugins-{type}s-{plugin}-ssl_truststore_path>>.
 * Value type is <<array,array>>
 * There is no default value for this setting.
 
-Type of verification.
+Level of verification of the certificate provided by Elasticsearch.
 If not specified and SSL is enabled, the verification mode becomes `full`. Refer to <<plugins-{type}s-{plugin}-ssl_enabled>> to get more information about when SSL can be enabled.
 
 * Available modes:
