@@ -2,26 +2,10 @@ steps:
   - label: ":hammer: Setup CI"
     command:
       # TODO: change to logstash-plugins org repo, now using personal repo to test
-      - "mkdir -p .ci && curl -sL https://github.com/mashhurs/.ci/archive/main.tar.gz | tar zxvf - --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh'"
-
-  - wait
-
-  - label: ":hammer: Building a :docker: to run tests"
-    command:
+      - "mkdir -p .ci && curl -sL https://github.com/mashhurs/.ci/archive/main.tar.gz | tar zxvf - --skip-old-files --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh'"
       - ".ci/docker-setup.sh"
-    plugins:
-      - docker-compose#v4.10.1:
-          build: app
     env:
       ELASTIC_STACK_VERSION: "8.6.2" # TODO we need to dynamically inject the version
     agents:
       # define a GCP VM agent to support container management (by default agent doesn't support)
       provider: "gcp"
-
-  - wait
-
-  - label: "Running tests on :docker: %n"
-    command: ".ci/docker-run.sh"
-    plugins:
-      - docker-compose#v4.10.1:
-          run: app
