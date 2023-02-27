@@ -1,15 +1,12 @@
 steps:
-  - label: ":hammer: Unit tests run"
-    command:
-      - "./gradlew clean vendor test"
-      - "bundle install"
-      - "bundle exec rspec --format documentation"
-
   - label: ":hammer: Integration tests run with :docker:"
     # TODO: change to logstash-plugins org repo, now using personal repo to test
     command:
-      - "ls -a && mkdir -p .ci && curl -sL https://github.com/mashhurs/.ci/archive/main.tar.gz | tar zxvf - --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh'"
-      - "ls -a && .ci/docker-setup.sh"
-      - "echo Docker is running."
+      - "mkdir -p .ci && curl -sL https://github.com/mashhurs/.ci/archive/main.tar.gz | tar zxvf - --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh'"
+      - "ls -a && ls -a .ci/ && .ci/docker-setup.sh"
+      - ".ci/docker-setup.sh"
     env:
       ELASTIC_STACK_VERSION: "8.6.2" # TODO we need to dynamically inject the version
+    agents:
+      # define a GCP VM agent to support container management (by default agent doesn't support)
+      provider: "gcp"
