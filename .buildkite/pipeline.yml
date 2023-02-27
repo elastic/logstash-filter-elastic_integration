@@ -1,5 +1,11 @@
 steps:
-  - label: ":hammer: Setup .ci -> :docker: Docker setup -> :docker: Docker run"
+  - label: ":hammer: Unit tests run"
+    command:
+      - "./gradlew clean vendor test"
+      - "bundle install"
+      - "bundle exec rspec --format documentation"
+
+  - label: ":hammer: Integration tests run with :docker:"
     # TODO: change to logstash-plugins org repo, now using personal repo to test
     command:
       - "ls -a && mkdir -p .ci && curl -sL https://github.com/mashhurs/.ci/archive/main.tar.gz | tar zxvf - --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh'"
