@@ -8,6 +8,6 @@ steps:
   - label: ":hammer: CI setup and tests run on :docker:"
     command:
       # TODO: change to logstash-plugins org repo, now using personal repo to test
-      - ".ci/docker-setup.sh && ci/docker-run.sh"
+      - ".ci/docker-setup.sh && .ci/docker-run.sh"
     env:
       ELASTIC_STACK_VERSION: "8.6.2" # TODO we need to dynamically inject the version
