@@ -85,7 +85,7 @@ public class DatastreamEventToPipelineNameResolver implements EventToPipelineNam
             try {
                 Request request = new Request(
                         "POST",
-                        URLEncodedUtils.formatSegments("_index_template", "_simulate_index", datastreamName));
+                        URLEncodedUtils.formatSegments("_index_template", "_simulate", datastreamName));
                 Response response = elasticsearchRestClient.performRequest(request);
 
                 final String responseBody = new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
