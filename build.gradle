@@ -67,7 +67,7 @@ dependencies {
     elasticsearchCore fileTree(dir: 'local_libs', include: ["*.jar"])
 
     // Logstash core and its known-provided dependencies
-    logstashCore fileTree(dir: LOGSTASH_CORE_PATH, include: "build/libs/logstash-core.jar")
+    logstashCore fileTree(dir: getLogstashCorePath(), include: "build/libs/logstash-core.jar")
     logstashCore 'org.apache.logging.log4j:log4j-api:2.19.0'
     logstashCore 'org.apache.logging.log4j:log4j-core:2.19.0'
     logstashCore "com.fasterxml.jackson.core:jackson-core:2.14.1"
@@ -110,6 +110,12 @@ def namedPackageWithAnyVersionPattern(String packageName, String suffix = null) 
     def optionalAnyVersionPart = "(?:-\\d+(?:\\.\\d+)*(?i:-SNAPSHOT(?:-[0-9A-F]+)?)?)?"
     def escapedSuffixPart = suffix == null ? "" : Pattern.quote(".${suffix}")
     return Pattern.compile("${escapedPackagePart}${optionalAnyVersionPart}${escapedSuffixPart}");
+}
+
+def getLogstashCorePath() {
+    return System.getenv('LOGSTASH_PATH')
+            ? System.getenv('LOGSTASH_PATH').concat("/logstash-core")
+            : LOGSTASH_CORE_PATH
 }
 
 task downloadElasticsearchSourceZip(type: Download) {
