@@ -67,7 +67,7 @@ dependencies {
     elasticsearchCore fileTree(dir: 'local_libs', include: ["*.jar"])
 
     // Logstash core and its known-provided dependencies
-    logstashCore fileTree(dir: getLogstashCorePath(), include: "build/libs/logstash-core.jar")
+    logstashCore fileTree(dir: getLogstashCorePath(), include: "lib/jars/logstash-core.jar")
     logstashCore 'org.apache.logging.log4j:log4j-api:2.19.0'
     logstashCore 'org.apache.logging.log4j:log4j-core:2.19.0'
     logstashCore "com.fasterxml.jackson.core:jackson-core:2.14.1"
