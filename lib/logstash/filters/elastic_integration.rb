@@ -34,7 +34,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   config :cloud_id, :validate => :string
 
   # Enable SSL/TLS secured communication to Elasticsearch cluster
-  config :ssl, :validate => :boolean
+  config :ssl_enabled, :validate => :boolean
 
   # Determines how much to verify a presented SSL certificate when `ssl => true`
   #  - none: no validation
@@ -43,10 +43,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   config :ssl_verification_mode, :validate => %w(full certificate none)
 
   # A path to truststore, used to _override_ the system truststore
-  config :truststore, :validate => :path
+  config :ssl_truststore_path, :validate => :path
 
   # A password for truststore
-  config :truststore_password, :validate => :password
+  config :ssl_truststore_password, :validate => :password
 
   # list of paths for SSL certificate authorities, used to _override_ the system truststore
   config :ssl_certificate_authorities, :validate => :path, :list => true
@@ -61,10 +61,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   config :ssl_key_passphrase, :validate => :password
 
   # The keystore used to present a certificate to the server
-  config :keystore, :validate => :path
+  config :ssl_keystore_path, :validate => :path
 
-  # A password for keystore
-  config :keystore_password, :validate => :password
+  # A password for SSL keystore
+  config :ssl_keystore_password, :validate => :password
 
   # Username for basic authentication
   config :auth_basic_username, :validate => :string
@@ -84,7 +84,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
 
     validate_connection_settings!
-    @ssl = infer_ssl_from_connection_settings if @ssl.nil?
+    @ssl_enabled = infer_ssl_from_connection_settings if @ssl_enabled.nil?
 
     validate_ssl_settings!
     validate_auth_settings!
@@ -118,12 +118,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def validate_and_normalize_hosts
     return if @hosts.nil? || @hosts.size == 0
 
-    # host normalization expects `ssl` to be resolved (not nil)
+    # host normalization expects `ssl_enabled` to be resolved (not nil)
     # let's add a safeguard to make sure we don't break the behavior in the future
-    raise_config_error! "`hosts` cannot be normalized with `ssl => nil`" if @ssl.nil?
+    raise_config_error! "`hosts` cannot be normalized with `ssl_enabled => nil`" if @ssl_enabled.nil?
 
     root_path = @hosts[0].path.empty? ? ELASTICSEARCH_DEFAULT_PATH : @hosts[0].path
-    scheme = @ssl ? HTTPS_PROTOCOL : HTTP_PROTOCOL
+    scheme = @ssl_enabled ? HTTPS_PROTOCOL : HTTP_PROTOCOL
 
     @hosts = @hosts.each do |host_uri|
       # no need to validate hostname, uri validates it at initialize
@@ -134,7 +134,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
       host_uri.update(:scheme, scheme) if host_uri.scheme.to_s.empty?
       agree_with = host_uri.scheme == scheme
-      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl ? '' : ' NOT'} using `ssl`." unless agree_with
+      raise_config_error! "All hosts must agree with #{scheme} schema when#{@ssl_enabled ? '' : ' NOT'} using `ssl_enabled`." unless agree_with
 
       host_uri.freeze
     end.freeze
@@ -158,27 +158,27 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     raise_config_error! "Empty `cloud_auth` is not allowed" if @cloud_auth && @cloud_auth.value.empty?
     raise_config_error! "Empty `api_key` is not allowed" if @api_key && @api_key.value.empty?
 
-    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") if possible_auth_options.size == 1 && !@ssl
+    @logger.warn("Credentials are being sent over unencrypted HTTP. This may bring security risk.") if possible_auth_options.size == 1 && !@ssl_enabled
   end
 
   def validate_ssl_settings!
-    @ssl                         = @ssl&.freeze
+    @ssl_enabled                 = @ssl_enabled&.freeze
     @ssl_verification_mode       = @ssl_verification_mode&.freeze
-    @truststore                  = @truststore&.freeze
-    @truststore_password         = @truststore_password&.freeze
     @ssl_certificate             = @ssl_certificate&.freeze
     @ssl_key                     = @ssl_key&.freeze
     @ssl_key_passphrase          = @ssl_key_passphrase&.freeze
-    @keystore                    = @keystore&.freeze
-    @keystore_password           = @keystore_password&.freeze
+    @ssl_truststore_path         = @ssl_truststore_path&.freeze
+    @ssl_truststore_password     = @ssl_truststore_password&.freeze
+    @ssl_keystore_path           = @ssl_keystore_path&.freeze
+    @ssl_keystore_password       = @ssl_keystore_password&.freeze
     @ssl_certificate_authorities = @ssl_certificate_authorities&.freeze
 
-    if @ssl
+    if @ssl_enabled
       # when SSL is enabled, the default ssl_verification_mode is "full"
       @ssl_verification_mode = "full".freeze if @ssl_verification_mode.nil?
 
       # optional: presenting our identity
-      raise_config_error! "`ssl_certificate` and `keystore` cannot be used together." if @ssl_certificate && @keystore
+      raise_config_error! "`ssl_certificate` and `ssl_keystore_path` cannot be used together." if @ssl_certificate && @ssl_keystore_path
       raise_config_error! "`ssl_certificate` requires `ssl_key`" if @ssl_certificate && !@ssl_key
       ensure_readable_and_non_writable! "ssl_certificate", @ssl_certificate if @ssl_certificate
 
@@ -189,37 +189,37 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
       raise_config_error! "`ssl_key_passphrase` is not allowed unless `ssl_key` is specified" if @ssl_key_passphrase && !@ssl_key
       raise_config_error! "`ssl_key_passphrase` cannot be empty" if @ssl_key_passphrase && @ssl_key_passphrase.value.empty?
 
-      raise_config_error! "`keystore` requires `keystore_password`" if @keystore && !@keystore_password
-      raise_config_error! "`keystore_password` is not allowed unless `keystore` is specified" if @keystore_password && !@keystore
-      raise_config_error! "`keystore_password` cannot be empty" if @keystore_password && @keystore_password.value.empty?
-      ensure_readable_and_non_writable!"keystore", @keystore if @keystore
+      raise_config_error! "`ssl_keystore_path` requires `ssl_keystore_password`" if @ssl_keystore_path && !@ssl_keystore_password
+      raise_config_error! "`ssl_keystore_password` is not allowed unless `ssl_keystore_path` is specified" if @ssl_keystore_password && !@ssl_keystore_path
+      raise_config_error! "`ssl_keystore_password` cannot be empty" if @ssl_keystore_password && @ssl_keystore_password.value.empty?
+      ensure_readable_and_non_writable! "ssl_keystore_path", @ssl_keystore_path if @ssl_keystore_path
 
       # establishing trust of the server we connect to
       # system-provided trust requires verification mode enabled
       if @ssl_verification_mode == "none"
-        raise_config_error! "`truststore` requires `ssl_verification_mode` to be either `full` or `certificate`" if @truststore
-        raise_config_error! "`truststore_password` requires `truststore` and `ssl_verification_mode` (either `full` or `certificate`)" if @truststore_password
+        raise_config_error! "`ssl_truststore_path` requires `ssl_verification_mode` to be either `full` or `certificate`" if @ssl_truststore_path
+        raise_config_error! "`ssl_truststore_password` requires `ssl_truststore_path` and `ssl_verification_mode` (either `full` or `certificate`)" if @ssl_truststore_password
         raise_config_error! "`ssl_certificate_authorities` requires `ssl_verification_mode` to be either `full` or `certificate`" if @ssl_certificate_authorities
       end
 
-      raise_config_error! "`truststore` and `ssl_certificate_authorities` cannot be used together." if @truststore && @ssl_certificate_authorities
-      raise_config_error! "`truststore` requires `truststore_password`" if @truststore && !@truststore_password
-      ensure_readable_and_non_writable!"truststore", @truststore if @truststore
+      raise_config_error! "`ssl_truststore_path` and `ssl_certificate_authorities` cannot be used together." if @ssl_truststore_path && @ssl_certificate_authorities
+      raise_config_error! "`ssl_truststore_path` requires `ssl_truststore_password`" if @ssl_truststore_path && !@ssl_truststore_password
+      ensure_readable_and_non_writable! "ssl_truststore_path", @ssl_truststore_path if @ssl_truststore_path
 
-      raise_config_error! "`truststore_password` is not allowed unless `truststore` is specified" if !@truststore && @truststore_password
-      raise_config_error! "`truststore_password` cannot be empty" if @truststore_password && @truststore_password.value.empty?
+      raise_config_error! "`ssl_truststore_password` is not allowed unless `ssl_truststore_path` is specified" if !@ssl_truststore_path && @ssl_truststore_password
+      raise_config_error! "`ssl_truststore_password` cannot be empty" if @ssl_truststore_password && @ssl_truststore_password.value.empty?
 
-      if !@truststore && @ssl_certificate_authorities&.empty?
+      if !@ssl_truststore_path && @ssl_certificate_authorities&.empty?
         raise_config_error! "`ssl_certificate_authorities` cannot be empty"
       end
       @ssl_certificate_authorities&.each do |certificate_authority|
-        ensure_readable_and_non_writable!"ssl_certificate_authorities", certificate_authority
+        ensure_readable_and_non_writable! "ssl_certificate_authorities", certificate_authority
       end
     else
       # Disabled SSL does not allow to set SSL related configs
-      ssl_config_provided = original_params.keys.select {|k| k.start_with?("ssl_", "keystore", "truststore", "cloud_id") }
+      ssl_config_provided = original_params.keys.select {|k| k.start_with?("ssl_", "cloud_id") && k != "ssl_enabled" }
       if ssl_config_provided.any?
-        raise_config_error! "When ssl is disabled, the following provided parameters are not allowed: #{ssl_config_provided}"
+        raise_config_error! "When SSL is disabled, the following provided parameters are not allowed: #{ssl_config_provided}"
       end
     end
   end
