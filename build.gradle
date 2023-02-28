@@ -253,7 +253,7 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
-task generateRubyJarRequiresFile(dependsOn: shadowJar) {
+task generateGemJarRequiresFile() {
     description "Generates a ruby script for runtime-requiring vendored jars"
 
     def jarRequiresFile = file("${projectDir}/lib/logstash/filters/elastic_integration/jar_dependencies.rb")
@@ -308,21 +308,29 @@ tasks.withType(Test) {
     ]
 }
 
-task vendor(dependsOn: shadowJar) {
+task vendorShadowJar(dependsOn: shadowJar) {
     description "vendors jar dependencies"
 
     String vendorPathPrefix = "vendor/jar-dependencies"
     String projectGroupPath = project.group.replaceAll('\\.', '/')
-    File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/logstash-filter-elastic_integration/${project.version}/logstash-filter-elastic_integration-${project.version}.jar")
+    File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${project.name}/${project.version}/${project.name}-${project.version}.jar")
+
+    inputs.file("${buildDir}/libs/${project.name}-${project.version}.jar")
     outputs.file(projectJarFile.toPath())
 
     doLast {
         projectJarFile.mkdirs()
-        Files.copy(file("$buildDir/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
+        Files.copy(file("${buildDir}/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
     }
 }
-vendor.dependsOn(shadowJar, generateRubyJarRequiresFile)
 
+task vendor {
+    description "vendors dependencies and generates the ruby code to require them"
+
+    dependsOn vendorShadowJar
+    dependsOn generateGemJarRequiresFile
+    generateGemJarRequiresFile.mustRunAfter vendorShadowJar
+}
 
 clean {
     delete "${projectDir}/*.gem"
