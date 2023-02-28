@@ -120,10 +120,11 @@ def getLogstashCorePath() {
             ? System.getenv('LOGSTASH_PATH').concat("/logstash-core")
             : LOGSTASH_CORE_PATH
 
-    def files = ('ls -l'.concat(logstashCorePath)).execute().text
-    files.eachLine{ file ->
-        System.out.println("File: " + file)
-    }
+    def proc  = ("ls -l ".concat(logstashCorePath)).execute();
+    proc.waitFor();
+    println "ls -l return code: ${ proc.exitValue()}"
+    println "ls -l stderr: ${proc.err.text}"
+    println "ls -l stdout: ${proc.in.text}"
 
     return logstashCorePath
 }
