@@ -119,16 +119,19 @@ def getLogstashCorePath() {
 }
 
 task downloadElasticsearchSourceZip(type: Download) {
-    inputs.property("ELASTICSEARCH_TREEISH", project.findProperty("ELASTICSEARCH_TREEISH"))
+    def esTreeish = System.getenv('ELASTICSEARCH_TREEISH')
+            ? System.getenv('ELASTICSEARCH_TREEISH')
+            : project.findProperty("ELASTICSEARCH_TREEISH")
+    inputs.property("ELASTICSEARCH_TREEISH", esTreeish)
 
-    if (!project.hasProperty("ELASTICSEARCH_TREEISH")) {
+    if (!esTreeish) {
         throw new StopActionException(""""
                 The property ELASTICSEARCH_TREEISH must be defined, and be a tree-ish (branch, commit hash, or tag)
                 available on the github repository for elastic/elasticsearch (e.g., `v8.7.0`, `8.7`, `main`)
             """)
     }
 
-    src "https://github.com/elastic/elasticsearch/archive/refs/heads/${ELASTICSEARCH_TREEISH}.zip"
+    src "https://github.com/elastic/elasticsearch/archive/refs/heads/${esTreeish}.zip"
     dest "${buildDir}/elasticsearch-source.zip"
     onlyIfModified true
     useETag "all"
