@@ -113,20 +113,9 @@ def namedPackageWithAnyVersionPattern(String packageName, String suffix = null) 
 }
 
 def getLogstashCorePath() {
-    System.out.println("Logstash from system env: " + System.getenv('LOGSTASH_PATH'))
-    System.out.println("Logstash from gradle properties: " + LOGSTASH_CORE_PATH)
-
-    def logstashCorePath = System.getenv('LOGSTASH_PATH')
+    return System.getenv('LOGSTASH_PATH')
             ? System.getenv('LOGSTASH_PATH').concat("/logstash-core")
             : LOGSTASH_CORE_PATH
-
-    def proc  = ("ls -l ".concat(logstashCorePath)).execute();
-    proc.waitFor();
-    println "ls -l return code: ${ proc.exitValue()}"
-    println "ls -l stderr: ${proc.err.text}"
-    println "ls -l stdout: ${proc.in.text}"
-
-    return logstashCorePath
 }
 
 task downloadElasticsearchSourceZip(type: Download) {
