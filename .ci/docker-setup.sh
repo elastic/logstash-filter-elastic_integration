@@ -55,7 +55,7 @@ if [ "$ELASTIC_STACK_VERSION" ]; then
     fi
 else
     echo "Please set the ELASTIC_STACK_VERSION environment variable"
-    echo "For example: export ELASTIC_STACK_VERSION=6.2.4"
+    echo "For example: export ELASTIC_STACK_VERSION=8.6.2"
     exit 1
 fi
 
