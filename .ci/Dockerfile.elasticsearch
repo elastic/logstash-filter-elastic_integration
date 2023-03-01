@@ -10,7 +10,8 @@ ARG ES_SSL_SUPPORTED_PROTOCOLS
 
 RUN rm -f $es_path/config/scripts
 
-COPY --chown=elasticsearch:elasticsearch spec/fixtures/test_certs/* $es_path/config/test_certs/
+# TODO let's come back for the SSL tests
+# COPY --chown=elasticsearch:elasticsearch src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs/generated/* $es_path/config/test_certs/
 COPY --chown=elasticsearch:elasticsearch .ci/elasticsearch-run.sh $es_path/
 
 RUN if [ "$SECURE_INTEGRATION" != "true" ] ; then echo "xpack.security.enabled: false" >> $es_yml; fi
