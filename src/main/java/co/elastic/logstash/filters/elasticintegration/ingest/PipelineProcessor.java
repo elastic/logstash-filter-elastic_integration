@@ -38,10 +38,6 @@ public class PipelineProcessor extends AbstractProcessor {
         this.ignoreMissingPipeline = ignoreMissingPipeline;
     }
 
-    public boolean isDynamic() {
-        return this.pipelineName.contains("{{");
-    }
-
     public String getPipelineName() {
         return this.pipelineName;
     }
