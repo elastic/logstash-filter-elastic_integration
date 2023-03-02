@@ -1,0 +1,26 @@
+{
+  "pipeline-id-one" : {
+    "description": "my fancy description",
+    "version": 123,
+    "processors": [
+      {
+        "set": {
+          "field" : "foo",
+          "value" : "bar"
+        }
+      }
+    ]
+  },
+  "pipeline-id-two" : {
+    "description": "my mundane description",
+    "version": 456,
+    "processors": [
+      {
+        "append": {
+          "field" : "foo",
+          "value" : "bar"
+        }
+      }
+    ]
+  }
+}

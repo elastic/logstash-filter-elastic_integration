@@ -15,7 +15,7 @@ public class LocalPipelinesUtil {
                 .orElseThrow(() -> new IllegalArgumentException(String.format("failed to load resource for `%s`", packageRelativePath)));
     }
 
-    static Optional<Path> getResourcePath(final Class<?> resourceProvider, final String packageRelativePath) {
+    public static Optional<Path> getResourcePath(final Class<?> resourceProvider, final String packageRelativePath) {
         return Optional.ofNullable(resourceProvider.getResource(packageRelativePath))
                 .map(URL::getPath)
                 .map(Paths::get);

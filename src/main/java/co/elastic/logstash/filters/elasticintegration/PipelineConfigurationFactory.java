@@ -8,10 +8,9 @@ import org.elasticsearch.common.bytes.BytesArray;
 import org.elasticsearch.ingest.PipelineConfiguration;
 import org.elasticsearch.xcontent.XContentType;
 
-import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * The {@code PipelineConfigurationFactory} is capable of creating an Elasticsearch
@@ -27,15 +26,19 @@ public class PipelineConfigurationFactory {
 
     private PipelineConfigurationFactory() { }
 
-    public Collection<PipelineConfiguration> parseNamedObjects(final String json) throws Exception {
+    public List<PipelineConfiguration> parseNamedObjects(final String json) throws Exception {
         return Spec.MAPPER.readValue(json, Spec.class).get();
     }
 
     public PipelineConfiguration parseNamedObject(final String json) throws Exception {
-        final Collection<PipelineConfiguration> configs = parseNamedObjects(json);
-        if (configs.size() > 1) { throw new IllegalStateException("empty"); }
+        final List<PipelineConfiguration> configs = parseNamedObjects(json);
+        if (configs.isEmpty()) {
+            throw new IllegalStateException("Expected a single pipeline definition. Got none");
+        } else if (configs.size() > 1) {
+            throw new IllegalStateException("Expected a single pipeline definition. Got " + configs.size());
+        }
 
-        return configs.stream().findFirst().orElseThrow(() -> new IllegalStateException("empty"));
+        return configs.get(0);
     }
 
     public PipelineConfiguration parseConfigOnly(final String pipelineId, final String jsonEncodedConfig) {
@@ -45,18 +48,17 @@ public class PipelineConfigurationFactory {
 
     private static class Spec {
         private static final ObjectMapper MAPPER = new ObjectMapper();
-        private final Map<String, String> idToConfigMap = new HashMap<>();
+        private final Map<String, String> idToConfigMap = new LinkedHashMap<>();
 
         @JsonAnySetter
         public void setConfig(final String pipelineId, final JsonNode jsonNode) throws JsonProcessingException {
             idToConfigMap.put(pipelineId, MAPPER.writeValueAsString(jsonNode));
         }
 
-        public Collection<PipelineConfiguration> get(){
+        public List<PipelineConfiguration> get(){
             return idToConfigMap.entrySet()
                     .stream()
-                    .map(e -> init(e.getKey(), e.getValue()))
-                    .collect(Collectors.toUnmodifiableSet());
+                    .map(e -> init(e.getKey(), e.getValue())).toList();
         }
 
         private static PipelineConfiguration init(final String id, final String json) {
