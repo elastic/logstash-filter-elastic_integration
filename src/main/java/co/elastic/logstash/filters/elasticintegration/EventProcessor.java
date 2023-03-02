@@ -2,13 +2,11 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
-import co.elastic.logstash.filters.elasticintegration.util.DuplexMarshaller;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.core.IOUtils;
-import org.elasticsearch.ingest.IngestDocument;
 import org.elasticsearch.ingest.common.FailProcessorException;
 
 import java.io.Closeable;
@@ -39,7 +37,7 @@ public class EventProcessor implements Closeable {
     private final IngestPipelineResolver internalPipelineProvider;
 
     private final EventToPipelineNameResolver eventToPipelineNameResolver;
-    private final DuplexMarshaller<Event, IngestDocument> eventMarshaller;
+    private final IngestDuplexMarshaller eventMarshaller;
 
     private final List<Closeable> resourcesToClose;
 
@@ -112,7 +110,7 @@ public class EventProcessor implements Closeable {
 
             final IngestPipeline ingestPipeline = loadedPipeline.get();
             LOGGER.trace(() -> String.format("Using loaded pipeline `%s` (%s)", pipelineName, System.identityHashCode(ingestPipeline)));
-            ingestPipeline.execute(eventMarshaller.toExternal(incomingEvent), (resultIngestDocument, ingestPipelineException) -> {
+            ingestPipeline.execute(eventMarshaller.toIngestDocument(incomingEvent), (resultIngestDocument, ingestPipelineException) -> {
                 if (Objects.nonNull(ingestPipelineException)) {
                     // If we had an exception in the IngestPipeline, tag and emit the original Event
                     final Throwable unwrappedException = unwrapException(ingestPipelineException);
@@ -129,7 +127,7 @@ public class EventProcessor implements Closeable {
                         incomingEvent.cancel();
                         eventConsumer.accept(incomingEvent);
                     } else {
-                        final Event resultEvent = eventMarshaller.toInternal(resultIngestDocument);
+                        final Event resultEvent = eventMarshaller.toLogstashEvent(resultIngestDocument);
                         // provide downstream ES output with hint to avoid re-running the same pipelines
                         resultEvent.setField(TARGET_PIPELINE_FIELD, PIPELINE_MAGIC_NONE);
                         filterMatchListener.filterMatched(resultEvent);

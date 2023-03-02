@@ -2,7 +2,6 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.EventFactory;
-import co.elastic.logstash.filters.elasticintegration.util.DuplexMarshaller;
 import org.elasticsearch.ingest.IngestDocument;
 import org.logstash.Javafier;
 import org.logstash.Valuefier;
@@ -15,7 +14,7 @@ import java.util.Map;
  * The {@code IngestDuplexMarshaller} is capable of marshalling events between the internal logstash {@link Event}
  * and the external Elasticsearch {@link IngestDocument}.
  */
-public class IngestDuplexMarshaller implements DuplexMarshaller<Event, IngestDocument> {
+public class IngestDuplexMarshaller {
     private static final String INGEST_TIMESTAMP = "timestamp";
     private final EventFactory eventFactory;
 
@@ -29,7 +28,7 @@ public class IngestDuplexMarshaller implements DuplexMarshaller<Event, IngestDoc
         return DEFAULT_INSTANCE;
     }
 
-    public IngestDocument toExternal(final Event event) {
+    public IngestDocument toIngestDocument(final Event event) {
         Map<String, Object> data = new HashMap<>();
         Map<String, Object> ingestMetadata = new HashMap<>();
 
@@ -55,7 +54,7 @@ public class IngestDuplexMarshaller implements DuplexMarshaller<Event, IngestDoc
         return new IngestDocument(data, ingestMetadata);
     }
 
-    public Event toInternal(final IngestDocument document) {
+    public Event toLogstashEvent(final IngestDocument document) {
         Map<String, Object> source = document.getSourceAndMetadata();
         Map<String, Object> metadata = document.getIngestMetadata();
 
