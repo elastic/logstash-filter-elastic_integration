@@ -41,14 +41,14 @@ SSL is enabled by default in the plugin.
 This plugin can optionally be configured to present a certificate-based proof-of-identity to the Elasticsearch cluster it connects to:
 
 * A PKCS8 Certificate/Key pair (see <<plugins-{type}s-{plugin}-ssl_certificate>>)
-* A JKS- or PKCS12-formatted Keystore (see <<plugins-{type}s-{plugin}-keystore>>)
+* A JKS- or PKCS12-formatted Keystore (see <<plugins-{type}s-{plugin}-ssl_keystore_path>>)
 
 ===== SSL Trust Configuration
 
 When communicating over SSL, this plugin fully-validates the proof-of-identity presented by Elasticsearch using the system trust store. An alternate source of trust can be provided with one of:
 
 * A PEM-formatted list of certificate authorities (see <<plugins-{type}s-{plugin}-ssl_certificate_authorities>>)
-* A JKS- or PKCS12-formatted Keystore(see <<plugins-{type}s-{plugin}-truststore>>)
+* A JKS- or PKCS12-formatted Keystore(see <<plugins-{type}s-{plugin}-ssl_truststore_path>>)
 
 ===== Request Identity
 
@@ -75,16 +75,16 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-cloud_auth>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-cloud_id>> | <<string,string>>|No
 | <<plugins-{type}s-{plugin}-hosts>> |<<array,array>>|No
-| <<plugins-{type}s-{plugin}-keystore>> | <<path,path>>|No
-| <<plugins-{type}s-{plugin}-keystore_password>> | <<password,password>>|No
-| <<plugins-{type}s-{plugin}-ssl>> | <<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-ssl_enabled>> | <<boolean,boolean>>|No
 | <<plugins-{type}s-{plugin}-ssl_key>> | <<path,path>>|No
+| <<plugins-{type}s-{plugin}-ssl_keystore_password>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-ssl_keystore_path>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-ssl_key_passphrase>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-ssl_truststore_path>> | <<path,path>>|No
+| <<plugins-{type}s-{plugin}-ssl_truststore_password>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-ssl_verification_mode>> | <<string,string>>, one of `["full", "certificate", "none"]`|No
-| <<plugins-{type}s-{plugin}-truststore>> | <<path,path>>|No
-| <<plugins-{type}s-{plugin}-truststore_password>> | <<password,password>>|No
 |=======================================================================
 
 [id="plugins-{type}s-{plugin}-api_key"]
@@ -129,7 +129,8 @@ for the `auth_basic_username`/`auth_basic_password` pair and can be obtained fro
 * There is no default value for this setting.
 
 Cloud ID, from the Elastic Cloud web console.
-This setting should not be used when `hosts` are specified.
+This setting should not be used when <<plugins-{type}s-{plugin}-hosts>> are specified.
+Using this setting enables SSL if <<plugins-{type}s-{plugin}-ssl_enabled>> is not specified or this cannot be used with <<plugins-{type}s-{plugin}-ssl_enabled>> 'false'.
 
 For more details, check out the
 {logstash-ref}/connecting-to-cloud.html[Logstash-to-Cloud documentation].
@@ -150,37 +151,14 @@ Examples:
     `["https://127.0.0.1:9200"]`
     `["https://127.0.0.1:9200/subpath"]` (If using a proxy on a subpath)
 
-Set HTTPS to each entry when using SSL or HTTP when not using.
-When port is not specified, the plugin uses default 9200. Similarly, it uses default `/` path.
+Host entry protocols decide enabling the SSL if <<plugins-{type}s-{plugin}-ssl_enabled>> is not specified. Set HTTPS to each entry when using SSL or HTTP when not using.
+Not specifying entry protocols (example `"127.0.0.1"`) will cause normalizing the host protocols based on <<plugins-{type}s-{plugin}-ssl_enabled>> value, HTTP if `ssl_enabled => false`, HTTPS otherwise.
+
+The plugin uses default 9200 port if port is not specified.
+Each host entry must contain same path when using a path, defaults to `/`.
 
 Any special characters present in the URLs here MUST be URL escaped! This means
 `#` should be put in as `%23` for instance.
-
-[id="plugins-{type}s-{plugin}-keystore"]
-===== `keystore`
-
-* Value type is <<path,path>>
-* There is no default value for this setting.
-* When present, <<plugins-{type}s-{plugin}-keystore_password>> is also required.
-
-A path to a JKS- or PKCS12-formatted keystore with which to identify this plugin to Elasticsearch.
-
-[id="plugins-{type}s-{plugin}-keystore_password"]
-===== `keystore_password`
-
-* Value type is <<password,password>>
-* There is no default value for this setting.
-* Required when connection identity is configured with <<plugins-{type}s-{plugin}-keystore>>
-
-Password for the <<plugins-{type}s-{plugin}-keystore>>
-
-[id="plugins-{type}s-{plugin}-ssl"]
-===== `ssl`
-
-* Value type is <<boolean,boolean>>
-* Default value is `true`.
-
-Enable or disable secured SSL communication to Elasticsearch cluster.
 
 [id="plugins-{type}s-{plugin}-ssl_certificate"]
 ===== `ssl_certificate`
@@ -201,6 +179,19 @@ One or more PEM-formatted files defining certificate authorities.
 
 This setting can be used to _override_ the system trust store for verifying the SSL certificate presented by Elasticsearch.
 
+[id="plugins-{type}s-{plugin}-ssl_enabled"]
+===== `ssl_enabled`
+
+* Value type is <<boolean,boolean>>
+* There is no default value for this setting.
+
+Secure SSL communication to {es} is enabled unless:
+
+* it is explicitly disabled with `ssl_enabled => false`; OR
+* it is implicitly disabled by providing `http`-protocol <<plugins-{type}s-{plugin}-hosts>>.
+
+Specifying `ssl_enabled => true` can be a helpful redundant safeguard to ensure this plugin cannot be configured to use non-ssl communication.
+
 [id="plugins-{type}s-{plugin}-ssl_key"]
 ===== `ssl_key`
 
@@ -209,6 +200,24 @@ This setting can be used to _override_ the system trust store for verifying the 
 * Required when connection identity is configured with <<plugins-{type}s-{plugin}-ssl_certificate>>
 
 A path to a PKCS8-formatted SSL certificate key.
+
+[id="plugins-{type}s-{plugin}-ssl_keystore_password"]
+===== `ssl_keystore_password`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+* Required when connection identity is configured with <<plugins-{type}s-{plugin}-ssl_keystore_path>>
+
+Password for the <<plugins-{type}s-{plugin}-ssl_keystore_path>>
+
+[id="plugins-{type}s-{plugin}-ssl_keystore_path"]
+===== `ssl_keystore_path`
+
+* Value type is <<path,path>>
+* There is no default value for this setting.
+* When present, <<plugins-{type}s-{plugin}-ssl_keystore_password>> is also required.
+
+A path to a JKS- or PKCS12-formatted keystore with which to identify this plugin to Elasticsearch.
 
 [id="plugins-{type}s-{plugin}-ssl_key_passphrase"]
 ===== `ssl_key_passphrase`
@@ -219,38 +228,39 @@ A path to a PKCS8-formatted SSL certificate key.
 
 A password or passphrase of the <<plugins-{type}s-{plugin}-ssl_key>>.
 
-[id="plugins-{type}s-{plugin}-ssl_verification_mode"]
-===== `ssl_verification_mode`
-
-* Value type is <<array,array>>
-* Default value is `full`.
-
-Type of verification.
-
-* Available modes:
-** `none`: performs no validation, implicitly trusting any server that this plugin connects to (insecure)
-** `certificate`: validates the server-provided certificate is signed by a trusted certificate authority and that the server can prove possession of its associated private key (less secure)
-** `full`: performs the same validations as `certificate` and also that the provided certificate has an identity claim matching the server we are attempting to connect to (most secure)
-
-[id="plugins-{type}s-{plugin}-truststore"]
-===== `truststore`
+[id="plugins-{type}s-{plugin}-ssl_truststore_path"]
+===== `ssl_truststore_path`
 
 * Value type is <<path,path>>
 * There is no default value for this setting.
-* When present, <<plugins-{type}s-{plugin}-truststore_password>> is required.
+* When present, <<plugins-{type}s-{plugin}-ssl_truststore_password>> is required.
 
 A path to JKS- or PKCS12-formatted keystore where trusted certificates are located.
 
 This setting can be used to _override_ the system trust store for verifying the SSL certificate presented by Elasticsearch.
 
-[id="plugins-{type}s-{plugin}-truststore_password"]
-===== `truststore_password`
+[id="plugins-{type}s-{plugin}-ssl_truststore_password"]
+===== `ssl_truststore_password`
 
 * Value type is <<password,password>>
 * There is no default value for this setting.
-* Required when connection trust is configured with <<plugins-{type}s-{plugin}-truststore>>
+* Required when connection trust is configured with <<plugins-{type}s-{plugin}-ssl_truststore_path>>
 
-Password for the <<plugins-{type}s-{plugin}-truststore>>.
+Password for the <<plugins-{type}s-{plugin}-ssl_truststore_path>>.
+
+[id="plugins-{type}s-{plugin}-ssl_verification_mode"]
+===== `ssl_verification_mode`
+
+* Value type is <<array,array>>
+* There is no default value for this setting.
+
+Level of verification of the certificate provided by Elasticsearch.
+If not specified and SSL is enabled, the verification mode becomes `full`. Refer to <<plugins-{type}s-{plugin}-ssl_enabled>> to get more information about when SSL can be enabled.
+
+* Available modes:
+** `none`: performs no validation, implicitly trusting any server that this plugin connects to (insecure)
+** `certificate`: validates the server-provided certificate is signed by a trusted certificate authority and that the server can prove possession of its associated private key (less secure)
+** `full`: performs the same validations as `certificate` and also that the provided certificate has an identity claim matching the server we are attempting to connect to (most secure)
 
 
 Also see <<plugins-{type}s-{plugin}-common-options>> for a list of options supported by all
