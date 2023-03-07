@@ -15,6 +15,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   java_import('co.elastic.logstash.filters.elasticintegration.EventProcessor')
   java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
   java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
+  java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
@@ -101,6 +102,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_and_normalize_hosts
 
     initialize_event_processor!
+
+    perform_preflight_check!
   end # def register
 
   def filter(event)
@@ -313,4 +316,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     raise_config_error!("configuration did not produce an EventProcessor: #{exception}")
   end
 
+  def perform_preflight_check!
+    PreflightCheck.new(@elasticsearch_rest_client).check
+  rescue => e
+    raise_config_error!(e.message)
+  end
 end
