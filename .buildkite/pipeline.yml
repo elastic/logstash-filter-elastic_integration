@@ -1,0 +1,4 @@
+steps:
+  - label: ":hammer: Initial setup"
+    command:
+      - "ls -a"
