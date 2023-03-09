@@ -12,6 +12,7 @@ import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.common.IngestCommonPlugin;
+import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
 import org.elasticsearch.painless.PainlessScriptEngine;
 import org.elasticsearch.painless.spi.Whitelist;
@@ -66,6 +67,7 @@ public class EventProcessorBuilder {
 
         // add the ingest processors
         builder.addProcessorsFromPlugin(IngestCommonPlugin::new);
+        builder.addProcessorsFromPlugin(IngestUserAgentPlugin::new);
         builder.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
 
         return builder;
