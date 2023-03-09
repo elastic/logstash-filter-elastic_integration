@@ -1,4 +1,8 @@
 steps:
   - label: ":hammer: Initial setup"
     command:
-      - "ls -a"
+      - "mkdir -p .ci && ls -a"
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: false
+      SNAPSHOT: true
