@@ -1,0 +1,35 @@
+version: '3'
+
+services:
+
+  logstash:
+    command: /usr/share/plugins/plugin/.ci/logstash-run.sh
+    build:
+      args:
+        - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+    environment:
+        - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+        - INTEGRATION=${INTEGRATION:-false}
+        - SECURE_INTEGRATION=${SECURE_INTEGRATION:-false}
+        - ES_SSL_KEY_INVALID=${ES_SSL_KEY_INVALID:-false}
+        - ES_SSL_SUPPORTED_PROTOCOLS=$ES_SSL_SUPPORTED_PROTOCOLS
+        - ELASTICSEARCH_TREEISH=$ELASTICSEARCH_TREEISH
+
+  elasticsearch:
+    build:
+      context: ../
+      dockerfile: .ci/Dockerfile.elasticsearch
+      args:
+        - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+        - INTEGRATION=${INTEGRATION:-false}
+        - SECURE_INTEGRATION=${SECURE_INTEGRATION:-false}
+        - ES_SSL_KEY_INVALID=${ES_SSL_KEY_INVALID:-false}
+        - ES_SSL_SUPPORTED_PROTOCOLS=$ES_SSL_SUPPORTED_PROTOCOLS
+    environment:
+      - ES_JAVA_OPTS=-Xms640m -Xmx640m
+    command: /usr/share/elasticsearch/elasticsearch-run.sh
+    tty: true
+    ports:
+      - "9200:9200"
+    user: elasticsearch
+

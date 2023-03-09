@@ -1,0 +1,42 @@
+# define a GCP VM agent to support container management (by default agent doesn't support)
+agents:
+  provider: "gcp"
+  machineType: "n1-standard-4"
+  image: family/core-ubuntu-2004
+
+steps:
+# ------------- Unit tests ---------------------
+  - label: ":hammer: CI setup and unit tests run :docker:"
+    command:
+      - "mkdir -p .ci && curl -sL https://github.com/logstash-plugins/.ci/archive/buildkite-1.x.tar.gz | tar zxvf - --skip-old-files --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh' && .ci/docker-setup.sh && .ci/docker-run.sh"
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: false
+      SNAPSHOT: true
+
+# ------------- Integration tests ---------------------
+  - label: ":hammer: CI setup and integration tests run on :docker:"
+    command:
+      - "mkdir -p .ci && curl -sL https://github.com/logstash-plugins/.ci/archive/buildkite-1.x.tar.gz | tar zxvf - --skip-old-files --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh' && .ci/docker-setup.sh && .ci/docker-run.sh"
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: true
+
+  - label: ":hammer: CI setup and integration tests run on :docker:"
+    command:
+      - "mkdir -p .ci && curl -sL https://github.com/logstash-plugins/.ci/archive/buildkite-1.x.tar.gz | tar zxvf - --skip-old-files --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh' && .ci/docker-setup.sh && .ci/docker-run.sh"
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: true
+      SNAPSHOT: true
+      LOG_LEVEL: "info"
+
+  - label: ":hammer: CI setup and integration tests run on :docker:"
+    command:
+      - "mkdir -p .ci && curl -sL https://github.com/logstash-plugins/.ci/archive/buildkite-1.x.tar.gz | tar zxvf - --skip-old-files --strip-components=1 -C .ci --wildcards '*Dockerfile*' '*docker*' '*.sh' && .ci/docker-setup.sh && .ci/docker-run.sh"
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: true
+      LOG_LEVEL: "info"
+      SECURE_INTEGRATION: true
+      SNAPSHOT: true
