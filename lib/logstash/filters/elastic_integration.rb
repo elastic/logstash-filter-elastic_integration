@@ -86,6 +86,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def register
     @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
+    puts "Do not merge this change, adding a change to run PR on a buildkite."
 
     validate_connection_settings!
     @ssl_enabled = infer_ssl_from_connection_settings if @ssl_enabled.nil?
