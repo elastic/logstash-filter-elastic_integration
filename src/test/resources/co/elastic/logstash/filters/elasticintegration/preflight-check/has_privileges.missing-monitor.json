@@ -1,0 +1,11 @@
+{
+  "username": "luna",
+  "has_all_requested": false,
+  "cluster": {
+    "monitor": false,
+    "read_pipeline": true,
+    "manage_index_templates": true
+  },
+  "index" : {},
+  "application": {}
+}

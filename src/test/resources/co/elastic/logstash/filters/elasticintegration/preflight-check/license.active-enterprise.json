@@ -1,0 +1,11 @@
+{
+  "license": {
+    "status": "active",
+    "type": "enterprise",
+    "issue_date": "{{now offset='-10 days'  timezone='UTC'}}",
+    "expiry_date": "{{now offset='20 days' timezone='UTC'}}",
+    "max_nodes": 10,
+    "issued_to": "tester",
+    "issuer": "test-fixture"
+  }
+}

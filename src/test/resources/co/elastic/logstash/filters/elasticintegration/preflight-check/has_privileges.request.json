@@ -1,0 +1,3 @@
+{
+  "cluster": ["monitor", "read_pipeline", "manage_index_templates"]
+}

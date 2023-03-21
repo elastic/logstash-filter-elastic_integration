@@ -9,6 +9,8 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static co.elastic.logstash.filters.elasticintegration.util.LocalPipelinesUtil.*;
+import static co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil.ensureSetFileReadable;
+import static co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil.ensureSetFileWritable;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
