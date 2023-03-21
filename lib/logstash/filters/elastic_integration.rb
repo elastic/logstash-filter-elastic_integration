@@ -280,7 +280,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     builder.setHosts @hosts&.map(&:to_s)
     builder.setCloudId @cloud_id
 
-    builder.setSslEnabled @ssl
+    builder.setSslEnabled @ssl_enabled
 
     # ssl trust
     builder.setSslVerificationMode @ssl_verification_mode
