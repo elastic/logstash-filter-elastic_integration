@@ -211,6 +211,7 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
                 include jarPackageNamed("elasticsearch-core")
                 include jarPackageNamed("elasticsearch-x-content")
                 include jarPackageNamed("lucene-core")
+                include jarPackageNamed("lucene-analysis-common")
             }
 
             from("${elasticsearchBuildTree}/modules/ingest-common") {
