@@ -90,6 +90,8 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.1.1'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
+    testImplementation "com.github.seregamorph:hamcrest-more-matchers:0.1"
+    testImplementation "com.github.tomakehurst:wiremock-jre8:2.35.0"
     testRuntimeOnly requiredLogstashCoreJar("log4j-core")
 }
 
@@ -251,7 +253,7 @@ tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
 }
 
-task generateRubyJarRequiresFile(dependsOn: shadowJar) {
+task generateGemJarRequiresFile() {
     description "Generates a ruby script for runtime-requiring vendored jars"
 
     def jarRequiresFile = file("${projectDir}/lib/logstash/filters/elastic_integration/jar_dependencies.rb")
@@ -272,6 +274,27 @@ test {
     useJUnitPlatform()
 }
 
+task generateTestCertificates(type: Exec) {
+    def sslTestCertsDir = "${projectDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs"
+
+    workingDir sslTestCertsDir
+    commandLine './generate.sh'
+
+    def commonOutputFile = Paths.get("${buildDir}/generateTestCertificates.log")
+    file(commonOutputFile.parent).mkdirs()
+    def commonOutputStream = Files.newOutputStream(commonOutputFile)
+
+    standardOutput = commonOutputStream
+    errorOutput = commonOutputStream
+
+    inputs.file("${sslTestCertsDir}/generate.sh")
+    inputs.file("${sslTestCertsDir}/openssl.cnf")
+
+    outputs.dir("${sslTestCertsDir}/generated")
+    outputs.file(commonOutputFile)
+}
+processTestResources.dependsOn(generateTestCertificates)
+
 tasks.withType(Test) {
     // Add Exports to enable tests to run in JDK17
     jvmArgs = [
@@ -285,21 +308,29 @@ tasks.withType(Test) {
     ]
 }
 
-task vendor(dependsOn: shadowJar) {
+task vendorShadowJar(dependsOn: shadowJar) {
     description "vendors jar dependencies"
 
     String vendorPathPrefix = "vendor/jar-dependencies"
     String projectGroupPath = project.group.replaceAll('\\.', '/')
-    File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/logstash-filter-elastic_integration/${project.version}/logstash-filter-elastic_integration-${project.version}.jar")
+    File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${project.name}/${project.version}/${project.name}-${project.version}.jar")
+
+    inputs.file("${buildDir}/libs/${project.name}-${project.version}.jar")
     outputs.file(projectJarFile.toPath())
 
     doLast {
         projectJarFile.mkdirs()
-        Files.copy(file("$buildDir/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
+        Files.copy(file("${buildDir}/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
     }
 }
-vendor.dependsOn(shadowJar, generateRubyJarRequiresFile)
 
+task vendor {
+    description "vendors dependencies and generates the ruby code to require them"
+
+    dependsOn vendorShadowJar
+    dependsOn generateGemJarRequiresFile
+    generateGemJarRequiresFile.mustRunAfter vendorShadowJar
+}
 
 clean {
     delete "${projectDir}/*.gem"
