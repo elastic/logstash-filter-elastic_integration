@@ -13,6 +13,7 @@ import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.common.IngestCommonPlugin;
+import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
 import org.elasticsearch.painless.PainlessScriptEngine;
 import org.elasticsearch.painless.spi.Whitelist;
@@ -53,15 +54,14 @@ public class EventProcessorBuilder {
 
         builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
                 new SimpleResolverCache.Configuration(Duration.ofSeconds(60), Duration.ofSeconds(10)))));
-
         builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
         builder.setPipelineResolverCacheConfig(Duration.ofSeconds(60), Duration.ofSeconds(10));
-
         return builder;
     }
 
     public EventProcessorBuilder() {
         this.addProcessorsFromPlugin(IngestCommonPlugin::new);
+        this.addProcessorsFromPlugin(IngestUserAgentPlugin::new);
         this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
