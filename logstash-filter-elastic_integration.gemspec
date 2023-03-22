@@ -4,7 +4,7 @@ ELASTIC_INTEGRATION_VERSION = File.read(File.expand_path(File.join(File.dirname(
 Gem::Specification.new do |s|
   s.name = 'logstash-filter-elastic_integration'
   s.version = ELASTIC_INTEGRATION_VERSION
-  s.licenses = ['NONE']
+  s.licenses = ['ELv2']
   s.summary = "Processes Elastic Integrations"
   s.description = "This gem is a Logstash plugin required to be installed on top of the Logstash core pipeline using $LS_HOME/bin/logstash-plugin install gemname. This gem is not a stand-alone program"
   s.authors = ["Elastic"]
@@ -12,12 +12,13 @@ Gem::Specification.new do |s|
   s.homepage = "http://www.elastic.co/guide/en/logstash/current/index.html"
   s.require_paths = ["lib", "vendor/jar-dependencies"]
 
-  # Files
+  # Files to be included in package
   s.files = Dir[*%w{
     lib/**/*.*
     vendor/jar-dependencies/**/*.jar
     VERSION
-    LICENSE
+    LICENSE.md
+    NOTICE.txt
   }]
 
   # Special flag to let us know this is actually a logstash plugin
@@ -32,4 +33,10 @@ Gem::Specification.new do |s|
   s.add_development_dependency 'logstash-devutils'
 
   s.platform = "java"
+
+  s.post_install_message = <<~NOTICES
+    This Logstash plugin embeds a subset of Elasticsearch (https://elastic.co/)
+    and packages from Apache Lucene, including software developed by The Apache
+    Software Foundation (http://www.apache.org/).
+  NOTICES
 end

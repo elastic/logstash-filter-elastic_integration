@@ -94,6 +94,22 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A directory containing one or more Maxmind Datbase files in *.mmdb format
   config :geoip_database_directory, :validate => :path
 
+
+  def initialize(*a, &b)
+    # This Elastic-licensed plugin needs to run in a _complete_ distro of Logstash that
+    # has non-OSS features active. Runtime detection mechanism relies on LogStash::OSS,
+    # which is set in the prelude to LogStash::Runner, and is bypassed when LogStash::OSS
+    # is not defined (such as when running specs from source)
+    if defined?(LogStash::OSS) && LogStash::OSS
+      raise_config_error! <<~ERR
+        The Elastic Integration filter for Logstash is an Elastic-licensed plugin
+        that REQUIRES the complete Logstash distribution, including non-OSS features.
+      ERR
+    end
+
+    super
+  end
+
   def register
     @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
 
