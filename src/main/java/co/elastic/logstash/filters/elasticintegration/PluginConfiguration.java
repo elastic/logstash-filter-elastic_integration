@@ -7,11 +7,9 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Function;
 
 /**
  * A {@link PluginConfiguration} is an immutable view of the subset of a plugin's configuration
@@ -51,18 +49,18 @@ final class PluginConfiguration {
         this.id = builder.id;
         // elasticsearch: routing
         this.cloudId = builder.cloudId;
-        this.hosts = nullableImmutableCopy(builder.hosts, Function.identity());
+        this.hosts = copyOfNullableList(builder.hosts);
         this.sslEnabled = builder.sslEnabled;
         // elasticsearch: ssl trust
         this.sslVerificationMode = builder.sslVerificationMode;
-        this.sslTruststorePath = nullableImmutableCopy(builder.sslTruststorePath, Path::toString);
+        this.sslTruststorePath = builder.sslTruststorePath;
         this.sslTruststorePassword = builder.sslTruststorePassword;
-        this.sslCertificateAuthorities = nullableImmutableCopy(builder.sslCertificateAuthorities, Path::toString);
+        this.sslCertificateAuthorities = copyOfNullableList(builder.sslCertificateAuthorities);
         // elasticsearch: ssl identity
-        this.sslKeystorePath = nullableImmutableCopy(builder.sslKeystorePath, Path::toString);
+        this.sslKeystorePath = builder.sslKeystorePath;
         this.sslKeystorePassword = builder.sslKeystorePassword;
-        this.sslCertificate = nullableImmutableCopy(builder.sslCertificate, Path::toString);
-        this.sslKey = nullableImmutableCopy(builder.sslKey, Path::toString);
+        this.sslCertificate = builder.sslCertificate;
+        this.sslKey = builder.sslKey;
         this.sslKeyPassphrase = builder.sslKeyPassphrase;
         // elasticsearch: request auth
         this.authBasicUsername = builder.authBasicUsername;
@@ -71,18 +69,10 @@ final class PluginConfiguration {
         this.apiKey = builder.apiKey;
     }
 
-    private static <T> List<String> nullableImmutableCopy(final Collection<T> source,
-                                                          final Function<T,String> transformer) {
+    private static <T> List<T> copyOfNullableList(final List<T> source) {
         if (Objects.isNull(source)) { return null; }
 
-        return source.stream()
-                .map(transformer)
-                .toList();
-    }
-    private static <T> String nullableImmutableCopy(final T source, final Function<T,String> transformer) {
-        if (Objects.isNull(source)) { return null; }
-
-        return transformer.apply(source);
+        return List.copyOf(source);
     }
 
     public static Builder builder() {
@@ -198,13 +188,13 @@ final class PluginConfiguration {
         List<String> hosts;
         Boolean sslEnabled;
         String sslVerificationMode;
-        Path sslTruststorePath;
+        String sslTruststorePath;
         Password sslTruststorePassword;
-        List<Path> sslCertificateAuthorities;
-        Path sslKeystorePath;
+        List<String> sslCertificateAuthorities;
+        String sslKeystorePath;
         Password sslKeystorePassword;
-        Path sslCertificate;
-        Path sslKey;
+        String sslCertificate;
+        String sslKey;
         Password sslKeyPassphrase;
         String authBasicUsername;
         Password authBasicPassword;
@@ -242,7 +232,7 @@ final class PluginConfiguration {
             return this;
         }
 
-        public Builder setSslTruststorePath(final Path sslTruststorePath) {
+        public Builder setSslTruststorePath(final String sslTruststorePath) {
             this.sslTruststorePath = sslTruststorePath;
             return this;
         }
@@ -252,14 +242,14 @@ final class PluginConfiguration {
             return this;
         }
 
-        public Builder setSslCertificateAuthorities(final List<Path> sslCertificateAuthorities) {
+        public Builder setSslCertificateAuthorities(final List<String> sslCertificateAuthorities) {
             if (Objects.nonNull(sslCertificateAuthorities)) {
                 this.sslCertificateAuthorities = List.copyOf(sslCertificateAuthorities);
             }
             return this;
         }
 
-        public Builder setSslKeystorePath(final Path sslKeystorePath) {
+        public Builder setSslKeystorePath(final String sslKeystorePath) {
             this.sslKeystorePath = sslKeystorePath;
             return this;
         }
@@ -269,12 +259,12 @@ final class PluginConfiguration {
             return this;
         }
 
-        public Builder setSslCertificate(final Path sslCertificate) {
+        public Builder setSslCertificate(final String sslCertificate) {
             this.sslCertificate = sslCertificate;
             return this;
         }
 
-        public Builder setSslKey(final Path sslKey) {
+        public Builder setSslKey(final String sslKey) {
             this.sslKey = sslKey;
             return this;
         }
