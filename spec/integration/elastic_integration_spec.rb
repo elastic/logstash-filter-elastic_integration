@@ -9,9 +9,8 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:es_http_client_options) {
     {
       ssl: {
-        ca_file: 'spec/fixtures/test_certs/ca.crt',
-        client_cert: 'spec/fixtures/test_certs/test.crt',
-        client_key: 'spec/fixtures/test_certs/test.key'
+        ca_file: 'spec/fixtures/test_certs/root.crt',
+        verify: :none
       }
     }
   }
@@ -21,14 +20,15 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:integ_user_password) { "elastic" }
   let(:settings) {
     {
-      "hosts" => "https://@elasticsearch:9200",
+      "hosts" => "https://elasticsearch:9200",
       "auth_basic_username" => integ_user_name,
       "auth_basic_password" => integ_user_password,
       "ssl_enabled" => true,
-      "ssl_certificate_authorities" => "spec/fixtures/test_certs/ca.crt",
-      "ssl_certificate" => "spec/fixtures/test_certs/test.crt",
-      "ssl_key" => "spec/fixtures/test_certs/test.key",
-      "ssl_key_passphrase" => "1234567890"
+      "ssl_verification_mode" => "certificate",
+      "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt",
+      "ssl_certificate" => "spec/fixtures/test_certs/client_from_root.crt",
+      "ssl_key" => "spec/fixtures/test_certs/client_from_root.key.pkcs8",
+      "ssl_key_passphrase" => "12345678"
     }
   }
 
@@ -331,7 +331,6 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
     end
 
-    # TODO : not dropping the event
     describe 'with drop processor' do
       let(:pipeline_processor) {
         '{
@@ -357,10 +356,8 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         # we still keep it and mark it as cancelled
         expect(processed_events.size.eql?(2)).to be_truthy
         processed_events.each do |event|
-          puts "Event: #{event.to_json.to_s}"
-          puts "Event meta: #{event.get("@metadata")}"
           if event.get("user_type") == "Guest"
-            expect(event.is_cancelled).to be_truthy
+            expect(event.cancelled?).to be_truthy
           end
         end
       end
@@ -1005,14 +1002,6 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       "l0ng-r4nd0m-p@ssw0rd"
     }
 
-    let(:settings) {
-      {
-        "hosts" => "https://elasticsearch:9200",
-        "auth_basic_username" => integ_user_name,
-        "auth_basic_password" => integ_user_password
-      }
-    }
-
     let(:ls_integration_tests_user_info) {
       '{
         "password" : "' + integ_user_password + '",
@@ -1172,24 +1161,20 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
   end
 
-  # TODO
-  #  - add SSL failure case (PKIX: unable to find valid certification path to requested target)
   context '#SSL' do
-    before(:each) do
-      subject.register
-    end
 
-    describe 'when using self-signed certificate' do
+    # all test cases are using CA since plugin requires enterprise license
+    # we need to test invalid CA and/or certificate cases make sure the plugin has a safety net
+    describe 'when using invalid certificate' do
+
       let(:settings) {
         super().merge(
-          "ssl_enabled" => true,
-          "ssl_certificate_authorities" => "spec/fixtures/test_certs/ca.crt",
-          "ssl_certificate" => "spec/fixtures/test_certs/test.crt",
-          "ssl_key" => "spec/fixtures/test_certs/test.key",
-          "ssl_key_passphrase" => "1234567890"
+          # certificate is signed with localhost/127.0.0.1, should complain
+          "ssl_verification_mode" => "full"
         )
       }
 
+      # just need to fill the params, we don't/can't send any request to ES
       let(:pipeline_processor) {
         '{
           "dissect": {
@@ -1199,20 +1184,12 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         }'
       }
 
-      it 'parses the field based on the pattern' do
-        events = [LogStash::Event.new(
-          "message" => "Parses Nginx single line log.",
-          "dissect_field" => "1.2.3.4 - - [01/Apr/2023:22:00:52 +0000] \"GET /path/to/some/resources/test.gif HTTP/1.0\" 200 3171",
-          "data_stream" => data_stream)]
-
-        subject.multi_filter(events).each do |event|
-          expect(event.get("clientip").eql?("1.2.3.4")).to be_truthy
-          expect(event.get("@timestamp").eql?("01/Apr/2023:22:00:52 +0000")).to be_truthy
-          expect(event.get("verb").eql?("GET")).to be_truthy
-          expect(event.get("request").eql?("/path/to/some/resources/test.gif")).to be_truthy
-          expect(event.get("status").eql?("200")).to be_truthy
-          expect(event.get("size").eql?("3171")).to be_truthy
-        end
+      it 'raises SSL related error' do
+        expect { subject.register }
+          .to(raise_error do |error|
+            expect(error).to be_a(LogStash::ConfigurationError)
+            expect(error.message.include?("Host name 'elasticsearch' does not match the certificate subject provided by the peer")).to be_truthy
+          end)
       end
     end
   end
