@@ -105,7 +105,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_and_normalize_hosts
 
     initialize_elasticsearch_rest_client!
-    initialize_geo_ip_database_provider!
+    initialize_geoip_database_provider!
     initialize_event_processor!
 
     perform_preflight_check!
@@ -322,13 +322,13 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client)
                                             .setFilterMatchListener(method(:filter_matched_java).to_proc)
-                                            .addProcessor(GeoIpProcessor::TYPE) { GeoIpProcessor::Factory.new(@geo_ip_database_provider) }
+                                            .addProcessor(GeoIpProcessor::TYPE) { GeoIpProcessor::Factory.new(@geoip_database_provider) }
                                             .build("logstash.filter.elastic_integration.#{id}.#{__id__}")
   rescue => exception
     raise_config_error!("configuration did not produce an EventProcessor: #{exception}")
   end
 
-  def initialize_geo_ip_database_provider!
+  def initialize_geoip_database_provider!
     java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
     java_import('co.elastic.logstash.filters.elasticintegration.geoip.StaticGeoIpDatabase')
 
