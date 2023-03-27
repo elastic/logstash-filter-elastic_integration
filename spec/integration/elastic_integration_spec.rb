@@ -128,6 +128,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("append_field") == expected_append_field).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -150,6 +151,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("size").eql?(2048)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -173,6 +175,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("[network][community_id]").nil?).to be_falsey
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -196,6 +199,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("id").eql?(200)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -222,6 +226,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("csv_email_parsed").eql?("elephant@example.com")).to be_truthy
           expect(event.get("csv_phone_parsed").eql?("111-222-3344")).to be_truthy
           expect(event.get("csv_address_parsed").eql?("Elephant's address.")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -247,6 +252,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("timestamp").eql?("2023-03-08T09:10:17.000+01:00")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -271,6 +277,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("_index").include?("<monthly-index-{2023-03-08")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -302,6 +309,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("httpversion").eql?("1.0")).to be_truthy
           expect(event.get("status").eql?("200")).to be_truthy
           expect(event.get("size").eql?("3171")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -326,6 +334,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         subject.multi_filter(events).each do |event|
           expect(event.get("[foo][bar]").eql?("foo -> bar value")).to be_truthy
           expect(event.get("[parent][child]").eql?("parent -> child value")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -381,6 +390,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("fingerprint").eql?("XqSwreW5FVPwjCF9pB7tzX6fQBs=")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -408,6 +418,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("values")== ["FOO","BAR","BAZ"]).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -434,6 +445,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("request").eql?("/index.html")).to be_truthy
           expect(event.get("bytes").eql?(15824)).to be_truthy
           expect(event.get("duration").eql?(0.043)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -458,6 +470,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("gsub_field") == %w[kit-ten dog-gy elephant]).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -480,6 +493,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("strip_field") == "\n HTML \n \n   fast, and brutal   \n").to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -503,6 +517,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("joined_array_field").eql?("1-2-3-4")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -526,6 +541,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("[json_target][foo]").eql?(2000)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -550,6 +566,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         subject.multi_filter(events).each do |event|
           expect(event.get("ip").eql?("1.2.3.4")).to be_truthy
           expect(event.get("error").eql?("REFUSED")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -573,6 +590,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("cats").eql?(expected_message)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -596,6 +614,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("[network][direction]").eql?("inbound")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -617,11 +636,12 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           "domain_field" => "www.example.ac.uk",
           "data_stream" => data_stream)]
 
-        subject.multi_filter(events).each do |event|\
+        subject.multi_filter(events).each do |event|
           expect(event.get("[url][top_level_domain]").eql?("ac.uk")).to be_truthy
-        expect(event.get("[url][subdomain]").eql?("www")).to be_truthy
-        expect(event.get("[url][registered_domain]").eql?("example.ac.uk")).to be_truthy
-        expect(event.get("[url][domain]").eql?("www.example.ac.uk")).to be_truthy
+          expect(event.get("[url][subdomain]").eql?("www")).to be_truthy
+          expect(event.get("[url][registered_domain]").eql?("example.ac.uk")).to be_truthy
+          expect(event.get("[url][domain]").eql?("www.example.ac.uk")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -680,6 +700,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("rename_field_from").nil?).to be_truthy
           expect(event.get("rename_field_to").nil?).to be_falsey
           expect(event.get("rename_field_to").eql?("I have to be renamed to rename_field_to.")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -706,6 +727,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("_index") == "uz-catalog").to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -730,6 +752,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("elephant_age").eql?(expected_value)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -753,6 +776,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("array_field_to_sort").eql?([8,4,3,2,1])).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
     end
@@ -775,6 +799,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("split_field").eql?(%w[1 2 3 4 5 6 7 8])).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -797,6 +822,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("trim_field").eql?("Trimming the field")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -820,6 +846,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("dogs").eql?(expected_message)).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -847,6 +874,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("[url][path]").eql?("/foo.gif")).to be_truthy
           expect(event.get("[url][port]").eql?(80)).to be_truthy
           expect(event.get("[url][domain]").eql?("www.example.com")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -869,6 +897,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("url_to_decode").eql?("elastic.co/E&L&K-stack")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -893,6 +922,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("[user_agent][name]").eql?("Chrome")).to be_truthy
           expect(event.get("[user_agent][device][name]").eql?("Mac")).to be_truthy
           expect(event.get("[user_agent][version]").eql?("51.0.2704.103")).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
 
@@ -929,6 +959,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("split_and_sort_field").eql?(%w[8 8 7 6 5 4 3 2 1])).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
     end
@@ -1081,6 +1112,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("append_field") == expected_append_field).to be_truthy
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
     end
@@ -1155,6 +1187,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       subject.multi_filter(events).each do |event|
         if event.get("tags")
           expect(event.get("tags").include?("_ingest_pipeline_failure")).to be_falsey
+          expect(event.get("[@metadata][target_ingest_pipeline]").eql?('_none')).to be_truthy
         end
       end
     end
