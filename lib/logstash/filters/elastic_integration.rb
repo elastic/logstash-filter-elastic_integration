@@ -104,6 +104,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_auth_settings!
     validate_and_normalize_hosts
 
+    initialize_elasticsearch_rest_client!
     initialize_geo_ip_database_provider!
     initialize_event_processor!
 
