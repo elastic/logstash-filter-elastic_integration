@@ -4,8 +4,6 @@ env
 
 set -ex
 
-export PATH=$BUILD_DIR/gradle/bin:$PATH
-
 if [[ "$SECURE_INTEGRATION" == "true" ]]; then
   ES_URL="https://elasticsearch:9200"
 else
