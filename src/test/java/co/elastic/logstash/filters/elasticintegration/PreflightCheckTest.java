@@ -3,9 +3,11 @@ package co.elastic.logstash.filters.elasticintegration;
 import com.github.tomakehurst.wiremock.extension.responsetemplating.ResponseTemplateTransformer;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import org.apache.logging.log4j.Logger;
 import org.elasticsearch.client.RestClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.mockito.Mockito;
 
 import java.net.URL;
 import java.nio.file.Path;
@@ -18,6 +20,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 class PreflightCheckTest {
 
@@ -119,7 +122,10 @@ class PreflightCheckTest {
                 .willReturn(okJson(getBodyFixture("license.active-enterprise.json"))
                         .withTransformers("response-template")));
         withWiremockElasticsearch((restClient -> {
-            new PreflightCheck(restClient).checkLicense();
+            final Logger logger = Mockito.mock(Logger.class);
+            new PreflightCheck(logger, restClient).checkLicense();
+
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch license OK")));
         }));
     }
 
@@ -129,10 +135,10 @@ class PreflightCheckTest {
                 .willReturn(okJson(getBodyFixture("license.active-basic.json"))
                         .withTransformers("response-template")));
         withWiremockElasticsearch((restClient -> {
-            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkLicense();
-            });
-            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("requires an enterprise license", "got `basic`")));
+            final Logger logger = Mockito.mock(Logger.class);
+            new PreflightCheck(logger, restClient).checkLicense();
+
+            Mockito.verify(logger).warn(argThat(containsString("Elasticsearch license.type is `basic`")));
         }));
     }
 
@@ -142,10 +148,10 @@ class PreflightCheckTest {
                 .willReturn(okJson(getBodyFixture("license.invalid.json"))
                         .withTransformers("response-template")));
         withWiremockElasticsearch((restClient -> {
-            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkLicense();
-            });
-            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("requires an active license")));
+            final Logger logger = Mockito.mock(Logger.class);
+            new PreflightCheck(logger, restClient).checkLicense();
+
+            Mockito.verify(logger).warn(argThat(containsString("Elasticsearch license.status is `invalid`")));
         }));
     }
 
@@ -155,10 +161,10 @@ class PreflightCheckTest {
                 .willReturn(okJson(getBodyFixture("license.expired.json"))
                         .withTransformers("response-template")));
         withWiremockElasticsearch((restClient -> {
-            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkLicense();
-            });
-            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("requires an active license")));
+            final Logger logger = Mockito.mock(Logger.class);
+            new PreflightCheck(logger, restClient).checkLicense();
+
+            Mockito.verify(logger).warn(argThat(containsString("Elasticsearch license.status is `expired`")));
         }));
     }
 
