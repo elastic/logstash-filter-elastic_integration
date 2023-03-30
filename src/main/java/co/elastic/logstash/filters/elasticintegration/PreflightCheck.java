@@ -40,7 +40,7 @@ public class PreflightCheck {
         checkLicense();
     }
 
-    void checkCredentialsPrivileges(){
+    void checkCredentialsPrivileges() {
         try {
             final Request hasPrivilegesRequest = new Request("POST", "/_security/user/_has_privileges");
             hasPrivilegesRequest.setJsonEntity(OBJECT_MAPPER.writeValueAsString(Map.of("cluster", REQUIRED_CLUSTER_PRIVILEGES.keySet())));
@@ -84,7 +84,7 @@ public class PreflightCheck {
             }
 
             final String licenseType = licenseNode.get("type").asText();
-            if (!Objects.equals(licenseType, "enterprise")) {
+            if (!Objects.equals(licenseType, "enterprise") && !Objects.equals(licenseType, "trial")) {
                 LOGGER.debug(() -> String.format("license type=(`%s`): %s", licenseType, responseBody));
                 throw new Failure(String.format("Use of the Elastic Integration filter for Logstash requires an enterprise license, got `%s`", licenseType));
             }

@@ -9,7 +9,7 @@ describe LogStash::Filters::ElasticIntegration do
     {
       # path has to be created, otherwise config :path validation fails
       # and since we cannot control the chmod operations on paths, we should stub file readable? and writable? operations
-      :test_path => "spec/filters/resources/do_not_remove_path"
+      :test_path => "spec/unit/resources/do_not_remove_path"
     }
   end
 

@@ -286,17 +286,17 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     builder.setHosts @hosts&.map(&:to_s)
     builder.setCloudId @cloud_id
 
-    builder.setSslEnabled @ssl
+    builder.setSslEnabled @ssl_enabled
 
     # ssl trust
     builder.setSslVerificationMode @ssl_verification_mode
-    builder.setSslTruststorePath @truststore
-    builder.setSslTruststorePassword @truststore_password
+    builder.setSslTruststorePath @ssl_truststore_path
+    builder.setSslTruststorePassword @ssl_truststore_password
     builder.setSslCertificateAuthorities @ssl_certificate_authorities
 
     # ssl identity
     builder.setSslKeystorePath @keystore
-    builder.setSslKeystorePassword @keystore_password
+    builder.setSslKeystorePassword @ssl_keystore_password
     builder.setSslCertificate @ssl_certificate
     builder.setSslKey @ssl_key
     builder.setSslKeyPassphrase @ssl_key_passphrase
