@@ -7,13 +7,14 @@ import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AsnRespons
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CityResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CountryResponse;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Objects;
 import java.util.Optional;
 
-public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase {
+public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase, Closeable {
     private final DatabaseReader databaseReader;
     private final String databaseType;
 
@@ -61,6 +62,14 @@ public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase {
 
     @Override
     public void release() throws IOException {
+        // no-op: ES uses this internally to unload a database
+        // from memory whenever there are zero processors that
+        // hold a reference to it, but Logstash pipelines will
+        // keep the database open until the pipeline is closed
+    }
+
+    @Override
+    public void close() throws IOException {
         this.databaseReader.close();
     }
 

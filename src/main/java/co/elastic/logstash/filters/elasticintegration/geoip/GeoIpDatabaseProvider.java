@@ -3,6 +3,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.ingest.geoip.GeoIpDatabase;
 
 import java.io.Closeable;
@@ -40,10 +41,8 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
     @Override
     public void close() throws IOException {
         databaseMap.forEach((name, database) -> {
-            try {
-                database.release();
-            } catch (IOException e) {
-                LOGGER.warn(String.format("Exception while releasing GeoIpDatabase `%s`", name), e);
+            if (database instanceof Closeable) {
+                IOUtils.closeWhileHandlingException((Closeable) database);
             }
         });
     }
@@ -55,6 +54,9 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
             final ValidatableGeoIpDatabase previous = databaseMap.put(identifierFileName, database);
             if (Objects.nonNull(previous)) {
                 LOGGER.warn(String.format("de-registered previous entry for `%s`: %s", identifierFileName, previous));
+                if (previous instanceof Closeable) {
+                    IOUtils.closeWhileHandlingException((Closeable) previous);
+                }
             }
             return this;
         }
