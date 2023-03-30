@@ -3,9 +3,9 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil;
 import com.google.common.net.InetAddresses;
-import com.maxmind.geoip2.model.AsnResponse;
-import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.model.CountryResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AsnResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CityResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CountryResponse;
 import org.elasticsearch.ingest.geoip.GeoIpDatabase;
 import org.junit.jupiter.api.Test;
 

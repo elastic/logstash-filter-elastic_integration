@@ -1,6 +1,6 @@
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import com.maxmind.db.CHMCache;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.ingest.geoip.GeoIpDatabase;

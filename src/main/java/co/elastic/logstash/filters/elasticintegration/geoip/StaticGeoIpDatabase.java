@@ -1,11 +1,11 @@
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import com.maxmind.db.NodeCache;
-import com.maxmind.geoip2.DatabaseReader;
-import com.maxmind.geoip2.model.AbstractResponse;
-import com.maxmind.geoip2.model.AsnResponse;
-import com.maxmind.geoip2.model.CityResponse;
-import com.maxmind.geoip2.model.CountryResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.DatabaseReader;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AbstractResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AsnResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CityResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CountryResponse;
 
 import java.io.File;
 import java.io.IOException;
