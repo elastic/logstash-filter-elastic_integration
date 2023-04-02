@@ -91,6 +91,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A key to authenticate when connecting to Elasticsearch
   config :api_key, :validate => :password
 
+  # A directory containing one or more Maxmind Datbase files in *.mmdb format
+  config :geoip_database_directory, :validate => :path
+
   def register
     @logger.debug("Registering `filter-elastic_integration` plugin.", :params => original_params)
 
@@ -101,6 +104,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     validate_auth_settings!
     validate_and_normalize_hosts
 
+    initialize_elasticsearch_rest_client!
+    initialize_geoip_database_provider!
     initialize_event_processor!
 
     perform_preflight_check!
@@ -126,6 +131,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def close
     @elasticsearch_rest_client&.close
+    @geoip_database_provider&.close
     @event_processor&.close
   end
 
@@ -304,16 +310,31 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     builder.build
   end
 
-  def initialize_event_processor!
+  def initialize_elasticsearch_rest_client!
     @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
                                                                .map(&:build)
                                                                .orElseThrow() # todo: ruby/java bridge better exception
+  end
+
+  def initialize_event_processor!
+    java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
+    java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpProcessorFactory')
 
     @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client)
                                             .setFilterMatchListener(method(:filter_matched_java).to_proc)
+                                            .addProcessor("geoip") { GeoIpProcessorFactory.new(@geoip_database_provider) }
                                             .build("logstash.filter.elastic_integration.#{id}.#{__id__}")
   rescue => exception
     raise_config_error!("configuration did not produce an EventProcessor: #{exception}")
+  end
+
+  def initialize_geoip_database_provider!
+    java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
+    java_import('co.elastic.logstash.filters.elasticintegration.geoip.StaticGeoIpDatabase')
+
+    @geoip_database_provider ||= GeoIpDatabaseProvider::Builder.new.tap do |builder|
+      builder.setDatabases(java.io.File.new(@geoip_database_directory)) if @geoip_database_directory
+    end.build
   end
 
   def perform_preflight_check!

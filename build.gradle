@@ -21,7 +21,7 @@ plugins {
     id "idea"
     id "com.adarshr.test-logger" version "3.2.0"
     id "de.undercouch.download" version "5.3.1"
-    id "com.github.johnrengelman.shadow" version "7.1.2"
+    id "com.github.johnrengelman.shadow" version "8.1.1"
 }
 
 // ===========================================================================
@@ -45,9 +45,11 @@ repositories {
 }
 
 configurations {
-    logstashCore
-    elasticsearchMinimalCore
-    elasticsearchClient
+    logstashCore { canBeResolved = false; canBeConsumed = false }
+    elasticsearchMinimalCore { canBeConsumed = false }
+    elasticsearchClient { canBeConsumed = false }
+
+    geolite2 { canBeConsumed = false }
 
     implementation.extendsFrom(logstashCore, elasticsearchMinimalCore, elasticsearchClient)
 }
@@ -60,13 +62,13 @@ wrapper {
 shadowJar {
     configurations = [project.configurations.elasticsearchMinimalCore,
                       project.configurations.elasticsearchClient]
-    classifier = null
+
     zip64 true
 }
 
 dependencies {
     elasticsearchClient 'co.elastic.clients:elasticsearch-java:8.6.1'
-    elasticsearchMinimalCore fileTree(dir: 'local_libs', include: ["*.jar"])
+    elasticsearchMinimalCore fileTree(dir: { importMinimalElasticsearch.jars }, include: ["*.jar"])
 
     // Logstash core and its known-provided and required dependencies
     // must NEVER be included in the gem-vendored jars
@@ -93,6 +95,10 @@ dependencies {
     testImplementation "com.github.seregamorph:hamcrest-more-matchers:0.1"
     testImplementation "com.github.tomakehurst:wiremock-jre8:2.35.0"
     testRuntimeOnly requiredLogstashCoreJar("log4j-core")
+
+    geolite2('org.elasticsearch:geolite2-databases:20191119') {
+        transitive = false
+    }
 }
 
 /**
@@ -186,33 +192,69 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
         errorOutput = funneler.funnelInstance
     }
 
-    workingDir "${buildDir}/elasticsearch-source/"
+    def esSource = "${buildDir}/elasticsearch-source/"
+    def esBuildDir = "${esSource}/build"
+
+    inputs.dir esSource
+    outputs.dir esBuildDir
+
+    ext.buildRoot = esBuildDir
+    ext.localDistroParent = "${esBuildDir}/distribution/local"
+    ext.localDistroResult = provider({
+        project.fileTree(dir: ext.localDistroParent, include: "*/lib/elasticsearch-core-*.jar").with {
+            it && !it.isEmpty() ? it.singleFile.parentFile.parentFile : null
+        }
+    })
+    ext.lib = localDistroResult.map { "${it}/lib" }
+    ext.module = { moduleName -> localDistroResult.map { "${it}/modules/${moduleName}"} }
+
+    workingDir esSource
     commandLine "./gradlew", "localDistro"
 
     ignoreExitValue true // handled in doLast
     doLast {
         def exitValue = executionResult.get().exitValue
         assert exitValue == 0 : "Elasticsearch build failed; logs available in ${logFile.path}"
+        assert ext.localDistroResult.isPresent() : "Elasticsearch did not produce exactly one localdistro build"
     }
+}
+
+task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades embedded dependencies of the Elasticsearch Ingest GeoIP module"
+
+    dependsOn buildElasticsearchLocalDistro
+
+    from(buildElasticsearchLocalDistro.module("ingest-geoip").orElse(objects.fileCollection()))
+
+    archiveFileName = 'ingest-geoip-shaded.jar'
+    destinationDirectory = file("${buildDir}/shaded")
+
+    mergeServiceFiles()
+
+    String shadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
+    relocate('com.fasterxml.jackson', "${shadeNamespace}.com.fasterxml.jackson")
+    relocate('com.maxmind',           "${shadeNamespace}.com.maxmind")
+
+    exclude 'module-info.class'
+    exclude 'META-INF/versions/9/module-info.class'
 }
 
 task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
     description "Imports minimal portions of Elasticsearch localDistro"
 
-    def buildDestination = file("${buildDir}/elasticsearch-source/build/distribution/local/")
+    dependsOn buildElasticsearchLocalDistro
+    dependsOn shadeElasticsearchIngestGeoIpModule
 
-    inputs.dir(buildDestination)
-    outputs.dir project.file("local_libs")
+    ext.jars = "${buildDir}/elasticsearch-minimal-jars"
+
+    inputs.dir buildElasticsearchLocalDistro.buildRoot
+    outputs.dir ext.jars
 
     doLast {
-        def buildLocationCandidates = buildDestination.listFiles({ it.isDirectory() && it.name.matches(namedPackageWithAnyVersionPattern("elasticsearch")) } as FileFilter)
-        if (buildLocationCandidates.length.equals(0)) { throw new StopActionException("No local ES build in ${buildDestination.toPath()}") }
-        if (buildLocationCandidates.length > 1) { throw new StopActionException("Multiple local ES builds in ${buildDestination.toPath()}")}
-
-        def elasticsearchBuildTree = buildLocationCandidates.first()
+        delete(project.file(ext.jars))
 
         copy {
-            from("${elasticsearchBuildTree}/lib/") {
+            from(buildElasticsearchLocalDistro.lib) {
                 include jarPackageNamed("elasticsearch")
                 include jarPackageNamed("elasticsearch-core")
                 include jarPackageNamed("elasticsearch-x-content")
@@ -220,22 +262,24 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
                 include jarPackageNamed("lucene-analysis-common")
             }
 
-            from("${elasticsearchBuildTree}/modules/ingest-common") {
+            from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
                 include jarPackageNamed("elasticsearch-grok")
                 include jarPackageNamed("elasticsearch-dissect")
             }
 
-            from("${elasticsearchBuildTree}/modules/ingest-user-agent") {
+            from(buildElasticsearchLocalDistro.module("ingest-user-agent")) {
                 include jarPackageNamed("ingest-user-agent")
             }
 
-            from("${elasticsearchBuildTree}/modules/lang-mustache") {
+            from(shadeElasticsearchIngestGeoIpModule)
+
+            from(buildElasticsearchLocalDistro.module("lang-mustache")) {
                 include jarPackageNamed("lang-mustache")
                 include jarPackageNamed("compiler")
             }
 
-            from("${elasticsearchBuildTree}/modules/lang-painless") {
+            from(buildElasticsearchLocalDistro.module("lang-painless")) {
                 include jarPackageNamed("lang-painless")
                 include jarPackageNamed("antlr4-runtime")
                 include jarPackageNamed("asm-util")
@@ -245,11 +289,11 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
                 include jarPackageNamed("spi/elasticsearch-scripting-painless-spi")
             }
 
-            into project.file('local_libs')
+            into ext.jars
 
             includeEmptyDirs(false)
             eachFile { path = name } // flatten
-            eachFile { logger.debug "copying ${it} to local_libs" }
+            eachFile { logger.info "copying ${it} to ${ext.jars}" }
         }
     }
 }
@@ -258,23 +302,6 @@ shadowJar.dependsOn(importMinimalElasticsearch)
 
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
-}
-
-task generateGemJarRequiresFile() {
-    description "Generates a ruby script for runtime-requiring vendored jars"
-
-    def jarRequiresFile = file("${projectDir}/lib/logstash/filters/elastic_integration/jar_dependencies.rb")
-    outputs.file(jarRequiresFile)
-    inputs.files(tasks.shadowJar)
-
-    doLast {
-        jarRequiresFile.parentFile.mkdirs()
-        jarRequiresFile.withWriter { w ->
-            w << "# AUTOGENERATED BY THE GRADLE SCRIPT. DO NOT EDIT.\n\n"
-            w << "require \'jar_dependencies\'\n"
-            w << "require_jar(\'${project.group}\', \'${project.name}\', \'${project.version}\')\n"
-        }
-    }
 }
 
 test {
@@ -302,6 +329,23 @@ task generateTestCertificates(type: Exec) {
 }
 processTestResources.dependsOn(generateTestCertificates)
 
+task geoipTestResources {
+    def output = "${project.rootDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases"
+
+    outputs.dir output
+    inputs.files configurations.geolite2
+
+    doLast {
+        copy {
+            from(zipTree(configurations.geolite2.singleFile)) {
+                include "*.mmdb"
+            }
+            into(output)
+        }
+    }
+}
+processTestResources.dependsOn(geoipTestResources)
+
 tasks.withType(Test) {
     // Add Exports to enable tests to run in JDK17
     jvmArgs = [
@@ -321,13 +365,35 @@ task vendorShadowJar(dependsOn: shadowJar) {
     String vendorPathPrefix = "vendor/jar-dependencies"
     String projectGroupPath = project.group.replaceAll('\\.', '/')
     File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${project.name}/${project.version}/${project.name}-${project.version}.jar")
+    File shadowJar = project.file("${buildDir}/libs/${project.name}-${project.version}-all.jar")
 
-    inputs.file("${buildDir}/libs/${project.name}-${project.version}.jar")
-    outputs.file(projectJarFile.toPath())
+    inputs.file shadowJar
+    outputs.file projectJarFile
 
     doLast {
         projectJarFile.mkdirs()
-        Files.copy(file("${buildDir}/libs/${project.name}-${project.version}.jar").toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
+        Files.copy(shadowJar.toPath(), projectJarFile.toPath(), REPLACE_EXISTING)
+    }
+}
+
+task generateGemJarRequiresFile() {
+    description "Generates a ruby script for runtime-requiring vendored jars"
+    dependsOn vendorShadowJar
+
+    def jarRequiresFile = file("${projectDir}/lib/logstash/filters/elastic_integration/jar_dependencies.rb")
+
+    outputs.file jarRequiresFile
+    inputs.property 'project.group', project.group
+    inputs.property 'project.name', project.name
+    inputs.property 'project.version', project.version
+
+    doLast {
+        jarRequiresFile.parentFile.mkdirs()
+        jarRequiresFile.withWriter { w ->
+            w << "# AUTOGENERATED BY THE GRADLE SCRIPT. DO NOT EDIT.\n\n"
+            w << "require \'jar_dependencies\'\n"
+            w << "require_jar(\'${project.group}\', \'${project.name}\', \'${project.version}\')\n"
+        }
     }
 }
 
@@ -336,7 +402,6 @@ task vendor {
 
     dependsOn vendorShadowJar
     dependsOn generateGemJarRequiresFile
-    generateGemJarRequiresFile.mustRunAfter vendorShadowJar
 }
 
 clean {
