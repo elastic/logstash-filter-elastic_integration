@@ -9,7 +9,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:es_http_client_options) {
     {
       ssl: {
-        ca_file: 'spec/fixtures/test_certs/root.crt',
+        ca_file: 'spec/fixtures/test_certs/generated/root.crt',
         verify: :none
       }
     }
@@ -25,9 +25,9 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       "auth_basic_password" => integ_user_password,
       "ssl_enabled" => true,
       "ssl_verification_mode" => "certificate",
-      "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt",
-      "ssl_certificate" => "spec/fixtures/test_certs/client_from_root.crt",
-      "ssl_key" => "spec/fixtures/test_certs/client_from_root.key.pkcs8",
+      "ssl_certificate_authorities" => "spec/fixtures/test_certs/generated/root.crt",
+      "ssl_certificate" => "spec/fixtures/test_certs/generated/client_from_root.crt",
+      "ssl_key" => "spec/fixtures/test_certs/generated/client_from_root.key.pkcs8",
       "ssl_key_passphrase" => "12345678"
     }
   }
@@ -926,6 +926,41 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         end
       end
 
+    end
+
+    describe 'with geoip processor' do
+      let(:settings) {
+        super().merge(
+          "geoip_database_directory" => "src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases/GeoLite2-City.mmdb"
+        )
+      }
+      let(:pipeline_processor) {
+        '{
+          "geoip" : {
+            "field" : "ip"
+          }
+        }'
+      }
+
+      it 'resolves IP geo-location information' do
+        events = [LogStash::Event.new(
+          "message" => "IP address in Sweden, Europe.",
+          "ip" => "89.160.20.128",
+          "data_stream" => data_stream)]
+
+        subject.multi_filter(events).each do |event|
+          puts "Event: #{event.to_json.to_s}"
+          puts "Event meta: #{event.get("@metadata").inspect}"
+          expect(event.get("[geoip][continent_name]")).to eql "Europe"
+          expect(event.get("[geoip][country_name]")).to eql "Sweden"
+          expect(event.get("[geoip][country_iso_code]")).to eql "SE"
+          expect(event.get("[geoip][city_name]")).to eql "Tumba"
+          expect(event.get("[geoip][region_iso_code]")).to eql "SE-AB"
+          expect(event.get("[geoip][region_name]")).to eql "Stockholm"
+          expect(event.get("[geoip][location][lat]")).to eql 59.2
+          expect(event.get("[geoip][location][lon]")).to eql 17.8167
+        end
+      end
     end
 
   end
