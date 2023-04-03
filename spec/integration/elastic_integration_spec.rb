@@ -9,7 +9,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:es_http_client_options) {
     {
       ssl: {
-        ca_file: 'spec/fixtures/test_certs/root.crt',
+        ca_file: 'spec/fixtures/test_certs/generated/root.crt',
         verify: :none
       }
     }
@@ -25,9 +25,9 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       "auth_basic_password" => integ_user_password,
       "ssl_enabled" => true,
       "ssl_verification_mode" => "certificate",
-      "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt",
-      "ssl_certificate" => "spec/fixtures/test_certs/client_from_root.crt",
-      "ssl_key" => "spec/fixtures/test_certs/client_from_root.key.pkcs8",
+      "ssl_certificate_authorities" => "spec/fixtures/test_certs/generated/root.crt",
+      "ssl_certificate" => "spec/fixtures/test_certs/generated/client_from_root.crt",
+      "ssl_key" => "spec/fixtures/test_certs/generated/client_from_root.key.pkcs8",
       "ssl_key_passphrase" => "12345678"
     }
   }
