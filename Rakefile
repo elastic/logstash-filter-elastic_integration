@@ -3,9 +3,6 @@ require 'logstash/devutils/rake'
 task :install_jars do
   sh('./gradlew clean vendor')
 end
-task :generate_ssl_certificates do
-  sh('./gradlew generateTestCertificates')
-end
 task :prepare_geoip_resources do
   sh('./gradlew geoipTestResources')
 end

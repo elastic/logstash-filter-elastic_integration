@@ -312,7 +312,7 @@ task generateTestCertificates(type: Exec) {
     def sslTestCertsDir = "${projectDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs"
 
     workingDir sslTestCertsDir
-    commandLine './generate.sh'
+    commandLine './generate_certificates.sh'
 
     def commonOutputFile = Paths.get("${buildDir}/generateTestCertificates.log")
     file(commonOutputFile.parent).mkdirs()
@@ -321,12 +321,22 @@ task generateTestCertificates(type: Exec) {
     standardOutput = commonOutputStream
     errorOutput = commonOutputStream
 
-    inputs.file("${sslTestCertsDir}/generate.sh")
+    inputs.file("${sslTestCertsDir}/generate_certificates.sh")
     inputs.file("${sslTestCertsDir}/openssl.cnf")
 
     outputs.dir("${sslTestCertsDir}/generated")
     outputs.file(commonOutputFile)
 }
+
+task generateTestCertificatesAndStores(type: Exec) {
+    def sslTestCertsDir = "${projectDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs"
+
+    dependsOn generateTestCertificates
+
+    workingDir sslTestCertsDir
+    commandLine './generate_keystores.sh'
+}
+
 processTestResources.dependsOn(generateTestCertificates)
 
 task geoipTestResources {

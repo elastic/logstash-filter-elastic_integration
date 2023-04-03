@@ -46,9 +46,11 @@ if [ "$ELASTIC_STACK_VERSION" ]; then
 
     if [ "$SECURE_INTEGRATION" == "true" ]; then
       echo "Generating SSL certificates..."
-      rm -rf spec/fixtures/test_certs/generated
-      ./spec/fixtures/test_certs/generate_certificates.sh
-      chmod -R 0440 spec/fixtures/test_certs/generated/*
+      rm -rf spec/fixtures/test_certs
+      ./src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs/generate_certificates.sh
+      mkdir -p spec/fixtures/test_certs
+      cp src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs/generated/* spec/fixtures/test_certs
+      chmod -R 0440 spec/fixtures/test_certs/*
       echo "SSL certificates are generated."
     fi
 

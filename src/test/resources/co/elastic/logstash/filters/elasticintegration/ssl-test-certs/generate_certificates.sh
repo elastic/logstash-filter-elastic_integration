@@ -54,12 +54,3 @@ openssl pkcs12 -export -in server_from_root.crt -inkey server_from_root.key -out
 openssl pkcs12 -export -in client_from_root.crt -inkey client_from_root.key -out client_from_root.p12 -name "client_from_root" -passout 'pass:12345678'
 openssl pkcs12 -export -in client_self_signed.crt -inkey client_self_signed.key -out client_self_signed.p12 -name "client_from_root" -passout 'pass:12345678'
 openssl pkcs12 -export -in client_no_matching_subject.crt -inkey client_no_matching_subject.key -out client_no_matching_subject.p12 -name "client_no_matching_subject" -passout 'pass:12345678'
-
-# create pkcs12 truststore (pass:12345678)
-keytool -importcert -storetype PKCS12 -keystore ca.p12 -storepass 12345678 -alias ca -file root.crt -noprompt
-
-# use java keytool to convert all pkcs12 keystores to jks-format keystores (pass:12345678)
-keytool -importkeystore -srckeystore client_from_root.p12 -srcstoretype pkcs12 -srcstorepass 12345678 -destkeystore client_from_root.jks -deststorepass 12345678 -alias client_from_root
-
-# cleanup csr, we don't need them
-rm -rf *.csr
