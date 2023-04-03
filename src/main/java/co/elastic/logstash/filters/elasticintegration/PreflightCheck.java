@@ -14,10 +14,13 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 public class PreflightCheck {
     private final RestClient elasticsearchRestClient;
+    private final Logger logger;
 
+    private static final Set<String> SUPPORTED_LICENSE_TYPES = Set.of("enterprise", "trial");
     private static final Logger LOGGER = LogManager.getLogger(PreflightCheck.class);
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -31,7 +34,13 @@ public class PreflightCheck {
         REQUIRED_CLUSTER_PRIVILEGES = Collections.unmodifiableMap(prv);
     }
 
-    public PreflightCheck(RestClient elasticsearchRestClient) {
+    public PreflightCheck(final RestClient elasticsearchRestClient) {
+        this(LOGGER, elasticsearchRestClient);
+    }
+
+    PreflightCheck(final Logger logger,
+                   final RestClient elasticsearchRestClient) {
+        this.logger = logger;
         this.elasticsearchRestClient = elasticsearchRestClient;
     }
 
@@ -49,21 +58,20 @@ public class PreflightCheck {
             final String responseBody = new String(hasPrivilegesResponse.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
 
             final JsonNode hasPrivilegesRootNode = OBJECT_MAPPER.readTree(responseBody);
-            final Map<String, Boolean> clusterPrivileges = OBJECT_MAPPER.convertValue(hasPrivilegesRootNode.path("cluster"), new TypeReference<Map<String, Boolean>>() {
-            });
+            final Map<String, Boolean> clusterPrivileges = OBJECT_MAPPER.convertValue(hasPrivilegesRootNode.path("cluster"), new TypeReference<Map<String, Boolean>>() {});
 
             for (Map.Entry<String, String> requiredPrivilegeAndReason : REQUIRED_CLUSTER_PRIVILEGES.entrySet()) {
                 final String requiredPrivilege = requiredPrivilegeAndReason.getKey();
                 if (!clusterPrivileges.get(requiredPrivilege)) {
-                    LOGGER.debug(() -> String.format("missing required privilege `%s`: %s", requiredPrivilege, responseBody));
+                    logger.debug(() -> String.format("missing required privilege `%s`: %s", requiredPrivilege, responseBody));
                     throw new Failure(String.format("The cluster privilege `%s` is REQUIRED in order to %s", requiredPrivilege, requiredPrivilegeAndReason.getValue()));
                 }
             }
-            LOGGER.debug(() -> String.format("has all required privileges: %s", responseBody));
+            logger.debug(() -> String.format("has all required privileges: %s", responseBody));
         } catch (Failure f) {
             throw f;
         } catch (Exception e) {
-            LOGGER.error(() -> String.format("Exception checking has_privileges: %s", e.getMessage()));
+            logger.error(String.format("Exception checking has_privileges: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
     }
@@ -78,22 +86,21 @@ public class PreflightCheck {
             final JsonNode licenseNode = OBJECT_MAPPER.readTree(responseBody).get("license");
 
             final String licenseStatus = licenseNode.get("status").asText();
-            if (!Objects.equals(licenseStatus, "active")) {
-                LOGGER.debug(() -> String.format("license status=(`%s`): %s", licenseStatus, responseBody));
-                throw new Failure(String.format("Use of the Elastic Integration filter for Logstash requires an active license, got `%s`", licenseStatus));
-            }
-
             final String licenseType = licenseNode.get("type").asText();
-            if (!Objects.equals(licenseType, "enterprise") && !Objects.equals(licenseType, "trial")) {
-                LOGGER.debug(() -> String.format("license type=(`%s`): %s", licenseType, responseBody));
-                throw new Failure(String.format("Use of the Elastic Integration filter for Logstash requires an enterprise license, got `%s`", licenseType));
-            }
 
-            LOGGER.debug(() -> String.format("license ok (`%s`): %s", licenseStatus, responseBody));
+
+            logger.debug(() -> String.format("Elasticsearch license RAW: %s", responseBody));
+            if (!SUPPORTED_LICENSE_TYPES.contains(licenseType)) {
+                logger.warn(String.format("Elasticsearch license.type is `%s`", licenseType));
+            } else if (!Objects.equals(licenseStatus, "active")) {
+                logger.warn(String.format("Elasticsearch license.status is `%s`", licenseStatus));
+            } else {
+                logger.info(String.format("Elasticsearch license OK (%s %s)", licenseStatus, licenseType));
+            }
         } catch (Failure f) {
             throw f;
         } catch (Exception e) {
-            LOGGER.error(() -> String.format("Exception checking license: %s", e.getMessage()));
+            logger.error(String.format("Exception checking license: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
     }
