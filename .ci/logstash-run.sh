@@ -23,8 +23,6 @@ wait_for_es() {
   echo $(curl $CURL_OPTS -vi $ES_URL | python -c "import sys, json; print(json.load(sys.stdin)['version']['number'])")
 }
 
-bundle exec rake prepare_geoip_resources
-
 if [[ "$INTEGRATION" != "true" ]]; then
   bundle exec rspec --format=documentation spec/unit --tag ~integration --tag ~secure_integration
 else
@@ -38,5 +36,6 @@ else
   echo "Waiting for elasticsearch to respond..."
   ES_VERSION=$(wait_for_es)
   echo "Elasticsearch $ES_VERSION is Up!"
+  chmod -R 0440 spec/fixtures/test_certs/*
   bundle exec rspec --format=documentation $extra_tag_args --tag es_version:$ES_VERSION spec/integration
 fi
