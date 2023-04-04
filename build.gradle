@@ -356,9 +356,8 @@ task localGem(dependsOn: vendor) {
 }
 
 task bundleInstall(dependsOn: vendor) {
-    assert project.hasProperty("LOGSTASH_PATH") : "The property LOGSTASH_PATH must be defined, and be path to logstash directory"
-
-    def logstashPath = project.property("LOGSTASH_PATH");
+    def logstashPath = envOrPropertyValue("LOGSTASH_PATH")
+    assert logstashPath != null : "The property LOGSTASH_PATH must be defined, and be path to logstash directory"
     inputs.file("logstash-filter-elastic_integration.gemspec")
     inputs.file("Gemfile")
     inputs.property("LOGSTASH_PATH", logstashPath)
