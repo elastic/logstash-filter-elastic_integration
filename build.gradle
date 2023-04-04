@@ -404,6 +404,58 @@ task vendor {
     dependsOn generateGemJarRequiresFile
 }
 
+task publish(dependsOn: vendor) {
+    doLast {
+        exec {
+            commandLine "bundle", "exec", "rake", "publish_gem"
+        }
+    }
+}
+
+task localGem(dependsOn: vendor) {
+    doLast {
+        exec {
+            commandLine "gem", "build", "logstash-filter-elastic_integration.gemspec"
+        }
+    }
+}
+
+task bundleInstall(dependsOn: vendor) {
+    def logstashPath = envOrPropertyValue("LOGSTASH_PATH")
+    assert logstashPath != null : "The property LOGSTASH_PATH must be defined, and be path to logstash directory"
+    inputs.file("logstash-filter-elastic_integration.gemspec")
+    inputs.file("Gemfile")
+    inputs.property("LOGSTASH_PATH", logstashPath)
+
+    outputs.file("Gemfile.lock")
+
+    doLast {
+        exec {
+            environment(Map.of("LOGSTASH_PATH", logstashPath, "LOGSTASH_SOURCE", "1"))
+            commandLine "bundle", "install"
+        }
+    }
+}
+
+task unitSpecs(dependsOn: bundleInstall) {
+
+    def unitSpecFiles = project.fileTree("spec/unit") { include "**/*_spec.rb" }.files*.path
+    assert unitSpecFiles : "No unit spec files could be found"
+
+    doLast {
+        exec {
+            commandLine "bundle", "exec", "rspec"
+            args "--format=documentation"
+            if (project.gradle.startParameter.consoleOutput != ConsoleOutput.Plain) {
+                args "--color"
+                args "--tty"
+            }
+
+            args unitSpecFiles
+        }
+    }
+}
+
 clean {
     delete "${projectDir}/*.gem"
 }
