@@ -7,6 +7,7 @@ import org.hamcrest.TypeSafeDiagnosingMatcher;
 import org.hamcrest.TypeSafeMatcher;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.hamcrest.Matchers.anything;
@@ -34,7 +35,7 @@ class EventMatchers {
         @Override
         protected boolean matchesSafely(Event event) {
             return Optional.ofNullable(event.getField("tags"))
-                    .filter(Collection.class::isInstance).map(Collection.class::cast)
+                    .map(IsEventTagged::normalizeTagsValue)
                     .filter(tagsCollection -> tagsCollection.contains(expectedTag))
                     .isPresent();
         }
@@ -51,6 +52,11 @@ class EventMatchers {
             } else {
                 mismatchDescription.appendText("had tags").appendValue(event.getField("tags"));
             }
+        }
+
+        private static Collection<?> normalizeTagsValue(final Object rawTags) {
+            if (rawTags instanceof Collection) { return (Collection<?>) rawTags; }
+            return Collections.singleton(rawTags);
         }
     }
 
@@ -73,7 +79,7 @@ class EventMatchers {
 
         @Override
         public void describeTo(Description description) {
-            description.appendText(String.format("have not field `%s`", this.fieldReference));
+            description.appendText(String.format("not have field `%s`", this.fieldReference));
         }
     }
 

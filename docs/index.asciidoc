@@ -76,6 +76,7 @@ You can configure this plugin to present authentication credentials to Elasticse
 NOTE: Request authentication is not a substitute for SSL, as it provides neither secrecy nor security on its own.
 When used with SSL disabled, these auth credentials are transmitted in effectively clear-text and can be easily recovered by an adversary.
 
+[id="plugins-{type}s-{plugin}-supported_ingest_processors"]
 ==== Supported Ingest Processors
 
 This filter can run Elasticsearch Ingest Node pipelines that are _wholly_ comprised of the supported subset of processors, with access to the Painless and Mustache scripting engines where applicable:
@@ -123,6 +124,29 @@ This filter can run Elasticsearch Ingest Node pipelines that are _wholly_ compri
 h| GeoIp
 | `geoip` | Requires local MaxMind GeoIp databases <<plugins-{type}s-{plugin}-geoip_database_directory>>
 
+|=======================================================================
+
+
+[id="plugins-{type}s-{plugin}-field_mappings"]
+===== Field Mappings
+
+During execution, the Ingest pipeline works with a temporary mutable _view_ of the Logstash event that re-shapes some {ls}-reserved fields into their expected IngestDocument field names and object-types.
+Changes to the IngestDocument will be reflected in the resulting Logstash Event, including safely mapping these reserved fields _back_ from the IngestDocument reserved field to the {ls} reserved field counterpart.
+
+[cols="<,<,<",options="header"]
+|=======================================================================
+
+| {ls} Field | IngestDocument Field | Conflict Handling
+
+| `@timestamp` | `_ingest.timestamp` |when ingest processing _also_ sets a top-level `@timestamp` field, it will be made available via the Event's `_@timestamp` field
+
+| `@version` | `_version` | when ingest processing _also_ sets a top-level `@version` field in the source, it will be made available via the Event's `_@version` field
+
+| `@metadata` | `@metadata` | when ingest processing replaces the top-level `@metadata` map with an object that is not a string-object map, it will be made available via the Event's `_@metadata` field.
+
+| `tags` | `tags` | when ingest processing produces a top-level `tags` field that is not a collection of strings, it will be made available via the event's `_tags` field.
+
+| _everything else_ | _in-place, as-structured_ | only minimal type conversions are done
 |=======================================================================
 
 [id="plugins-{type}s-{plugin}-options"]

@@ -303,7 +303,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(event.get("clientip")).to eql "1.2.3.4"
           expect(event.get("ident")).to eql "-"
           expect(event.get("auth")).to eql "-"
-          expect(event.get("@timestamp")).to eql "01/Apr/2023:22:00:52 +0000"
+          expect(event.get("_@timestamp")).to eql "01/Apr/2023:22:00:52 +0000" # reserved-field collision re-routing
           expect(event.get("verb")).to eql "GET"
           expect(event.get("request")).to eql "/path/to/some/resources/test.gif"
           expect(event.get("httpversion")).to eql "1.0"
