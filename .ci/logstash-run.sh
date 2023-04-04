@@ -23,6 +23,8 @@ wait_for_es() {
   echo $(curl $CURL_OPTS -vi $ES_URL | python -c "import sys, json; print(json.load(sys.stdin)['version']['number'])")
 }
 
+bundle exec rake prepare_geoip_resources
+
 if [[ "$INTEGRATION" != "true" ]]; then
   bundle exec rspec --format=documentation spec/unit --tag ~integration --tag ~secure_integration
 else

@@ -928,6 +928,44 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
     end
 
+    describe 'with geoip processor' do
+      let(:settings) {
+        super().merge(
+          "geoip_database_directory" => "src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases"
+        )
+      }
+      let(:pipeline_processor) {
+        '{
+          "geoip" : {
+            "field" : "ip"
+          }
+        }'
+      }
+
+      it 'resolves IP geo-location information' do
+        events = [LogStash::Event.new(
+          "message" => "IP address in Sweden, Europe.",
+          "ip" => "89.160.20.128",
+          "data_stream" => data_stream)]
+
+        subject.multi_filter(events).to_a.tap do |filter_result|
+          expect(filter_result.size).to eql 1
+          filter_result.first.tap do |event|
+            aggregate_failures "geo enrichment (#{event.to_hash_with_metadata.inspect})" do
+              expect(event.get("[geoip][continent_name]")).to eql "Europe"
+              expect(event.get("[geoip][country_name]")).to eql "Sweden"
+              expect(event.get("[geoip][country_iso_code]")).to eql "SE"
+              expect(event.get("[geoip][city_name]")).to eql "Tumba"
+              expect(event.get("[geoip][region_iso_code]")).to eql "SE-AB"
+              expect(event.get("[geoip][region_name]")).to eql "Stockholm"
+              expect(event.get("[geoip][location][lat]")).to be_within(0.01).of(59.2)    # ~1km
+              expect(event.get("[geoip][location][lon]")).to be_within(0.02).of(17.8167) # ~1km @ lat 60
+            end
+          end 
+        end
+      end
+    end
+
   end
 
   context '#multi-pipeline execution' do
