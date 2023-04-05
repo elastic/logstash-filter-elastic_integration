@@ -15,6 +15,7 @@ Gem::Specification.new do |s|
   # Files
   s.files = Dir[*%w{
     lib/**/*.*
+    *.gemspec
     vendor/jar-dependencies/**/*.jar
     VERSION
     LICENSE
