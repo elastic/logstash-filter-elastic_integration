@@ -11,7 +11,6 @@ import org.elasticsearch.ingest.common.FailProcessorException;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,7 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 /**
@@ -39,6 +40,8 @@ public class EventProcessor implements Closeable {
     private final EventToPipelineNameResolver eventToPipelineNameResolver;
     private final IngestDuplexMarshaller eventMarshaller;
 
+    private final Executor executor;
+
     private final List<Closeable> resourcesToClose;
 
     private static final Logger LOGGER = LogManager.getLogger(EventProcessor.class);
@@ -50,10 +53,12 @@ public class EventProcessor implements Closeable {
     EventProcessor(final FilterMatchListener filterMatchListener,
                    final IngestPipelineResolver internalPipelineProvider,
                    final EventToPipelineNameResolver eventToPipelineNameResolver,
+                   final Executor executor,
                    final Collection<Closeable> resourcesToClose) {
         this.filterMatchListener = filterMatchListener;
         this.internalPipelineProvider = internalPipelineProvider;
         this.eventToPipelineNameResolver = eventToPipelineNameResolver;
+        this.executor = executor;
         this.resourcesToClose = List.copyOf(resourcesToClose);
         this.eventMarshaller = IngestDuplexMarshaller.defaultInstance();
     }
@@ -72,13 +77,15 @@ public class EventProcessor implements Closeable {
      * @return the outgoing batch, which <em>may</em> contain cancelled events
      */
     public Collection<Event> processEvents(final Collection<Event> incomingEvents) {
-        final List<Event> outgoingEvents = new ArrayList<>(incomingEvents.size());
+        final ConcurrentLinkedQueue<Event> outgoingEvents = new ConcurrentLinkedQueue<>();
 
-        for (Event incomingEvent : incomingEvents) {
-            processEvent(incomingEvent, outgoingEvents::add);
-        }
+        final CompletableFuture[] completableFutures = incomingEvents.stream()
+                .<Runnable>map(event -> () -> processEvent(event, outgoingEvents::add))
+                .map(runnable -> CompletableFuture.runAsync(runnable, executor))
+                .toArray(CompletableFuture[]::new);
+        CompletableFuture.allOf(completableFutures).join();
 
-        return outgoingEvents;
+        return List.copyOf(outgoingEvents);
     }
 
     /**

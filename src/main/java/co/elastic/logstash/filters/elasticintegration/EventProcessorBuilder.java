@@ -6,6 +6,7 @@ import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProc
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCache;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
+import co.elastic.logstash.filters.elasticintegration.util.ExecutorServiceCloser;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.IOUtils;
@@ -28,22 +29,34 @@ import org.elasticsearch.script.mustache.MustacheScriptEngine;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.Closeable;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 @SuppressWarnings("UnusedReturnValue")
 public class EventProcessorBuilder {
+
+    private record ExecutorProvider<T extends Executor>(Supplier<T> executorSupplier, Consumer<T> executorCloser) {
+        static <TT extends Executor> ExecutorProvider<TT> of(final TT executor) {
+            return new ExecutorProvider<>(() -> executor, null);
+        }
+        T getExecutor(final Consumer<Closeable> closeableConsumer) {
+            final T executor = Objects.requireNonNull(executorSupplier.get());
+            if (Objects.nonNull(executorCloser)) {
+                closeableConsumer.accept(() -> executorCloser.accept(executor));
+            }
+            return executor;
+        }
+    }
 
     private static <K,V> Supplier<ResolverCache<K,V>> defaultCacheSupplier(final String description) {
         return () -> new SimpleResolverCache<>(description, SimpleResolverCache.Configuration.PERMANENT);
@@ -72,6 +85,9 @@ public class EventProcessorBuilder {
 
     private Supplier<ResolverCache<String, IngestPipeline>> pipelineResolverCacheSupplier;
     private final List<Supplier<IngestPlugin>> ingestPlugins = new ArrayList<>();
+
+    private ExecutorProvider<?> executorProvider;
+
 
     public synchronized EventProcessorBuilder setPipelineConfigurationResolver(final PipelineConfigurationResolver pipelineConfigurationResolver) {
         if (Objects.nonNull(this.pipelineConfigurationResolver)) {
@@ -108,6 +124,22 @@ public class EventProcessorBuilder {
             throw new IllegalStateException("filterMatchListener already set");
         }
         this.filterMatchListener = filterMatchListener;
+        return this;
+    }
+
+    public EventProcessorBuilder setExecutor(final Executor executor) {
+        return setExecutorProvider(ExecutorProvider.of(executor));
+    }
+
+    public EventProcessorBuilder setExecutorServiceSupplier(final Supplier<ExecutorService> executorServiceSupplier) {
+        return this.setExecutorProvider(new ExecutorProvider<>(executorServiceSupplier, ExecutorServiceCloser::new));
+    }
+
+    private synchronized EventProcessorBuilder setExecutorProvider(final ExecutorProvider<?> executorProvider) {
+        if (Objects.nonNull(this.executorProvider)) {
+            throw new IllegalStateException("executorConfig already set");
+        }
+        this.executorProvider = executorProvider;
         return this;
     }
 
@@ -175,7 +207,9 @@ public class EventProcessorBuilder {
 
             final FilterMatchListener filterMatchListener = Objects.requireNonNullElse(this.filterMatchListener, (event) -> {});
 
-            return new EventProcessor(filterMatchListener, cachingInternalPipelineResolver, eventToPipelineNameResolver, resourcesToClose);
+            final Executor executor = Objects.requireNonNullElse(this.executorProvider, ExecutorProvider.of(Runnable::run)).getExecutor(resourcesToClose::add);
+
+            return new EventProcessor(filterMatchListener, cachingInternalPipelineResolver, eventToPipelineNameResolver, executor, resourcesToClose);
         } catch (Exception e) {
             IOUtils.closeWhileHandlingException(resourcesToClose);
             throw new RuntimeException("Failed to build EventProcessor", e);
