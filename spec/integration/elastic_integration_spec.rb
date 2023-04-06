@@ -63,7 +63,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:pipeline_processor) {}
 
   let(:index_pattern) {
-    "logs-logstash-*"
+    index_settings["type"] + "-" + index_settings["dataset"] + "-*"
   }
   let(:index_template_setting) { '
     {
