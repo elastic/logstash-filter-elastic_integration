@@ -53,9 +53,9 @@ public class EventProcessorBuilder {
         final EventProcessorBuilder builder = new EventProcessorBuilder();
 
         builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
-                new SimpleResolverCache.Configuration(Duration.ofSeconds(60), Duration.ofSeconds(10)))));
+                new SimpleResolverCache.Configuration(Duration.ofMinutes(60), Duration.ofSeconds(60)))));
         builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
-        builder.setPipelineResolverCacheConfig(Duration.ofSeconds(60), Duration.ofSeconds(10));
+        builder.setPipelineResolverCacheConfig(Duration.ofMinutes(60), Duration.ofSeconds(60));
         return builder;
     }
 
