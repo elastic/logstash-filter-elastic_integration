@@ -45,7 +45,7 @@ class DatastreamEventToPipelineNameResolverTest {
 
     @Test void datastreamResolvedFromEventNamedPipeline() throws Exception {
         withDatastreamResolver((resolver) -> {
-            wireMock.stubFor(post("/_index_template/_simulate/logs-elastic_agent.metricbeat-default")
+            wireMock.stubFor(post("/_index_template/_simulate_index/logs-elastic_agent.metricbeat-")
                     .willReturn(okJson(getMockResponseBody("post-simulate-index-with-template-settings-index-default_pipeline=(banana).json"))));
 
             final Event eventWithDatastreamFields = datastreamConfigEvent("logs", "elastic_agent.metricbeat", "default");
@@ -56,7 +56,7 @@ class DatastreamEventToPipelineNameResolverTest {
 
     @Test void datastreamResolvedFromEventExplicitNonePipeline() throws Exception {
         withDatastreamResolver((resolver) -> {
-            wireMock.stubFor(post("/_index_template/_simulate/logs-none_pipeline-default")
+            wireMock.stubFor(post("/_index_template/_simulate_index/logs-none_pipeline-")
                     .willReturn(okJson(getMockResponseBody("post-simulate-index-with-template-settings-index-default_pipeline=(_none).json"))));
 
             final Event eventWithDatastreamFields = datastreamConfigEvent("logs", "none_pipeline", "default");
@@ -66,7 +66,7 @@ class DatastreamEventToPipelineNameResolverTest {
 
     @Test void datastreamResolvedFromEventImplicitNonePipeline() throws Exception {
         withDatastreamResolver((resolver) -> {
-            wireMock.stubFor(post("/_index_template/_simulate/logs-no_pipeline-default")
+            wireMock.stubFor(post("/_index_template/_simulate_index/logs-no_pipeline-")
                     .willReturn(okJson(getMockResponseBody("post-simulate-index-without-template-settings-index-default_pipeline.json"))));
 
             final Event eventWithDatastreamFields = datastreamConfigEvent("logs", "no_pipeline", "default");
@@ -77,7 +77,7 @@ class DatastreamEventToPipelineNameResolverTest {
 
     @Test void datastreamResolvedFromEventNoTemplateSettings() throws Exception {
         withDatastreamResolver((resolver) -> {
-            wireMock.stubFor(post("/_index_template/_simulate/logs-ta-sh")
+            wireMock.stubFor(post("/_index_template/_simulate_index/logs-ta-")
                     .willReturn(okJson(getMockResponseBody("post-simulate-index-without-template-settings.json"))));
 
             final Event eventWithDatastreamFields = datastreamConfigEvent("logs", "ta", "sh");
@@ -87,7 +87,7 @@ class DatastreamEventToPipelineNameResolverTest {
 
     @Test void datastreamResolvedFromEventWithEscapableCharacters() throws Exception {
         withDatastreamResolver((resolver) -> {
-            wireMock.stubFor(post("/_index_template/_simulate/metrics-this%2Fthat%20and%23another%3Fone-custom")
+            wireMock.stubFor(post("/_index_template/_simulate_index/metrics-this%2Fthat%20and%23another%3Fone-")
                     .willReturn(okJson(getMockResponseBody("post-simulate-index-with-template-settings-index-default_pipeline=(banana).json"))));
 
             final AtomicReference<Exception> lastException = new AtomicReference<>();
@@ -100,7 +100,7 @@ class DatastreamEventToPipelineNameResolverTest {
 
     @Test void insufficientPermissionsToUseSimulateAPI() throws Exception {
         withDatastreamResolver((resolver) -> {
-            wireMock.stubFor(post("/_index_template/_simulate/logs-some_pipeline-default")
+            wireMock.stubFor(post("/_index_template/_simulate_index/logs-some_pipeline-")
                     .willReturn(aResponse().withStatus(403)));
 
             final AtomicReference<Exception> lastException = new AtomicReference<>();
