@@ -72,7 +72,7 @@ public class DatastreamEventToPipelineNameResolver implements EventToPipelineNam
         // When we add an integration, by default index template name will be `<type>-<dataset>` and index pattern is `<type>-<dataset>-*`
         // and there is no guarantee that namespace is added to index template name
         // we use `_simulate_index` API (not `_simulate`) to fetch the default pipeline
-        final String composedDatastream = String.format("%s-%s-", type, dataset);
+        final String composedDatastream = String.format("%s-%s-%s", type, dataset, namespace);
         LOGGER.trace(() -> String.format("datastream resolved from event: `%s`", composedDatastream));
 
         return Optional.of(composedDatastream);
