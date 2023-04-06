@@ -25,6 +25,7 @@ Gem::Specification.new do |s|
   s.metadata = {
     "logstash_plugin" => "true",
     "logstash_group" => "filter",
+    "source_code_uri" => "https://github.com/elastic/logstash-filter-elastic_integration",
   }
 
   # Gem dependencies
