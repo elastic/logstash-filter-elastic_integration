@@ -20,6 +20,20 @@ describe LogStash::Filters::ElasticIntegration do
     it { is_expected.to be_a_kind_of Class }
     it { is_expected.to be <= LogStash::Filters::Base }
     it { is_expected.to have_attributes(:config_name => "elastic_integration") }
+
+    context 'on unsupported Java' do
+      before(:each) do
+        allow(java.lang.System).to receive(:getProperty).with("java.specification.version").and_return("11.0.16.1")
+      end
+
+      it 'prevents initialization and presents helpful guidancee' do
+        expect { described_class.new({}) }.to raise_error(LogStash::EnvironmentError)
+                                                .with_message(including("requires Java 17 or later", # reason +
+                                                                        "current JVM version `11.0.16.1`",
+                                                                        "remove the plugin", # guidance options
+                                                                        "run Logstash with a supported JVM."))
+      end
+    end
   end
 
   describe 'an instance with default config' do

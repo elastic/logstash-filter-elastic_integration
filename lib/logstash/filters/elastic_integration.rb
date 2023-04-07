@@ -97,6 +97,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # is not encumbered by those dependencies.
   def initialize(*a, &b)
     ensure_complete_logstash!
+    ensure_java_major_version!(17)
 
     require_relative "elastic_integration/jar_dependencies"
     require_relative "elastic_integration/event_api_bridge"
@@ -370,6 +371,31 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
       raise_config_error! <<~ERR
         The Elastic Integration filter for Logstash is an Elastic-licensed plugin
         that REQUIRES the complete Logstash distribution, including non-OSS features.
+      ERR
+    end
+  end
+
+  ##
+  # single-use helper for ensuring the running JVM meets the minimum
+  # Java version requirement necessary for loading the included jars
+  # @raise [LogStash::EnvironmentError]
+  def ensure_java_major_version!(minimum_major_version)
+    java_version_string = java.lang.System.getProperty("java.specification.version")
+
+    # MAJOR <= 8 ? 1.MAJOR.MINOR : MAJOR.MINOR
+    # https://rubular.com/r/lLW5iUWN9N9N6Z
+    java_major_version_pattern = /(?:(?:(?<=^1\.)[0-8])|^(?:9|[1-9][0-9]+))(?=\.|$)/
+    java_major_version = java_version_string&.slice(java_major_version_pattern)&.to_i
+
+    if (java_major_version.nil?)
+      fail("Failed to retrieve running JVM's major version")
+    elsif (java_major_version < minimum_major_version)
+      fail(LogStash::EnvironmentError, <<~ERR.gsub(/[[:space:]]+/, ' '))
+        the #{self.class.config_name} #{self.class.plugin_type} plugin requires
+        Java #{minimum_major_version} or later and cannot be instantiated on the
+        current JVM version `#{java_version_string}`.
+        You can either remove the plugin from your pipeline definition or run
+        Logstash with a supported JVM.
       ERR
     end
   end
