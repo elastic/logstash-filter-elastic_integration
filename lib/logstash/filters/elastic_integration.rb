@@ -10,20 +10,9 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-require_relative "elastic_integration/jar_dependencies"
-
 class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
-  require_relative "elastic_integration/event_api_bridge"
-  include EventApiBridge
-
   config_name "elastic_integration"
-
-  java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
-  java_import('co.elastic.logstash.filters.elasticintegration.EventProcessor')
-  java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
-  java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
-  java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
@@ -102,7 +91,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A directory containing one or more Maxmind Datbase files in *.mmdb format
   config :geoip_database_directory, :validate => :path
 
-
+  ##
+  # Validates that this plugin can be initialized BEFORE loading dependencies
+  # and delegating to super, so that when this plugin CANNOT be run the process
+  # is not encumbered by those dependencies.
   def initialize(*a, &b)
     # This Elastic-licensed plugin needs to run in a _complete_ distro of Logstash that
     # has non-OSS features active. Runtime detection mechanism relies on LogStash::OSS,
@@ -114,6 +106,11 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
         that REQUIRES the complete Logstash distribution, including non-OSS features.
       ERR
     end
+
+    require_relative "elastic_integration/jar_dependencies"
+    require_relative "elastic_integration/event_api_bridge"
+
+    extend EventApiBridge
 
     super
   end
@@ -303,6 +300,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   ##
   # Builds a `PluginConfiguration` from the previously-validated config
   def extract_immutable_config
+    java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
+
     builder = PluginConfiguration::Builder.new
 
     builder.setId @id
@@ -335,6 +334,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def initialize_elasticsearch_rest_client!
+    java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
+
     @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
                                                                .map(&:build)
                                                                .orElseThrow() # todo: ruby/java bridge better exception
@@ -354,7 +355,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def initialize_geoip_database_provider!
     java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
-    java_import('co.elastic.logstash.filters.elasticintegration.geoip.StaticGeoIpDatabase')
 
     @geoip_database_provider ||= GeoIpDatabaseProvider::Builder.new.tap do |builder|
       builder.setDatabases(java.io.File.new(@geoip_database_directory)) if @geoip_database_directory
@@ -362,6 +362,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
+
     PreflightCheck.new(@elasticsearch_rest_client).check
   rescue => e
     raise_config_error!(e.message)
