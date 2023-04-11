@@ -63,7 +63,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:pipeline_processor) {}
 
   let(:index_pattern) {
-    "logs-logstash-*"
+    "#{index_settings['type']}-#{index_settings['dataset']}-*"
   }
   let(:index_template_setting) { '
     {
@@ -1124,7 +1124,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           "data_stream" => data_stream)]
 
         subject.multi_filter(events).each do |event|
-          expect(event.get("[@metadata][_ingest_pipeline_failure][message]")).to include("action [indices:admin/index_template/simulate] is unauthorized for user [ls_integration_tests_user]")
+          expect(event.get("[@metadata][_ingest_pipeline_failure][message]")).to include("action [indices:admin/index_template/simulate_index] is unauthorized for user [ls_integration_tests_user]")
         end
       end
     end
