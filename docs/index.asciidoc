@@ -29,7 +29,7 @@ Use of this plugin requires an active Enterprise Elastic License.
 
 Using this filter you can process Elastic integrations powered by {es} Ingest Node in Logstash.
 
-Once configured to point to an {es} cluster, events processed by this filter will first resolve their effective data-stream, and determine from elasticsearch which ingest pipeline to run.
+Once configured to point to an {es} cluster, events processed by this filter will first resolve their effective data-stream, and determine from {es} which ingest pipeline to run.
 The ingest pipeline will be run inside Logstash without transmitting the event to {es}.
 Events that are successfully handled by their ingest pipeline will have `[@metadata][target_ingest_pipeline]` set to `+_none+` so that any downstream {es} output in the Logstash pipeline will avoid running the event's default pipeline _again_ in {es}.
 
@@ -37,6 +37,8 @@ NOTE: Some multi-pipeline configurations such as logstash-to-logstash over http(
       In these setups, you may need to explicitly configure your downstream pipeline's {es} output with `+pipeline => "_none"+` to avoid re-running the default pipeline.
 
 Events that _fail_ ingest pipeline processing will be tagged with `_ingest_pipeline_failure`, and their `[@metadata][_ingest_pipeline_failure]` will be populated with details as a key/value map.
+
+IMPORTANT: This plugin requires minimum Java 17 and Logstash 8.7.0 versions.
 
 .Technology Preview
 ****
