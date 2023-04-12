@@ -28,7 +28,22 @@ describe LogStash::Filters::ElasticIntegration do
     it { is_expected.to be_a_kind_of LogStash::Filters::Base }
     it { is_expected.to respond_to(:register).with(0).arguments }
     it { is_expected.to respond_to(:filter).with(1).argument }
+  end
 
+  # NOTE: Depends on LogStash::OSS, which is set by the bootstrap prelude for LogStash::Runner
+  context 'Logstash core requirements' do
+    context 'on OSS-only Logstash' do
+      before(:each) { stub_const('LogStash::OSS', true) }
+      it 'cannot be instantiated' do
+        expect { described_class.new({}) }.to raise_error(LogStash::ConfigurationError).with_message(including "REQUIRES the complete Logstash distribution")
+      end
+    end
+    context 'on complete Logstash' do
+      before(:each) { stub_const('LogStash::OSS', false) }
+      it 'can be instantiated' do
+        described_class.new({})
+      end
+    end
   end
 
   describe "plugin register" do

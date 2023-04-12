@@ -1,0 +1,5 @@
+Elastic Integration filter for Logstash
+Copyright (c) 2023 Elastic, N.V.
+
+Distributable artifacts of this product include software developed
+by The Apache Software Foundation (http://www.apache.org/).
