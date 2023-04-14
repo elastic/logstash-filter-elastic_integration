@@ -96,16 +96,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # and delegating to super, so that when this plugin CANNOT be run the process
   # is not encumbered by those dependencies.
   def initialize(*a, &b)
-    # This Elastic-licensed plugin needs to run in a _complete_ distro of Logstash that
-    # has non-OSS features active. Runtime detection mechanism relies on LogStash::OSS,
-    # which is set in the prelude to LogStash::Runner, and is bypassed when LogStash::OSS
-    # is not defined (such as when running specs from source)
-    if defined?(LogStash::OSS) && LogStash::OSS
-      raise_config_error! <<~ERR
-        The Elastic Integration filter for Logstash is an Elastic-licensed plugin
-        that REQUIRES the complete Logstash distribution, including non-OSS features.
-      ERR
-    end
+    ensure_complete_logstash!
 
     require_relative "elastic_integration/jar_dependencies"
     require_relative "elastic_integration/event_api_bridge"
@@ -367,5 +358,19 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     PreflightCheck.new(@elasticsearch_rest_client).check
   rescue => e
     raise_config_error!(e.message)
+  end
+
+  ##
+  # single-use helper to ensure the running Logstash is a _complete_ distro that has
+  # non-OSS features active. Runtime detection mechanism relies on LogStash::OSS,
+  # which is set in the prelude to LogStash::Runner, and is bypassed when LogStash::OSS
+  # is not defined (such as when running specs from source)
+  def ensure_complete_logstash!
+    if defined?(LogStash::OSS) && LogStash::OSS
+      raise_config_error! <<~ERR
+        The Elastic Integration filter for Logstash is an Elastic-licensed plugin
+        that REQUIRES the complete Logstash distribution, including non-OSS features.
+      ERR
+    end
   end
 end
