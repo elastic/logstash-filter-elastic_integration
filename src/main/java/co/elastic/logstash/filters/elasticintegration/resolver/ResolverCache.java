@@ -26,4 +26,9 @@ public interface ResolverCache<K, V> {
     void flush();
 
     Set<K> keys();
+
+    // API: internal
+    void reload(final K resolveKey, CacheableResolver.Ephemeral<K, V> resolver);
+
+    CacheReloader getReloader(CacheableResolver.Ephemeral<K,V> resolver);
 }

@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -19,7 +20,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 
 /**
@@ -95,13 +95,17 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
                 try {
                     final CacheResult retrieved = doGet(rKey, cacheMissResolver, exceptionHandler);
                     LOGGER.trace(() -> String.format("uncached-load(%s){ %s -> %s }", type, resolveKey, retrieved.getCachedValue()));
-                    return configuration.maxMissAgeNanos >= 0 ? retrieved : null;
+                    return (retrieved.isHit() || !retrieved.isExpired()) ? retrieved : null;
                 } catch (Exception e) {
-                    LOGGER.debug(() -> String.format("uncached-load-exception(%s){ %s !> %s }", type, resolveKey, e.getMessage()));
+                    LOGGER.debug(() -> String.format("uncached-load-exception(%s){ %s !> %s }", type, resolveKey), e);
                     throw e;
                 }
             });
-        }).getCachedValue());
+        })).map(CacheResult::getCachedValue);
+    }
+
+    public CacheReloader getReloader(final CacheableResolver.Ephemeral<K,V> innerResolver) {
+        return new Reloader(innerResolver);
     }
 
     @Override
@@ -119,10 +123,68 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
         return persistentCache.keySet();
     }
 
+    @Override
+    public void reload(final K resolveKey,
+                       final CacheableResolver.Ephemeral<K, V> resolver) {
+        final CacheResult initialCacheResult = pruningFastResolveFromCache(resolveKey);
+        if (Objects.isNull(initialCacheResult)) {
+            LOGGER.warn(() -> String.format("reload-gone(%s) { %s } the entry disappeared from the cache", type, resolveKey));
+        }
+
+        final Exception[] exceptionHolder = new Exception[1];
+        final Optional<V> resolveResult = loadLock.withLock(resolveKey, () -> {
+            return resolver.resolve(resolveKey, e -> exceptionHolder[0] = e);
+        });
+
+        final Exception resolveException = exceptionHolder[0];
+        if (Objects.nonNull(resolveException)) {
+            LOGGER.warn(() -> {
+                if (Objects.nonNull(initialCacheResult)) {
+                    final String ttlRemainingDesc = Duration.ofNanos(initialCacheResult.getRemainingNanos()).truncatedTo(ChronoUnit.SECONDS).toString();
+                    final String cachedResultDesc = initialCacheResult.isHit() ? "non-empty value" : "empty value";
+
+                    return String.format("reload-failure(%s) { %s } the existing cached %s will continue to be available until it expires in ~%s",
+                            type, resolveKey, cachedResultDesc, ttlRemainingDesc);
+                } else {
+                    return String.format("reload-failure(%s) { %s } there is no existing cached value", type, resolveKey);
+                }
+            }, resolveException);
+            return;
+        }
+
+        persistentCache.compute(resolveKey, (k, currentCacheResult) -> {
+            if (Objects.nonNull(currentCacheResult)
+                    && currentCacheResult.isHit()
+                    && resolveResult.isPresent()
+                    && Objects.equals(resolveResult.get(), currentCacheResult.getCachedValue())) {
+                LOGGER.debug(() -> String.format("reload-unchanged(%s) { %s }", type, resolveKey));
+                // when unchanged, we return new cache entry containing old value
+                return new CacheHit(currentCacheResult.getCachedValue());
+            } else if (resolveResult.isPresent()) {
+                LOGGER.info(() -> String.format("reload-modified(%s) { %s }", type, resolveKey));
+                return new CacheHit(resolveResult.get());
+            } else if (Objects.nonNull(currentCacheResult) && currentCacheResult.isHit()) {
+                LOGGER.info(() -> String.format("reload-removed(%s) { %s }", type, resolveKey));
+                return new CacheMiss();
+            } else {
+                // unchanged miss; return unmodified
+                return currentCacheResult;
+            }
+        });
+    }
+
+    /**
+     * Quickly retrieves a non-expired result from the cache with minimal locking
+     *
+     * @param resolveKey the key to resolve directly from the hit/miss cache
+     * @return a possibly-{@code null} but never-expired cache result
+     */
     private CacheResult pruningFastResolveFromCache(final K resolveKey) {
         CacheResult cacheResult = persistentCache.get(resolveKey);
         if (Objects.nonNull(cacheResult) && cacheResult.isExpired()) {
-            persistentCache.remove(resolveKey, cacheResult);
+            if (persistentCache.remove(resolveKey, cacheResult)) {
+                LOGGER.debug(() -> String.format("expired(%s) { %s }", type, resolveKey));
+            }
             cacheResult = null;
         }
         return cacheResult;
@@ -186,12 +248,16 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
         abstract public boolean isHit();
 
         public long getAgeNanos() {
-            return Math.subtractExact(nanoTimeSupplier.getAsLong(), this.nanoTimestamp);
+            return nanoTimeSupplier.getAsLong() - this.nanoTimestamp;
         }
 
         abstract V getCachedValue();
 
-        abstract boolean isExpired();
+        abstract long getRemainingNanos();
+
+        boolean isExpired() {
+            return getRemainingNanos() <= 0;
+        }
     }
 
     private class CacheHit extends CacheResult {
@@ -212,8 +278,8 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
         }
 
         @Override
-        boolean isExpired() {
-            return getAgeNanos() >= configuration.maxHitAgeNanos;
+        long getRemainingNanos() {
+            return Math.subtractExact(configuration.maxHitAgeNanos, getAgeNanos());
         }
     }
 
@@ -229,8 +295,30 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
         }
 
         @Override
-        boolean isExpired() {
-            return getAgeNanos() >= configuration.maxMissAgeNanos;
+        long getRemainingNanos() {
+            return Math.subtractExact(configuration.maxMissAgeNanos, getAgeNanos());
+        }
+    }
+
+    class Reloader implements CacheReloader {
+        private final CacheableResolver.Ephemeral<K,V> innerResolver;
+
+        public Reloader(CacheableResolver.Ephemeral<K, V> innerResolver) {
+            this.innerResolver = innerResolver;
+        }
+
+        @Override
+        public String type() {
+            return type;
+        }
+
+        @Override
+        public void reloadOnce() {
+            persistentCache.keySet().forEach(this::reloadSingleEntry);
+        }
+
+        private void reloadSingleEntry(final K resolveKey) {
+            SimpleResolverCache.this.reload(resolveKey, this.innerResolver);
         }
     }
 }
