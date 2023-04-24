@@ -178,8 +178,26 @@ Changes to the IngestDocument will be reflected in the resulting Logstash Event,
 
 | `tags` | `tags` | when ingest processing produces a top-level `tags` field that is not a collection of strings, it will be made available via the event's `_tags` field.
 
+| _N/A_ | `_index`, `
+
 | _everything else_ | _in-place, as-structured_ | only minimal type conversions are done
 |=======================================================================
+
+Additionally, the following Elasticsearch IngestDocument Metadata fields are made available on the resulting event if-and-only-if they were set during pipeline execution:
+
+:mcc-prefix: [@metadata][_ingest_document]
+
+[cols="<1,<5",options="header"]
+|=======================================================================
+| {es} document metadata | {ls} field
+
+| `_id`                  | `{mcc-prefix}[id]`
+| `_index`               | `{mcc-prefix}[index]`
+| `_routing`             | `{mcc-prefix}[routing]`
+| `_version`             | `{mcc-prefix}[version]`
+| `_version_type`        | `{mcc-prefix}[version_type]`
+|=======================================================================
+
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== {elastic-integration-name} Filter Configuration Options

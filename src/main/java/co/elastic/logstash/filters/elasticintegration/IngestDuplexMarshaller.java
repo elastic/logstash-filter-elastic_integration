@@ -9,6 +9,7 @@ package co.elastic.logstash.filters.elasticintegration;
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.EventFactory;
 import org.elasticsearch.ingest.IngestDocument;
+import org.elasticsearch.script.Metadata;
 import org.logstash.Javafier;
 import org.logstash.plugins.BasicEventFactory;
 
@@ -18,8 +19,6 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +37,10 @@ public class IngestDuplexMarshaller {
     static final String LOGSTASH_TIMESTAMP_FALLBACK = "_@timestamp";
     static final String LOGSTASH_METADATA_FALLBACK = "_@metadata";
     static final String LOGSTASH_TAGS_FALLBACK = "_tags";
+
+    static final String VERSION_ONE = "1";
+
+    static final String LOGSTASH_METADATA_INGEST_DOCUMENT_METADATA = "[@metadata][_ingest_document]";
 
     private static final IngestDuplexMarshaller DEFAULT_INSTANCE = new IngestDuplexMarshaller(BasicEventFactory.INSTANCE);
 
@@ -121,9 +124,8 @@ public class IngestDuplexMarshaller {
     }
 
     public Event toLogstashEvent(final IngestDocument ingestDocument) {
-        // the IngestDocument we get back will have modified source directly,
-        // and may have modified metadata.
-        Map<String, Object> eventMap = new HashMap<>(ingestDocument.getSourceAndMetadata());
+        // the IngestDocument we get back will have modified source directly.
+        Map<String, Object> eventMap = new HashMap<>(ingestDocument.getSource());
 
         // extract and set the version, moving a pre-existing `@version` field out of the way
         final Object sourceVersion = eventMap.put(org.logstash.Event.VERSION, eventVersion(ingestDocument));
@@ -159,7 +161,26 @@ public class IngestDuplexMarshaller {
             }
         }
 
-        return eventFactory.newEvent(eventMap);
+        final Event event = eventFactory.newEvent(eventMap);
+
+        // inject the relevant normalized metadata from the IngestDocument#getMetadata
+        event.setField(LOGSTASH_METADATA_INGEST_DOCUMENT_METADATA, normalizeIngestDocumentMetadata(ingestDocument));
+        return event;
+    }
+
+    private Map<String,Object> normalizeIngestDocumentMetadata(final IngestDocument ingestDocument) {
+        final Map<String,Object> collectedIndexMetadata = new HashMap<>();
+        final Metadata metadata = ingestDocument.getMetadata();
+
+        collectedIndexMetadata.put("index", metadata.getIndex());
+        collectedIndexMetadata.put("id", metadata.getId());
+        collectedIndexMetadata.put("version", metadata.getVersion());
+        collectedIndexMetadata.put("version_type", metadata.getVersionType());
+        collectedIndexMetadata.put("routing", metadata.getRouting());
+
+        collectedIndexMetadata.values().removeIf(Objects::isNull);
+
+        return collectedIndexMetadata;
     }
 
     private static org.logstash.Timestamp eventTimestamp(final IngestDocument ingestDocument) {
@@ -176,7 +197,12 @@ public class IngestDuplexMarshaller {
     }
 
     private static String eventVersion(final IngestDocument ingestDocument) {
-        return Long.toString(ingestDocument.getMetadata().getVersion());
+        final long version = ingestDocument.getMetadata().getVersion();
+        if (version == 1L) {
+            // return a constant value for the most common use-case
+            return VERSION_ONE;
+        }
+        return Long.toString(version);
     }
 
     private static Object likelyCoercibleTags(final Object rawTagsValue) {

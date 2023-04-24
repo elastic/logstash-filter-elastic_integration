@@ -276,7 +276,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           "data_stream" => data_stream)]
 
         subject.multi_filter(events).each do |event|
-          expect(event.get("_index")).to include("<monthly-index-{2023-03-08")
+          expect(event.get("[@metadata][_ingest_document][index]")).to start_with("<monthly-index-{2023-03-08")
           expect(event.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
         end
       end
@@ -726,7 +726,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           "data_stream" => data_stream)]
 
         subject.multi_filter(events).each do |event|
-          expect(event.get("_index")).to eql "uz-catalog"
+          expect(event.get("[@metadata][_ingest_document][index]")).to eql "uz-catalog"
           expect(event.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
         end
       end
