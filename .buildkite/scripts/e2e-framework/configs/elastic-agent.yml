@@ -1,0 +1,23 @@
+
+outputs:
+  default:
+    type: logstash
+    hosts: '172.18.0.5:5044'
+
+inputs:
+  - type: system/metrics
+    id: unique-system-metrics-input
+    data_stream.namespace: default
+    use_output: default
+    streams:
+      - metricset: cpu
+        data_stream.dataset: system.cpu
+      - metricset: memory
+        data_stream.dataset: system.memory
+      - metricset: network
+        data_stream.dataset: system.network
+      - metricset: filesystem
+        data_stream.dataset: system.filesystem
+
+# Log levels are: error, warning, info, debug
+agent.logging.level: debug
