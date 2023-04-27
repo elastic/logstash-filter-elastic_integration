@@ -368,7 +368,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # is not defined (such as when running specs from source)
   def ensure_complete_logstash!
     if defined?(LogStash::OSS) && LogStash::OSS
-      raise_config_error! <<~ERR
+      raise_config_error! <<~ERR.gsub(/\s+/, ' ')
         The Elastic Integration filter for Logstash is an Elastic-licensed plugin
         that REQUIRES the complete Logstash distribution, including non-OSS features.
       ERR
@@ -390,7 +390,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     if (java_major_version.nil?)
       fail("Failed to retrieve running JVM's major version")
     elsif (java_major_version < minimum_major_version)
-      fail(LogStash::EnvironmentError, <<~ERR.gsub(/[[:space:]]+/, ' '))
+      fail(LogStash::EnvironmentError, <<~ERR.gsub(/\s+/, ' '))
         the #{self.class.config_name} #{self.class.plugin_type} plugin requires
         Java #{minimum_major_version} or later and cannot be instantiated on the
         current JVM version `#{java_version_string}`.
