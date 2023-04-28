@@ -55,6 +55,9 @@ import static com.google.common.util.concurrent.AbstractScheduledService.Schedul
 @SuppressWarnings("UnusedReturnValue")
 public class EventProcessorBuilder {
 
+    static final Duration CACHE_MAXIMUM_AGE = Duration.ofHours(24);
+    static final Duration CACHE_RELOAD_FREQUENCY = Duration.ofSeconds(60);
+
     private static <K,V> Supplier<ResolverCache<K,V>> defaultCacheSupplier(final String description) {
         return () -> new SimpleResolverCache<>(description, SimpleResolverCache.Configuration.PERMANENT);
     }
@@ -63,10 +66,10 @@ public class EventProcessorBuilder {
         final EventProcessorBuilder builder = new EventProcessorBuilder();
 
         builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
-                new SimpleResolverCache.Configuration(Duration.ofHours(24), Duration.ofHours(24)))));
+                new SimpleResolverCache.Configuration(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE))));
 
         builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
-        builder.setPipelineResolverCacheConfig(Duration.ofHours(24), Duration.ofHours(24));
+        builder.setPipelineResolverCacheConfig(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE);
         return builder;
     }
 
@@ -184,10 +187,10 @@ public class EventProcessorBuilder {
             // start reload services for our resolvers
             final ArrayList<Service> services = new ArrayList<>();
             eventToPipelineNameResolver.innerCacheReloader().ifPresent(cacheReloader -> {
-                final AbstractScheduledService.Scheduler pipelineNameReloadSchedule = newFixedRateSchedule(Duration.ofSeconds(60), Duration.ofSeconds(60));
+                final AbstractScheduledService.Scheduler pipelineNameReloadSchedule = newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY);
                 services.add(CacheReloadService.newManaged(pluginContext, cacheReloader, pipelineNameReloadSchedule));
             });
-            final AbstractScheduledService.Scheduler pipelineDefinitionReloadSchedule = newFixedRateSchedule(Duration.ofSeconds(60), Duration.ofSeconds(60));
+            final AbstractScheduledService.Scheduler pipelineDefinitionReloadSchedule = newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY);
             services.add(CacheReloadService.newManaged(pluginContext, cachingInternalPipelineResolver.getReloader(), pipelineDefinitionReloadSchedule));
 
             final ServiceManager serviceManager = new ServiceManager(services);
