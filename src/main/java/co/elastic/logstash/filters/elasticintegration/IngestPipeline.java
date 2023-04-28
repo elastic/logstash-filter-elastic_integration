@@ -20,8 +20,14 @@ public class IngestPipeline {
     private final PipelineConfiguration pipelineConfiguration;
     private final Pipeline innerPipeline;
 
-    public IngestPipeline(final PipelineConfiguration pipelineConfiguration,
-                          final Pipeline innerPipeline) {
+    /**
+     * @see IngestPipelineFactory#create(PipelineConfiguration)
+     *
+     * @param pipelineConfiguration the source ingest pipeline configuration
+     * @param innerPipeline an instantiated ingest pipeline
+     */
+    IngestPipeline(final PipelineConfiguration pipelineConfiguration,
+                   final Pipeline innerPipeline) {
         this.pipelineConfiguration = pipelineConfiguration;
         this.innerPipeline = innerPipeline;
     }
@@ -53,5 +59,13 @@ public class IngestPipeline {
     @Override
     public int hashCode() {
         return Objects.hash(pipelineConfiguration);
+    }
+
+    @Override
+    public String toString() {
+        return "IngestPipeline{" +
+                "id=" + getId() +
+                "pipelineConfiguration=" + pipelineConfiguration +
+                '}';
     }
 }
