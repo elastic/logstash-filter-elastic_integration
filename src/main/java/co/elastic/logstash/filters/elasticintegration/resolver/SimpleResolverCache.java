@@ -11,6 +11,7 @@ import org.apache.logging.log4j.Logger;
 
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -140,7 +141,7 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
         if (Objects.nonNull(resolveException)) {
             LOGGER.warn(() -> {
                 if (Objects.nonNull(initialCacheResult)) {
-                    final String ttlRemainingDesc = Duration.ofNanos(initialCacheResult.getRemainingNanos()).truncatedTo(ChronoUnit.SECONDS).toString();
+                    final String ttlRemainingDesc = humanReadableDuration(initialCacheResult.getRemainingNanos());
                     final String cachedResultDesc = initialCacheResult.isHit() ? "non-empty value" : "empty value";
 
                     return String.format("reload-failure(%s) { %s } the existing cached %s will continue to be available until it expires in ~%s",
@@ -215,6 +216,16 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
             LOGGER.debug(() -> String.format("failed to load %s: `%s`", type, resolveKey));
             return new CacheMiss();
         };
+    }
+
+    /**
+     * Gets a human-readable representation of the given nanos with at-most-seconds resolution
+     * @param nanos a quantity of nanoseconds
+     * @return a human-readable ISO8601-inspired duration like "48h7m56s"
+     */
+    static String humanReadableDuration(final long nanos) {
+        return Duration.ofNanos(nanos).truncatedTo(ChronoUnit.SECONDS)
+                .toString().replaceAll("[^0-9YDHMS]","").toLowerCase();
     }
 
     /**
