@@ -10,20 +10,9 @@
 require "logstash/filters/base"
 require "logstash/namespace"
 
-require_relative "elastic_integration/jar_dependencies"
-
 class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
-  require_relative "elastic_integration/event_api_bridge"
-  include EventApiBridge
-
   config_name "elastic_integration"
-
-  java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
-  java_import('co.elastic.logstash.filters.elasticintegration.EventProcessor')
-  java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
-  java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
-  java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
   ELASTICSEARCH_DEFAULT_PORT = 9200.freeze
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
@@ -102,18 +91,18 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A directory containing one or more Maxmind Datbase files in *.mmdb format
   config :geoip_database_directory, :validate => :path
 
-
+  ##
+  # Validates that this plugin can be initialized BEFORE loading dependencies
+  # and delegating to super, so that when this plugin CANNOT be run the process
+  # is not encumbered by those dependencies.
   def initialize(*a, &b)
-    # This Elastic-licensed plugin needs to run in a _complete_ distro of Logstash that
-    # has non-OSS features active. Runtime detection mechanism relies on LogStash::OSS,
-    # which is set in the prelude to LogStash::Runner, and is bypassed when LogStash::OSS
-    # is not defined (such as when running specs from source)
-    if defined?(LogStash::OSS) && LogStash::OSS
-      raise_config_error! <<~ERR
-        The Elastic Integration filter for Logstash is an Elastic-licensed plugin
-        that REQUIRES the complete Logstash distribution, including non-OSS features.
-      ERR
-    end
+    ensure_complete_logstash!
+    ensure_java_major_version!(17)
+
+    require_relative "elastic_integration/jar_dependencies"
+    require_relative "elastic_integration/event_api_bridge"
+
+    extend EventApiBridge
 
     super
   end
@@ -303,6 +292,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   ##
   # Builds a `PluginConfiguration` from the previously-validated config
   def extract_immutable_config
+    java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
+
     builder = PluginConfiguration::Builder.new
 
     builder.setId @id
@@ -335,6 +326,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def initialize_elasticsearch_rest_client!
+    java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
+
     @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
                                                                .map(&:build)
                                                                .orElseThrow() # todo: ruby/java bridge better exception
@@ -354,7 +347,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def initialize_geoip_database_provider!
     java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
-    java_import('co.elastic.logstash.filters.elasticintegration.geoip.StaticGeoIpDatabase')
 
     @geoip_database_provider ||= GeoIpDatabaseProvider::Builder.new.tap do |builder|
       builder.setDatabases(java.io.File.new(@geoip_database_directory)) if @geoip_database_directory
@@ -362,8 +354,49 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
+
     PreflightCheck.new(@elasticsearch_rest_client).check
   rescue => e
     raise_config_error!(e.message)
+  end
+
+  ##
+  # single-use helper to ensure the running Logstash is a _complete_ distro that has
+  # non-OSS features active. Runtime detection mechanism relies on LogStash::OSS,
+  # which is set in the prelude to LogStash::Runner, and is bypassed when LogStash::OSS
+  # is not defined (such as when running specs from source)
+  def ensure_complete_logstash!
+    if defined?(LogStash::OSS) && LogStash::OSS
+      raise_config_error! <<~ERR.gsub(/\s+/, ' ')
+        The Elastic Integration filter for Logstash is an Elastic-licensed plugin
+        that REQUIRES the complete Logstash distribution, including non-OSS features.
+      ERR
+    end
+  end
+
+  ##
+  # single-use helper for ensuring the running JVM meets the minimum
+  # Java version requirement necessary for loading the included jars
+  # @raise [LogStash::EnvironmentError]
+  def ensure_java_major_version!(minimum_major_version)
+    java_version_string = java.lang.System.getProperty("java.specification.version")
+
+    # MAJOR <= 8 ? 1.MAJOR.MINOR : MAJOR.MINOR
+    # https://rubular.com/r/lLW5iUWN9N9N6Z
+    java_major_version_pattern = /(?:(?:(?<=^1\.)[0-8])|^(?:9|[1-9][0-9]+))(?=\.|$)/
+    java_major_version = java_version_string&.slice(java_major_version_pattern)&.to_i
+
+    if (java_major_version.nil?)
+      fail("Failed to retrieve running JVM's major version")
+    elsif (java_major_version < minimum_major_version)
+      fail(LogStash::EnvironmentError, <<~ERR.gsub(/\s+/, ' '))
+        the #{self.class.config_name} #{self.class.plugin_type} plugin requires
+        Java #{minimum_major_version} or later and cannot be instantiated on the
+        current JVM version `#{java_version_string}`.
+        You can either remove the plugin from your pipeline definition or run
+        Logstash with a supported JVM.
+      ERR
+    end
   end
 end
