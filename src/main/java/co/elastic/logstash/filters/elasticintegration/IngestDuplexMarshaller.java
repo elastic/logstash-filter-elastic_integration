@@ -136,7 +136,6 @@ public class IngestDuplexMarshaller {
         // extract and set the timestamp, moving a pre-existing `@timestamp` field out of the way
         final Object sourceTimestamp = eventMap.put(org.logstash.Event.TIMESTAMP, eventTimestamp(ingestDocument));
         if (Objects.nonNull(sourceTimestamp)) {
-            System.out.format("TS(%s): %s\n", sourceTimestamp.getClass(), sourceTimestamp);
             eventMap.put(LOGSTASH_TIMESTAMP_FALLBACK, sourceTimestamp);
         }
 
