@@ -21,13 +21,12 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
+import org.elasticsearch.common.Strings;
 
 import javax.net.ssl.SSLContext;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.KeyStore;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -348,8 +347,16 @@ public class ElasticsearchRestClientBuilder {
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
             Objects.requireNonNull(cloudAuth, "cloudAuth");
 
-            final String apiKey = Base64.getEncoder().encodeToString(cloudAuth.getPassword().getBytes(StandardCharsets.UTF_8));
-            return this.setApiKey(new Password(apiKey));
+            final int colonIndex = cloudAuth.getPassword().indexOf(":");
+            if (colonIndex <= 0) {
+                throw new IllegalArgumentException("Invalid cloudAuth.");
+            }
+            String username = cloudAuth.getPassword().substring(0, colonIndex);
+            String password = cloudAuth.getPassword().substring(colonIndex + 1);
+
+            Strings.requireNonEmpty(username, "cloudAuth username");
+            Strings.requireNonEmpty(password, "cloudAuth password");
+            return this.setBasicAuth(username, new Password(password));
         }
 
         private synchronized RequestAuthConfig setHttpClientConfigurator(final HttpClientConfigurator httpClientConfigurator) {
