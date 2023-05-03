@@ -9,10 +9,12 @@ package co.elastic.logstash.filters.elasticintegration;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.http.HttpStatus;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
+import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestClient;
 
 import java.nio.charset.StandardCharsets;
@@ -77,6 +79,18 @@ public class PreflightCheck {
         } catch (Failure f) {
             throw f;
         } catch (Exception e) {
+            if (e instanceof ResponseException responseException) {
+                if (Objects.nonNull(responseException.getResponse())
+                        && Objects.nonNull(responseException.getResponse().getStatusLine())) {
+                    int httpResponseCode = responseException.getResponse().getStatusLine().getStatusCode();
+                    String securityDisabledMessageReason = "no handler found for uri";
+                    if (HttpStatus.SC_BAD_REQUEST == httpResponseCode
+                            && responseException.getMessage().contains(securityDisabledMessageReason)) {
+                        String adviseMessage = "In order `elastic_integration` plugin properly work, Elasticsearch cluster security should be enabled. Make sure to enable it `xpack.security.enabled: true` in elasticsearch.yml and restart the cluster.";
+                        throw new Failure(String.format(adviseMessage + " %s", e.getMessage()), e);
+                    }
+                }
+            }
             logger.error(String.format("Exception checking has_privileges: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
