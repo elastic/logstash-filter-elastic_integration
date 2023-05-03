@@ -1,3 +1,7 @@
+## 0.0.3 (UNRELEASED)
+  - Presents helpful guidance when run on an unsupported version of Java [#43](https://github.com/elastic/logstash-filter-elastic_integration/pull/43)
+  - Provide a meaningful message when Elasticsearch cluster security is disabled [#64](https://github.com/elastic/logstash-filter-elastic_integration/pull/64)
+
 ## 0.0.2 (UNRELEASED)
   - Fixes several related issues with how fields are mapped from the Logstash Event to the IngestDocument and back again [#51](https://github.com/elastic/logstash-filter-elastic_integration/pull/51)
     - `IngestDocument` metadata fields are now separately routed to `[@metadata][_ingest_document]` on the resulting `Event`, fixing an issue where the presence of Elasticsearch-reserved fields such as the top-level `_version` would cause a downstream Elasticsearch output to be unable to index the event [#47][]
