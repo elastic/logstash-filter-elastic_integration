@@ -1,8 +1,10 @@
 package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
+import co.elastic.logstash.filters.elasticintegration.util.TestCapturingLogger;
 import org.elasticsearch.ingest.IngestDocument;
 import org.junit.jupiter.api.Test;
+import org.logstash.Timestamp;
 import org.logstash.plugins.BasicEventFactory;
 
 import java.time.Instant;
@@ -17,26 +19,38 @@ import static co.elastic.logstash.filters.elasticintegration.EventMatchers.*;
 import static co.elastic.logstash.filters.elasticintegration.IngestDuplexMarshaller.*;
 import static co.elastic.logstash.filters.elasticintegration.TemporalMatchers.recentCurrentTimestamp;
 import static co.elastic.logstash.filters.elasticintegration.TypeMatchers.instanceOfMatching;
+import static co.elastic.logstash.filters.elasticintegration.util.TestCapturingLogger.hasLogEntry;
 import static com.github.seregamorph.hamcrest.MoreMatchers.where;
+import static org.apache.logging.log4j.Level.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 class IngestDuplexMarshallerTest {
 
-    private static final IngestDuplexMarshaller IDM = IngestDuplexMarshaller.defaultInstance();
+    private final TestCapturingLogger logger = new TestCapturingLogger();
+    private final IngestDuplexMarshaller idm = new IngestDuplexMarshaller(logger);
 
     @Test
     void basicRoundTrip() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world", "@metadata", Map.of("this", "that","flip", "flop")));
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world",
+                "@metadata", Map.of(
+                        "this", "that",
+                        "flip", "flop"
+                )));
 
-        validateEvent(IDM.toLogstashEvent(IDM.toIngestDocument(input)), (output) -> {
+        validateEvent(idm.toLogstashEvent(idm.toIngestDocument(input)), (output) -> {
             assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(equalTo(input.getField(org.logstash.Event.TIMESTAMP))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
 
             assertThat(output, includesField("message").withValue(equalTo(input.getField("message"))));
             assertThat(output, includesField("[@metadata][this]").withValue(equalTo("that")));
             assertThat(output, includesField("[@metadata][flip]").withValue(equalTo("flop")));
+
+            assertThat(output, includesField("[@metadata][_ingest_document][version]").withValue(equalTo(3L)));
 
             assertAll("no superfluous ingestDocument metadata is injected", () -> {
                 assertThat(output, allOf(
@@ -50,50 +64,129 @@ class IngestDuplexMarshallerTest {
     }
 
     @Test
-    void ingestDocToEventModifiedTimestamp() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+    void ingestDocToEventModifiedAtTimestampZonedDateTimeValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"
+        ));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final ZonedDateTime updatedTimestamp = ZonedDateTime.parse("2023-03-12T01:17:38.135792468Z");
-        intermediate.setFieldValue(IngestDocument.INGEST_KEY + "." + INGEST_METADATA_TIMESTAMP_FIELD, updatedTimestamp);
+        intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(updatedTimestamp.toInstant())))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
         });
     }
 
     @Test
-    void ingestDocToEventRemovedTimestamp() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+    void ingestDocToEventModifiedAtTimestampStringValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
-        intermediate.removeField(IngestDocument.INGEST_KEY + "." + INGEST_METADATA_TIMESTAMP_FIELD);
+        final ZonedDateTime updatedTimestamp = ZonedDateTime.parse("2023-03-12T01:17:38.135792468Z");
+        intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp.toString());
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
-            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(recentCurrentTimestamp()))));
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(updatedTimestamp.toInstant())))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
         });
     }
 
     @Test
+    void ingestDocToEventModifiedAtTimestampInvalidStringValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
+
+        intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, "high noon");
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat("@timestamp is populated with the event's creation time",
+                    output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(intermediate.getMetadata().getNow().toInstant())))));
+            assertThat("the invalid value is available in `_@timestamp`",
+                    output, includesField(LOGSTASH_TIMESTAMP_FALLBACK).withValue(equalTo("high noon")));
+
+            assertThat(logger, hasLogEntry(TRACE, containsString("failed to extract a Timestamp from `high noon`")));
+        });
+    }
+
+    @Test
+    void ingestDocToEventRemovedAtTimestamp() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
+
+        intermediate.removeField(org.logstash.Event.TIMESTAMP);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat("@timestamp is populated with the event's creation time",
+                    output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(intermediate.getMetadata().getNow().toInstant())))));
+            assertThat("the event does not include `_@timestamp`",
+                    output, excludesField(LOGSTASH_TIMESTAMP_FALLBACK));
+        });
+    }
+
+    @Test
+    void ingestDocToEventRemovedAtTimestampWithEventCreatedAt() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
+
+        intermediate.removeField(org.logstash.Event.TIMESTAMP);
+
+        final Instant eventCreatedTimestamp = Instant.parse("2020-01-23T17:45:21.918273645Z");
+        intermediate.setFieldValue("event.created", eventCreatedTimestamp.toString());
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat("@timestamp is populated with the value from `event.created`",
+                    output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(eventCreatedTimestamp)))));
+
+            assertThat(output, includesField("[event][created]").withValue(equalTo(output.getField(org.logstash.Event.TIMESTAMP).toString())));
+
+            assertThat("the event does not include `_@timestamp`",
+                    output, excludesField(LOGSTASH_TIMESTAMP_FALLBACK));
+        });
+    }
+
+    @Test
     void ingestDocToEventModifiedMetadataVersion() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final long updatedMetadataVersion = 17L;
         intermediate.getMetadata().setVersion(updatedMetadataVersion);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
-            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(Long.toString(updatedMetadataVersion))));
+        final long updatedAtVersion = 255L;
+        intermediate.setFieldValue(org.logstash.Event.VERSION, updatedAtVersion);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(Long.toString(updatedAtVersion))));
             assertThat(output, includesField("[@metadata][_ingest_document][version]").withValue(equalTo(updatedMetadataVersion)));
         });
     }
 
     @Test
     void ingestDocToEventAdditionalMetadata() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         intermediate.getMetadata().setVersion(8191L);
         intermediate.getMetadata().setVersionType("external_gte"); // constrained
@@ -101,8 +194,8 @@ class IngestDuplexMarshallerTest {
         intermediate.getMetadata().setId("confused");
         intermediate.getMetadata().setIndex("card");
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
-            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo("8191")));
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo("3")));
             assertThat(output, includesField("[@metadata][_ingest_document][version]").withValue(equalTo(8191L))); // boxing??
             assertThat(output, includesField("[@metadata][_ingest_document][index]").withValue(equalTo("card")));
             assertThat(output, includesField("[@metadata][_ingest_document][id]").withValue(equalTo("confused")));
@@ -113,30 +206,37 @@ class IngestDuplexMarshallerTest {
 
     @Test
     void ingestDocToEventIncludingReservedAtTimestampField() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp",
+                "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message",
+                "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         // intentionally String to pass-through Valuifier#convert and make validation easier
         final String atTimestampInSource = "2023-03-12T01:17:38.135792468Z";
         intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, atTimestampInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
-            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(equalTo(input.getField(org.logstash.Event.TIMESTAMP))));
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(Timestamp::toInstant, is(equalTo(Instant.parse(atTimestampInSource))))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
 
-            assertThat(output, includesField(LOGSTASH_TIMESTAMP_FALLBACK).withValue(equalTo(atTimestampInSource)));
+            assertThat(output, excludesField(LOGSTASH_TIMESTAMP_FALLBACK));
         });
     }
 
     @Test
     void ingestDocToEventIncludingReservedAtVersionField() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final String atVersionInSource = "bananas";
         intermediate.setFieldValue(org.logstash.Event.VERSION, atVersionInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(equalTo(input.getField(org.logstash.Event.TIMESTAMP))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
 
@@ -146,13 +246,16 @@ class IngestDuplexMarshallerTest {
 
     @Test
     void ingestDocToEventIncludingReservedAtMetadataFieldWithAcceptableShape() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3", "message",
+                "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final Map<String,Object> atMetadataInSource = Map.of("this", "that","flip", "flop");
         intermediate.setFieldValue(org.logstash.Event.METADATA, atMetadataInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(equalTo(input.getField(org.logstash.Event.TIMESTAMP))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
 
@@ -163,76 +266,89 @@ class IngestDuplexMarshallerTest {
 
     @Test
     void ingestDocToEventIncludingReservedAtMetadataFieldWithInvalidShape() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final List<String> atMetadataInSource = List.of("wrong", "incorrect");
         intermediate.setFieldValue(org.logstash.Event.METADATA, atMetadataInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(equalTo(input.getField(org.logstash.Event.TIMESTAMP))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
             assertThat(output.getMetadata(), is(notNullValue())); // static typed, so non-null is enough.
 
             assertThat(output, includesField(LOGSTASH_METADATA_FALLBACK).withValue(equalTo(atMetadataInSource)));
+
+            assertThat(logger, hasLogEntry(TRACE, containsString("metadata could not be coerced into safe shape")));
         });
     }
 
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithInvalidShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final Map<String,Object> atTagsInSource = Map.of("this", "that");
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, excludesField(org.logstash.Event.TAGS));
             assertThat(output, includesField("[" + LOGSTASH_TAGS_FALLBACK + "][this]").withValue(equalTo("that")));
+
+            assertThat(logger, hasLogEntry(TRACE, containsString("tags field could not be coerced into safe shape")));
         });
     }
 
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithInvalidCoercibleShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final Set<String> atTagsInSource = Set.of("this", "that");
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, isTagged("this"));
             assertThat(output, isTagged("that"));
+
             assertThat(output, excludesField(LOGSTASH_TAGS_FALLBACK));
+            assertThat(logger, not(hasLogEntry(TRACE, containsString("tags field could not be coerced"))));
         });
     }
 
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithStringShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final String atTagsInSource = "this";
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, isTagged("this"));
+
             assertThat(output, excludesField(LOGSTASH_TAGS_FALLBACK));
+            assertThat(logger, not(hasLogEntry(TRACE, containsString("tags field could not be coerced"))));
         });
     }
 
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithListOfStringShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = IDM.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final List<String> atTagsInSource = List.of("this", "that");
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
 
-        validateEvent(IDM.toLogstashEvent(intermediate), (output) -> {
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, isTagged("this"));
             assertThat(output, isTagged("that"));
+
             assertThat(output, excludesField(LOGSTASH_TAGS_FALLBACK));
+            assertThat(logger, not(hasLogEntry(TRACE, containsString("tags field could not be coerced"))));
 
             // guarantee _should_ belong to LS core
             assertAll("providing immutable list doesn't prevent future tagging", ()->{
@@ -243,11 +359,34 @@ class IngestDuplexMarshallerTest {
         });
     }
 
+
+    @Test
+    void eventToIngestDocFieldWithNestedZonedDateTimeValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
+
+        final String iso8601value = "2023-05-03T03:17:59.182736455Z";
+        final ZonedDateTime zonedDateTime = ZonedDateTime.parse(iso8601value);
+        intermediate.setFieldValue("nested.hierarchy.ts", zonedDateTime);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            final Object retrievedValue = output.getField("[nested][hierarchy][ts]");
+            assertThat(retrievedValue, is(instanceOfMatching(Timestamp.class, where(Timestamp::toInstant, is(equalTo(zonedDateTime.toInstant()))))));
+        });
+    }
+
     @Test
     void eventToIngestDoc() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world", "@metadata", Map.of("this", "that","flip", "flop")));
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world",
+                "@metadata", Map.of(
+                        "this", "that",
+                        "flip", "flop"
+                )));
 
-        final IngestDocument ingestDocument = IDM.toIngestDocument(input);
+        final IngestDocument ingestDocument = idm.toIngestDocument(input);
 
         final ZonedDateTime ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
         assertThat(ingestTimestamp, is(notNullValue()));
@@ -258,10 +397,17 @@ class IngestDuplexMarshallerTest {
 
     @Test
     void eventToIngestDocMissingRequiredVersion() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world", "@metadata", Map.of("this", "that","flip", "flop")));
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world",
+                "@metadata", Map.of(
+                        "this", "that",
+                        "flip", "flop"
+                )));
         input.remove(org.logstash.Event.VERSION);
 
-        final IngestDocument ingestDocument = IDM.toIngestDocument(input);
+        final IngestDocument ingestDocument = idm.toIngestDocument(input);
 
         // sensible default
         assertThat(ingestDocument.getMetadata().getVersion(), is(equalTo(1L)));
@@ -269,13 +415,34 @@ class IngestDuplexMarshallerTest {
 
     @Test
     void eventToIngestDocMissingRequiredTimestamp() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp", "2023-01-17T23:19:04.765182352Z", "@version", "3", "message", "hello, world", "@metadata", Map.of("this", "that","flip", "flop")));
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world",
+                "@metadata", Map.of(
+                        "this", "that",
+                        "flip", "flop"
+                )));
         input.remove(org.logstash.Event.TIMESTAMP);
 
-        final IngestDocument ingestDocument = IDM.toIngestDocument(input);
+        final IngestDocument ingestDocument = idm.toIngestDocument(input);
 
         final ZonedDateTime ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
         assertThat(ingestTimestamp, is(recentCurrentTimestamp()));
+    }
+
+    @Test
+    void eventToIngestDocFieldWithNestedTimestampValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent();
+
+        final String iso8601value = "2023-05-03T03:17:59.182736455Z";
+        final Timestamp timestamp = new Timestamp(iso8601value);
+        input.setField("[nested][hierarchy][ts]", timestamp);
+
+        validateIngestDocument(idm.toIngestDocument(input), (output) -> {
+            final Object retrievedValue = output.getFieldValue("nested.hierarchy.ts", Object.class);
+            assertThat(retrievedValue, is(instanceOfMatching(ZonedDateTime.class, where(ZonedDateTime::toInstant, is(equalTo(timestamp.toInstant()))))));
+        });
     }
 
     Instant getEventTimestamp(final Event event) {
@@ -284,6 +451,10 @@ class IngestDuplexMarshallerTest {
 
     ZonedDateTime getIngestDocumentTimestamp(final IngestDocument ingestDocument) {
         return ingestDocument.getFieldValue(IngestDocument.INGEST_KEY + "." + INGEST_METADATA_TIMESTAMP_FIELD, ZonedDateTime.class);
+    }
+
+    void validateIngestDocument(final IngestDocument ingestDocument, Consumer<IngestDocument> ingestDocumentConsumer) {
+        ingestDocumentConsumer.accept(ingestDocument);
     }
 
     // shared helper for validating that Logstash-reserved fields are of the correct shape

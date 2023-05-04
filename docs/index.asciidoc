@@ -162,28 +162,41 @@ h| GeoIp
 [id="plugins-{type}s-{plugin}-field_mappings"]
 ===== Field Mappings
 
-During execution, the Ingest pipeline works with a temporary mutable _view_ of the Logstash event that re-shapes some {ls}-reserved fields into their expected IngestDocument field names and object-types.
-Changes to the IngestDocument will be reflected in the resulting Logstash Event, including safely mapping these reserved fields _back_ from the IngestDocument reserved field to the {ls} reserved field counterpart.
+:esid: {es} Ingest Document
 
-[cols="<,<,<",options="header"]
+During execution the Ingest pipeline works with a temporary mutable _view_ of the Logstash event called an ingest document.
+This view contains all of the as-structured fields from the event with minimal type conversions.
+
+It also contains additional metadata fields as required by ingest pipeline processors:
+
+* `_version`: a `long`-value integer equivalent to the event's `@version`, or a sensible default value of `1`.
+* `_ingest.timestamp`: a `ZonedDateTime` equivalent to the event's `@timestamp` field
+
+After execution completes the event is sanitized to ensure that Logstash-reserved fields have the expected shape, providing sensible defaults for any missing required fields.
+When an ingest pipeline has set a reserved field to a value that cannot be coerced, the value is made available in an alternate location on the event as described below.
+
+[cols="<1,<1,<5",options="header"]
+|=======================================================================
+| {ls} field | type | value
+
+| `@timestamp` | `Timestamp` |
+First coercible value of the ingest document's `@timestamp`, `event.created`, `_ingest.timestamp`, or `_now` fields; or the current timestamp.
+When the ingest document has a value for `@timestamp` that cannot be coerced, it will be available in the event's `_@timestamp` field.
+
+| `@version`   | String-encoded integer |
+First coercible value of the ingest document's `@version`, or `_version` fields; or the current timestamp.
+When the ingest document has a value for `@version` that cannot be coerced, it will be available in the event's `_@version` field.
+
+| `@metadata`  | key/value map |
+The ingest document's `@metadata`; or an empty map.
+When the ingest document has a value for `@metadata` that cannot be coerced, it will be available in the event's `_@metadata` field.
+
+| `tags`  | a String or a list of Strings |
+The ingest document's `tags`.
+When the ingest document has a value for `tags` that cannot be coerced, it will be available in the event's `_tags` field.
 |=======================================================================
 
-| {ls} Field | IngestDocument Field | Conflict Handling
-
-| `@timestamp` | `_ingest.timestamp` |when ingest processing _also_ sets a top-level `@timestamp` field, it will be made available via the Event's `_@timestamp` field
-
-| `@version` | `_version` | when ingest processing _also_ sets a top-level `@version` field in the source, it will be made available via the Event's `_@version` field
-
-| `@metadata` | `@metadata` | when ingest processing replaces the top-level `@metadata` map with an object that is not a string-object map, it will be made available via the Event's `_@metadata` field.
-
-| `tags` | `tags` | when ingest processing produces a top-level `tags` field that is not a collection of strings, it will be made available via the event's `_tags` field.
-
-| _N/A_ | `_index`, `
-
-| _everything else_ | _in-place, as-structured_ | only minimal type conversions are done
-|=======================================================================
-
-Additionally, the following Elasticsearch IngestDocument Metadata fields are made available on the resulting event if-and-only-if they were set during pipeline execution:
+Additionally, the following Elasticsearch IngestDocument Metadata fields are made available on the resulting event _if-and-only-if_ they were set during pipeline execution:
 
 :mcc-prefix: [@metadata][_ingest_document]
 
@@ -196,6 +209,7 @@ Additionally, the following Elasticsearch IngestDocument Metadata fields are mad
 | `_routing`             | `{mcc-prefix}[routing]`
 | `_version`             | `{mcc-prefix}[version]`
 | `_version_type`        | `{mcc-prefix}[version_type]`
+| `_ingest.timestamp`    | `{mcc-prefix}[timestamp]`
 |=======================================================================
 
 
