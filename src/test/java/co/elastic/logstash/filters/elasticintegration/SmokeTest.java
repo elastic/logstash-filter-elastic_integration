@@ -7,6 +7,7 @@
 package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
+import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
 import org.junit.jupiter.api.Test;
 import org.logstash.plugins.BasicEventFactory;
 
@@ -194,7 +195,8 @@ public class SmokeTest {
     }
 
     static void withEventProcessor(final EventProcessorBuilder eventProcessorBuilder, final Consumer<EventProcessor> eventProcessorConsumer) {
-        try (EventProcessor eventProcessor = eventProcessorBuilder.build("ANONYMOUS")) {
+        final PluginContext anonymousPluginContext = new PluginContext("NONE", "TEST");
+        try (EventProcessor eventProcessor = eventProcessorBuilder.build(anonymousPluginContext)) {
             eventProcessorConsumer.accept(eventProcessor);
         } catch (IOException e) {
             throw new RuntimeException(e);

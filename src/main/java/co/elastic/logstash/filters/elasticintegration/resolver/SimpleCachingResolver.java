@@ -37,6 +37,11 @@ public class SimpleCachingResolver<K,V> implements CachingResolver<K,V> {
         return cache.resolve(resolveKey, cacheMissResolver, exceptionHandler);
     }
 
+    @Override
+    public CacheReloader getReloader() {
+        return cache.getReloader(cacheMissResolver);
+    }
+
     @FunctionalInterface
     public interface Bindable<K,V> {
         CacheableResolver.Ephemeral<K,V> withCachingResolverBinding(final SimpleCachingResolver<K,V> cachingResolver);

@@ -7,6 +7,7 @@
 package co.elastic.logstash.filters.elasticintegration.resolver;
 
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**

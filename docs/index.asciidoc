@@ -181,6 +181,24 @@ Changes to the IngestDocument will be reflected in the resulting Logstash Event,
 | _everything else_ | _in-place, as-structured_ | only minimal type conversions are done
 |=======================================================================
 
+[id="plugins-{type}s-{plugin}-resolving"]
+==== Resolving Pipeline Definitions
+
+:cached-entry-ttl: 24 hours
+:cache-reload-frequency: 1 minute
+
+This plugin uses {es} to establish mappings of datastream names to pipeline names, and also to resolve pipeline names into their pipeline definitions.
+It uses hit/miss caches to avoid querying Elasticsearch for every single event.
+It also works to update these cached mappings _before_ they expire.
+The result is that when {es} is responsive this plugin is able to pick up changes quickly without impacting its own performance, and it can survive periods of {es} issues without interruption by continuing to use potentially-stale mappings or definitions.
+
+To achieve this, mappings are cached for a maximum of {cached-entry-ttl}, and cached values are reloaded every {cache-reload-frequency} with the following effect:
+
+* when a reloaded mapping is non-empty and is the _same_ as its already-cached value, its time-to-live is reset to ensure that subsequent events can continue using the confirmed-unchanged value
+* when a reloaded mapping is non-empty and is _different_ from its previously-cached value, the entry is _updated_ so that subsequent events will use the new value
+* when a reloaded mapping is newly _empty_, the previous non-empty mapping is _replaced_ with a new empty entry so that subsequent events will use the empty value
+* when the reload of a mapping _fails_, this plugin emits a log warning but the existing cache entry is unchanged and gets closer to its expiry.
+
 [id="plugins-{type}s-{plugin}-options"]
 ==== {elastic-integration-name} Filter Configuration Options
 

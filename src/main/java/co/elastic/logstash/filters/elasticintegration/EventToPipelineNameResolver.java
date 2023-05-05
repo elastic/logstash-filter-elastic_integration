@@ -7,6 +7,7 @@
 package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
+import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloader;
 import co.elastic.logstash.filters.elasticintegration.resolver.UncacheableResolver;
 
 import java.util.Optional;
@@ -24,4 +25,6 @@ import java.util.function.Consumer;
 public interface EventToPipelineNameResolver extends UncacheableResolver<Event, String> {
     @Override
     Optional<String> resolve(Event event, Consumer<Exception> exceptionHandler);
+
+    default Optional<CacheReloader> innerCacheReloader() { return Optional.empty(); };
 }
