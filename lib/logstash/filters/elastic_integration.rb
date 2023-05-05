@@ -88,7 +88,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A key to authenticate when connecting to Elasticsearch
   config :api_key, :validate => :password
 
-  # A directory containing one or more Maxmind Datbase files in *.mmdb format
+  # A directory containing one or more Maxmind Database files in *.mmdb format
   config :geoip_database_directory, :validate => :path
 
   # a sprintf template for resolving the pipeline name; when this template does
@@ -362,9 +362,14 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
+    using_basic_auth = @auth_basic_username && @auth_basic_password
+    using_cloud_auth = @cloud_id && (@cloud_auth || @api_key)
+
+    check_level = using_basic_auth || using_cloud_auth ? 'full' : 'license'
+
     java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
-    PreflightCheck.new(@elasticsearch_rest_client).check
+    PreflightCheck.new(@elasticsearch_rest_client).check(check_level)
   rescue => e
     raise_config_error!(e.message)
   end

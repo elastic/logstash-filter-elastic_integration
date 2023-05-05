@@ -52,9 +52,20 @@ public class PreflightCheck {
         this.elasticsearchRestClient = elasticsearchRestClient;
     }
 
-    public void check() {
-        checkCredentialsPrivileges();
-        checkLicense();
+    public void check(String checkLevel) {
+        PreflightCheckLevel preflightCheckLevel = PreflightCheckLevel.valueOf(checkLevel.toUpperCase());
+        switch (preflightCheckLevel) {
+            case LICENSE:
+                checkLicense();
+                break;
+            case PRIVILEGES:
+                checkCredentialsPrivileges();
+                break;
+            case FULL:
+                checkCredentialsPrivileges();
+                checkLicense();
+                break;
+        }
     }
 
     void checkCredentialsPrivileges() {
@@ -86,7 +97,7 @@ public class PreflightCheck {
                     String securityDisabledMessageReason = "no handler found for uri";
                     if (HttpStatus.SC_BAD_REQUEST == httpResponseCode
                             && responseException.getMessage().contains(securityDisabledMessageReason)) {
-                        String adviseMessage = "In order `elastic_integration` plugin properly work, Elasticsearch cluster security should be enabled. Make sure to enable it `xpack.security.enabled: true` in elasticsearch.yml and restart the cluster.";
+                        String adviseMessage = "Using user authentication (basic or cloud) in `elastic_integration` plugin requires Elasticsearch cluster security enabled to resolve user privileges. Make sure to enable it `xpack.security.enabled: true` in elasticsearch.yml and restart the cluster.";
                         throw new Failure(String.format(adviseMessage + " %s", e.getMessage()), e);
                     }
                 }
@@ -133,5 +144,11 @@ public class PreflightCheck {
         public Failure(String message) {
             super(message);
         }
+    }
+
+    public enum PreflightCheckLevel {
+        FULL,
+        PRIVILEGES,
+        LICENSE
     }
 }
