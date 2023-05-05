@@ -8,6 +8,8 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.filters.elasticintegration.resolver.AbstractSimpleCacheableResolver;
+import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloader;
+import co.elastic.logstash.filters.elasticintegration.resolver.CachingResolver;
 import co.elastic.logstash.filters.elasticintegration.resolver.Resolver;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -20,7 +22,6 @@ import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
 
 import java.io.IOException;
-import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.Optional;
@@ -54,6 +55,14 @@ public class DatastreamEventToPipelineNameResolver implements EventToPipelineNam
     public Optional<String> resolve(final Event event, final Consumer<Exception> exceptionHandler) {
         return resolveDatastreamName(event)
                 .flatMap((datastreamName) -> datastreamToPipelineNameResolver.resolve(datastreamName, exceptionHandler));
+    }
+
+    @Override
+    public Optional<CacheReloader> innerCacheReloader() {
+        if (CachingResolver.class.isAssignableFrom(this.datastreamToPipelineNameResolver.getClass())) {
+            return Optional.of(((CachingResolver<String, String>) this.datastreamToPipelineNameResolver).getReloader());
+        }
+        return Optional.empty();
     }
 
     private Optional<String> resolveDatastreamName(Event event) {

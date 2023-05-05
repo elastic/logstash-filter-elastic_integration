@@ -105,6 +105,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     extend EventApiBridge
 
     super
+
+    java_import('co.elastic.logstash.filters.elasticintegration.util.PluginContext')
+    @plugin_context = PluginContext.new(execution_context&.pipeline_id || "UNDEF", id)
   end
 
   def register
@@ -340,7 +343,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client)
                                             .setFilterMatchListener(method(:filter_matched_java).to_proc)
                                             .addProcessor("geoip") { GeoIpProcessorFactory.new(@geoip_database_provider) }
-                                            .build("logstash.filter.elastic_integration.#{id}.#{__id__}")
+                                            .build(@plugin_context)
   rescue => exception
     raise_config_error!("configuration did not produce an EventProcessor: #{exception}")
   end

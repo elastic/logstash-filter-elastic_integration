@@ -10,8 +10,13 @@ import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
 import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
+import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
 import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCache;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
+import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
+import com.google.common.util.concurrent.AbstractScheduledService;
+import com.google.common.util.concurrent.Service;
+import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.IOUtils;
@@ -34,22 +39,24 @@ import org.elasticsearch.script.mustache.MustacheScriptEngine;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.Closeable;
-import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static com.google.common.util.concurrent.AbstractScheduledService.Scheduler.newFixedRateSchedule;
+
 @SuppressWarnings("UnusedReturnValue")
 public class EventProcessorBuilder {
+
+    static final Duration CACHE_MAXIMUM_AGE = Duration.ofHours(24);
+    static final Duration CACHE_RELOAD_FREQUENCY = Duration.ofSeconds(60);
 
     private static <K,V> Supplier<ResolverCache<K,V>> defaultCacheSupplier(final String description) {
         return () -> new SimpleResolverCache<>(description, SimpleResolverCache.Configuration.PERMANENT);
@@ -59,9 +66,10 @@ public class EventProcessorBuilder {
         final EventProcessorBuilder builder = new EventProcessorBuilder();
 
         builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
-                new SimpleResolverCache.Configuration(Duration.ofMinutes(60), Duration.ofSeconds(60)))));
+                new SimpleResolverCache.Configuration(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE))));
+
         builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
-        builder.setPipelineResolverCacheConfig(Duration.ofMinutes(60), Duration.ofSeconds(60));
+        builder.setPipelineResolverCacheConfig(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE);
         return builder;
     }
 
@@ -126,20 +134,16 @@ public class EventProcessorBuilder {
         return this;
     }
 
-    EventProcessor build(final String nodeName) {
-        final Settings defaultSettings = Settings.builder()
+    synchronized EventProcessor build(final PluginContext pluginContext) {
+        Objects.requireNonNull(this.pipelineConfigurationResolver, "pipeline configuration resolver is REQUIRED");
+        Objects.requireNonNull(this.eventToPipelineNameResolver, "event to pipeline name resolver is REQUIRED");
+
+        final Settings settings = Settings.builder()
                 .put("path.home", "/")
-                .put("node.name", nodeName)
+                .put("node.name", "logstash.filter.elastic_integration." + pluginContext.pluginId())
                 .put("ingest.grok.watchdog.interval", "1s")
                 .put("ingest.grok.watchdog.max_execution_time", "1s")
                 .build();
-
-        return build(defaultSettings);
-    }
-
-    synchronized EventProcessor build(final Settings settings) {
-        Objects.requireNonNull(this.pipelineConfigurationResolver, "pipeline configuration resolver is REQUIRED");
-        Objects.requireNonNull(this.eventToPipelineNameResolver, "event to pipeline name resolver is REQUIRED");
 
         final List<Closeable> resourcesToClose = new ArrayList<>();
 
@@ -175,11 +179,26 @@ public class EventProcessorBuilder {
             final ResolverCache<String, IngestPipeline> ingestPipelineCache = Optional.ofNullable(pipelineResolverCacheSupplier)
                     .orElse(defaultCacheSupplier("ingest-pipeline"))
                     .get();
-
             final SimpleCachingIngestPipelineResolver cachingInternalPipelineResolver =
                     new SimpleIngestPipelineResolver(this.pipelineConfigurationResolver, ingestPipelineFactory).withCache(ingestPipelineCache);
 
             final FilterMatchListener filterMatchListener = Objects.requireNonNullElse(this.filterMatchListener, (event) -> {});
+
+            // start reload services for our resolvers
+            final ArrayList<Service> services = new ArrayList<>();
+            eventToPipelineNameResolver.innerCacheReloader().ifPresent(cacheReloader -> {
+                final AbstractScheduledService.Scheduler pipelineNameReloadSchedule = newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY);
+                services.add(CacheReloadService.newManaged(pluginContext, cacheReloader, pipelineNameReloadSchedule));
+            });
+            final AbstractScheduledService.Scheduler pipelineDefinitionReloadSchedule = newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY);
+            services.add(CacheReloadService.newManaged(pluginContext, cachingInternalPipelineResolver.getReloader(), pipelineDefinitionReloadSchedule));
+
+            final ServiceManager serviceManager = new ServiceManager(services);
+            serviceManager.startAsync();
+            resourcesToClose.add(() -> {
+                serviceManager.stopAsync();
+                serviceManager.awaitStopped();
+            });
 
             return new EventProcessor(filterMatchListener, cachingInternalPipelineResolver, eventToPipelineNameResolver, resourcesToClose);
         } catch (Exception e) {
