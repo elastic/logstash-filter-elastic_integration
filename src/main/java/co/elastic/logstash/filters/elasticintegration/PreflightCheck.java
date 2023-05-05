@@ -58,9 +58,6 @@ public class PreflightCheck {
             case LICENSE:
                 checkLicense();
                 break;
-            case PRIVILEGES:
-                checkCredentialsPrivileges();
-                break;
             case FULL:
                 checkCredentialsPrivileges();
                 checkLicense();
@@ -97,7 +94,7 @@ public class PreflightCheck {
                     String securityDisabledMessageReason = "no handler found for uri";
                     if (HttpStatus.SC_BAD_REQUEST == httpResponseCode
                             && responseException.getMessage().contains(securityDisabledMessageReason)) {
-                        String adviseMessage = "Using user authentication (basic or cloud) in `elastic_integration` plugin requires Elasticsearch cluster security enabled to resolve user privileges. Make sure to enable it `xpack.security.enabled: true` in elasticsearch.yml and restart the cluster.";
+                        String adviseMessage = "The Elasticsearch cluster does not have security enabled, but user authentication was configured. Either enable security in Elasticsearch (recommended!) or remove the basic auth parameters from the 'elastic_integration' plugin configuration.";
                         throw new Failure(String.format(adviseMessage + " %s", e.getMessage()), e);
                     }
                 }
@@ -148,7 +145,6 @@ public class PreflightCheck {
 
     public enum PreflightCheckLevel {
         FULL,
-        PRIVILEGES,
         LICENSE
     }
 }
