@@ -21,7 +21,6 @@ import org.apache.http.message.BasicHeader;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
-import org.elasticsearch.common.Strings;
 
 import javax.net.ssl.SSLContext;
 import java.net.URL;
@@ -35,6 +34,8 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+
+import static com.google.common.base.Strings.isNullOrEmpty;
 
 /**
  * The {@code ElasticsearchRestClientBuilder} can safely build an Elasticsearch {@link RestClient}
@@ -347,15 +348,17 @@ public class ElasticsearchRestClientBuilder {
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
             Objects.requireNonNull(cloudAuth, "cloudAuth");
 
-            final int colonIndex = cloudAuth.getPassword().indexOf(":");
-            if (colonIndex <= 0) {
+            final String cloudAuthValue = cloudAuth.getValue();
+            final int colonIndex = cloudAuthValue.indexOf(":");
+
+            final String username;
+            final String password;
+            if ((colonIndex <= 0)
+                    || isNullOrEmpty(username = cloudAuthValue.substring(0, colonIndex))
+                    || isNullOrEmpty(password = cloudAuthValue.substring(colonIndex + 1))) {
                 throw new IllegalArgumentException("Invalid cloudAuth.");
             }
-            String username = cloudAuth.getPassword().substring(0, colonIndex);
-            String password = cloudAuth.getPassword().substring(colonIndex + 1);
 
-            Strings.requireNonEmpty(username, "cloudAuth username");
-            Strings.requireNonEmpty(password, "cloudAuth password");
             return this.setBasicAuth(username, new Password(password));
         }
 
