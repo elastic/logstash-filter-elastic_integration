@@ -107,21 +107,6 @@ class PreflightCheckTest {
     }
 
     @Test
-    void checkEsClusterSecurityDisabled() throws Exception {
-        wireMock.stubFor(
-                post("/_security/user/_has_privileges")
-                        .withRequestBody(equalToJson(getBodyFixture("has_privileges.request.json"), true, true))
-                        .willReturn(jsonResponse("{\"error\":\"no handler found for uri [/_security/user/_has_privileges] and method [POST]\"}", 400)));
-        withWiremockElasticsearch((restClient -> {
-            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkCredentialsPrivileges();
-            });
-            String expectedMessage = "The Elasticsearch cluster does not have security enabled, but user authentication was configured. Either enable security in Elasticsearch (recommended!) or remove the basic auth parameters from the 'elastic_integration' plugin configuration.";
-            assertThat(failure.getMessage(), hasToString(stringContainsInOrder(expectedMessage, "no handler found for uri [/_security/user/_has_privileges] and method [POST]")));
-        }));
-    }
-
-    @Test
     void checkCredentialsPrivilegesConnectionError() throws Exception {
         wireMock.stubFor(
                 post("/_security/user/_has_privileges")

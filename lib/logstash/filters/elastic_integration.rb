@@ -362,14 +362,32 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
-    using_basic_auth = @auth_basic_username && @auth_basic_password
-    using_cloud_auth = @cloud_id && (@cloud_auth || @api_key)
-
-    check_level = using_basic_auth || using_cloud_auth ? 'full' : 'license'
-
     java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
-    PreflightCheck.new(@elasticsearch_rest_client).check(check_level)
+    check_user_privileges! if @password || @cloud_auth || @api_key
+    check_es_cluster_license!
+  end
+
+  def check_user_privileges!
+    PreflightCheck.new(@elasticsearch_rest_client).checkUserPrivileges
+  rescue => e
+    # security is manageable in on-premise env, on cloud it is not allowed
+    security_error_message = "no handler found for uri [/_security/user/_has_privileges]"
+    if e.message.include?(security_error_message)
+      cred_desc = case
+                  when @password   then "`username` and `password`"
+                  when @cloud_auth then "`cloud_auth`"
+                  when @api_key    then "`api_key`"
+                  end
+
+      recommend_message = "The Elasticsearch cluster does not have security features enabled but request credentials were provided. Either enable security in Elasticsearch (recommended!) or remove the #{cred_desc} request credentials. "
+      raise_config_error! recommend_message.concat(e.message)
+    end
+    raise_config_error!(e.message)
+  end
+
+  def check_es_cluster_license!
+    PreflightCheck.new(@elasticsearch_rest_client).checkLicense
   rescue => e
     raise_config_error!(e.message)
   end

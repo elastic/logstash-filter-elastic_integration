@@ -1,7 +1,3 @@
-## 0.0.3 (UNRELEASED)
-  - Presents helpful guidance when run on an unsupported version of Java [#43](https://github.com/elastic/logstash-filter-elastic_integration/pull/43)
-  - Provide a meaningful message when Elasticsearch cluster security is disabled [#64](https://github.com/elastic/logstash-filter-elastic_integration/pull/64)
-
 ## 0.0.2 (UNRELEASED)
   - Fixes several related issues with how fields are mapped from the Logstash Event to the IngestDocument and back again [#51](https://github.com/elastic/logstash-filter-elastic_integration/pull/51)
     - `IngestDocument` metadata fields are now separately routed to `[@metadata][_ingest_document]` on the resulting `Event`, fixing an issue where the presence of Elasticsearch-reserved fields such as the top-level `_version` would cause a downstream Elasticsearch output to be unable to index the event [#47][]
@@ -12,6 +8,9 @@
   - Fix: now plugin is able to establish a connection to Elasticsearch on Elastic cloud with `cloud_id` and `cloud_auth` authentication pair [#62](https://github.com/elastic/logstash-filter-elastic_integration/pull/62)
   - Adds `pipeline_name` to _override_ the default behaviour of auto-detecting the pipeline name from its data stream [#69](https://github.com/elastic/logstash-filter-elastic_integration/pull/69)
   - BREAKING: http basic authentication with Elasticsearch is now configured with `username` and `password` options to make this plugin behave more similarly to other Elasticsearch-related plugins [#61](https://github.com/elastic/logstash-filter-elastic_integration/pull/61)
+  - Improvements when not using authentication and security disabled Elasticsearch cluster [#64](https://github.com/elastic/logstash-filter-elastic_integration/pull/64)
+    - Omits checking privileges when connecting to on-premise passwordless Elasticsearch cluster
+    - Provides a meaningful message when using basic or cloud authentication with security disabled Elasticsearch cluster
 
 [#47]: https://github.com/elastic/logstash-filter-elastic_integration/issues/47
 [#54]: https://github.com/elastic/logstash-filter-elastic_integration/issues/54

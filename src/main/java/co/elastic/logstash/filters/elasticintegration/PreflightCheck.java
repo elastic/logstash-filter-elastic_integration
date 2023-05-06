@@ -52,17 +52,9 @@ public class PreflightCheck {
         this.elasticsearchRestClient = elasticsearchRestClient;
     }
 
-    public void check(String checkLevel) {
-        PreflightCheckLevel preflightCheckLevel = PreflightCheckLevel.valueOf(checkLevel.toUpperCase());
-        switch (preflightCheckLevel) {
-            case LICENSE:
-                checkLicense();
-                break;
-            case FULL:
-                checkCredentialsPrivileges();
-                checkLicense();
-                break;
-        }
+    public void checkLicenseAndPrivileges() {
+        checkCredentialsPrivileges();
+        checkLicense();
     }
 
     void checkCredentialsPrivileges() {
@@ -87,24 +79,11 @@ public class PreflightCheck {
         } catch (Failure f) {
             throw f;
         } catch (Exception e) {
-            if (e instanceof ResponseException responseException) {
-                if (Objects.nonNull(responseException.getResponse())
-                        && Objects.nonNull(responseException.getResponse().getStatusLine())) {
-                    int httpResponseCode = responseException.getResponse().getStatusLine().getStatusCode();
-                    String securityDisabledMessageReason = "no handler found for uri";
-                    if (HttpStatus.SC_BAD_REQUEST == httpResponseCode
-                            && responseException.getMessage().contains(securityDisabledMessageReason)) {
-                        String adviseMessage = "The Elasticsearch cluster does not have security enabled, but user authentication was configured. Either enable security in Elasticsearch (recommended!) or remove the basic auth parameters from the 'elastic_integration' plugin configuration.";
-                        throw new Failure(String.format(adviseMessage + " %s", e.getMessage()), e);
-                    }
-                }
-            }
-            logger.error(String.format("Exception checking has_privileges: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
     }
 
-    void checkLicense() {
+    public void checkLicense() {
         try {
             final Request licenseRequest = new Request("GET", "/_license");
             final Response licenseResponse = elasticsearchRestClient.performRequest(licenseRequest);
@@ -143,8 +122,4 @@ public class PreflightCheck {
         }
     }
 
-    public enum PreflightCheckLevel {
-        FULL,
-        LICENSE
-    }
 }
