@@ -50,12 +50,7 @@ public class PreflightCheck {
         this.elasticsearchRestClient = elasticsearchRestClient;
     }
 
-    public void checkLicenseAndPrivileges() {
-        checkCredentialsPrivileges();
-        checkLicense();
-    }
-
-    void checkCredentialsPrivileges() {
+    public void checkUserPrivileges() {
         try {
             final Request hasPrivilegesRequest = new Request("POST", "/_security/user/_has_privileges");
             hasPrivilegesRequest.setJsonEntity(OBJECT_MAPPER.writeValueAsString(Map.of("cluster", REQUIRED_CLUSTER_PRIVILEGES.keySet())));

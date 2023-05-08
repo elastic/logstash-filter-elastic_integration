@@ -10,7 +10,7 @@
   - BREAKING: http basic authentication with Elasticsearch is now configured with `username` and `password` options to make this plugin behave more similarly to other Elasticsearch-related plugins [#61](https://github.com/elastic/logstash-filter-elastic_integration/pull/61)
   - Improvements when not using authentication and security disabled Elasticsearch cluster [#64](https://github.com/elastic/logstash-filter-elastic_integration/pull/64)
     - Omits checking privileges when connecting to on-premise passwordless Elasticsearch cluster
-    - Provides a meaningful message when using basic or cloud authentication with security disabled Elasticsearch cluster
+    - Provides a meaningful message when using basic authentication with security disabled on-premise Elasticsearch cluster
 
 [#47]: https://github.com/elastic/logstash-filter-elastic_integration/issues/47
 [#54]: https://github.com/elastic/logstash-filter-elastic_integration/issues/54

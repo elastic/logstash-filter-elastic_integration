@@ -43,7 +43,7 @@ class PreflightCheckTest {
                         .withRequestBody(equalToJson(getBodyFixture("has_privileges.request.json"), true, true))
                         .willReturn(okJson(getBodyFixture("has_privileges.ok.json"))));
         withWiremockElasticsearch((restClient -> {
-            new PreflightCheck(restClient).checkCredentialsPrivileges();
+            new PreflightCheck(restClient).checkUserPrivileges();
         }));
     }
 
@@ -55,7 +55,7 @@ class PreflightCheckTest {
                         .willReturn(okJson(getBodyFixture("has_privileges.missing-monitor.json"))));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkCredentialsPrivileges();
+                new PreflightCheck(restClient).checkUserPrivileges();
             });
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("cluster privilege `monitor` is REQUIRED", "validate Elasticsearch license")));
         }));
@@ -69,7 +69,7 @@ class PreflightCheckTest {
                         .willReturn(okJson(getBodyFixture("has_privileges.missing-read_pipeline.json"))));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkCredentialsPrivileges();
+                new PreflightCheck(restClient).checkUserPrivileges();
             });
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("cluster privilege `read_pipeline` is REQUIRED", "retrieve Elasticsearch ingest pipeline definitions")));
         }));
@@ -85,7 +85,7 @@ class PreflightCheckTest {
                         .willReturn(okJson(getBodyFixture("has_privileges.missing-manage_index_templates.json"))));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkCredentialsPrivileges();
+                new PreflightCheck(restClient).checkUserPrivileges();
             });
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("cluster privilege `manage_index_templates` is REQUIRED", "resolve a data stream name to its default pipeline")));
         }));
@@ -100,7 +100,7 @@ class PreflightCheckTest {
                         .willReturn(status(403)));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkCredentialsPrivileges();
+                new PreflightCheck(restClient).checkUserPrivileges();
             });
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Preflight check failed", "403 Forbidden")));
         }));
@@ -114,7 +114,7 @@ class PreflightCheckTest {
                         .willReturn(aResponse().withFault(Fault.CONNECTION_RESET_BY_PEER)));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).checkCredentialsPrivileges();
+                new PreflightCheck(restClient).checkUserPrivileges();
             });
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Preflight check failed", "Connection reset")));
         }));
