@@ -5,6 +5,7 @@
     - Field-type conversions have been improved by adding a two-way-mapping between the Logstash-internal `Timestamp`-type object and the equivalent `ZonedDateTime`-object used in several Ingest Common processors [#65][]
   - Adds proactive reloaders for both datastream-to-pipeline-name mappings and pipeline definitions to ensure upstream changes are made available without impacting processing [#48](https://github.com/elastic/logstash-filter-elastic_integration/pull/48)
   - Presents helpful guidance when run on an unsupported version of Java [#43](https://github.com/elastic/logstash-filter-elastic_integration/pull/43)
+  - Fix: now plugin is able to establish a connection to Elasticsearch on Elastic cloud with `cloud_id` and `cloud_auth` authentication pair [#62](https://github.com/elastic/logstash-filter-elastic_integration/pull/62)
 
 [#47]: https://github.com/elastic/logstash-filter-elastic_integration/issues/47
 [#54]: https://github.com/elastic/logstash-filter-elastic_integration/issues/54
