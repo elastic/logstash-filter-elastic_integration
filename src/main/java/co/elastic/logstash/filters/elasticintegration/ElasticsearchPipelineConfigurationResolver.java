@@ -47,7 +47,7 @@ public class ElasticsearchPipelineConfigurationResolver
             return Optional.of(pipelineConfiguration);
         } catch (ResponseException re) {
             if (re.getResponse().getStatusLine().getStatusCode() == 404) {
-                LOGGER.warn(String.format("pipeline not found: `%s`", pipelineName), re.getMessage());
+                LOGGER.debug(String.format("pipeline not found: `%s`", pipelineName), re);
             } else {
                 LOGGER.error(String.format("failed to fetch pipeline: `%s`", pipelineName), re);
                 throw re;
