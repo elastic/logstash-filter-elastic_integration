@@ -62,11 +62,15 @@ public class EventProcessorBuilder {
         return () -> new SimpleResolverCache<>(description, SimpleResolverCache.Configuration.PERMANENT);
     }
 
-    public static EventProcessorBuilder fromElasticsearch(final RestClient elasticsearchRestClient) {
+    public static EventProcessorBuilder fromElasticsearch(final RestClient elasticsearchRestClient, final PluginConfiguration pluginConfiguration) {
         final EventProcessorBuilder builder = new EventProcessorBuilder();
 
-        builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
-                new SimpleResolverCache.Configuration(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE))));
+        if (pluginConfiguration.pipelineNameTemplate().isPresent()) {
+            builder.setEventPipelineNameResolver(SprintfTemplateEventToPipelineNameResolver.from(pluginConfiguration.pipelineNameTemplate().get()));
+        } else {
+            builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
+                    new SimpleResolverCache.Configuration(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE))));
+        }
 
         builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
         builder.setPipelineResolverCacheConfig(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE);

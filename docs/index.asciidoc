@@ -29,8 +29,10 @@ Use of this plugin requires an active Enterprise Elastic License.
 
 Using this filter you can process Elastic integrations powered by {es} Ingest Node in Logstash.
 
-Once configured to point to an {es} cluster, events processed by this filter will first resolve their effective data-stream, and determine from {es} which ingest pipeline to run.
-The ingest pipeline will be run inside Logstash without transmitting the event to {es}.
+Once configured to point to an {es} cluster, this filter will detect which ingest pipeline (if any) should be executed for each event,
+using an explicitly-defined <<plugins-{type}s-{plugin}-pipeline_name>> or auto-detecting the event's data-stream and its default pipeline.
+
+It will then load that pipeline's definition from {es} and run that pipeline inside Logstash without transmitting the event to {es}.
 Events that are successfully handled by their ingest pipeline will have `[@metadata][target_ingest_pipeline]` set to `+_none+` so that any downstream {es} output in the Logstash pipeline will avoid running the event's default pipeline _again_ in {es}.
 
 NOTE: Some multi-pipeline configurations such as logstash-to-logstash over http(s) do not maintain the state of `[@metadata]` fields.
@@ -219,7 +221,9 @@ Additionally, the following Elasticsearch IngestDocument Metadata fields are mad
 :cached-entry-ttl: 24 hours
 :cache-reload-frequency: 1 minute
 
-This plugin uses {es} to establish mappings of datastream names to pipeline names, and also to resolve pipeline names into their pipeline definitions.
+This plugin uses {es} to resolve pipeline names into their pipeline definitions.
+When configured _without_ an explicit <<plugins-{type}s-{plugin}-pipeline_name>>, it also uses {es} to establish mappings of data stream names to their respective default pipeline names.
+
 It uses hit/miss caches to avoid querying Elasticsearch for every single event.
 It also works to update these cached mappings _before_ they expire.
 The result is that when {es} is responsive this plugin is able to pick up changes quickly without impacting its own performance, and it can survive periods of {es} issues without interruption by continuing to use potentially-stale mappings or definitions.
@@ -245,6 +249,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-geoip_database_directory>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-hosts>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-password>> | <<password,password>>|No
+| <<plugins-{type}s-{plugin}-pipeline_name>> | <<string,string>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_enabled>> | <<boolean,boolean>>|No
@@ -354,6 +359,14 @@ There are two ways to disable SSL:
 * Required when request auth is configured with <<plugins-{type}s-{plugin}-username>>
 
 A password when using HTTP Basic Authentication to connect to {es}.
+
+[id="plugins-{type}s-{plugin}-pipeline_name"]
+===== `pipeline_name`
+
+* Value type is <<string,string>>
+* There is no default value for this setting.
+* When present, the pipeline name will _not_ be auto-detected from the event's data stream fields.
+* Value may be a {logstash-ref}/event-dependent-configuration.html#sprintf[sprintf-style] template; if any referenced fields cannot be resolved the event will not be routed to an ingest pipeline.
 
 [id="plugins-{type}s-{plugin}-ssl_certificate"]
 ===== `ssl_certificate`

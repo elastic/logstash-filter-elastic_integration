@@ -62,4 +62,5 @@ public interface Resolver<K, V> {
     default Optional<V> resolve(K resolveKey) {
         return this.resolve(resolveKey, (e) -> {});
     }
+
 }
