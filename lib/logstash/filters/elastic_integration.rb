@@ -328,7 +328,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
       builder.setApiKey @api_key
 
       # pipeline resolving
-      builder.setPipelineNameTemplete @pipeline_name
+      builder.setPipelineNameTemplate @pipeline_name
 
     end.build
   end
