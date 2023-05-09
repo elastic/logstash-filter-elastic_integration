@@ -50,6 +50,10 @@ final class PluginConfiguration {
     private final Password     cloudAuth;
     private final Password     apiKey;
 
+    // pipeline name resolver:
+
+    private final String       pipelineNameTemplate;
+
 
     private PluginConfiguration(final Builder builder) {
         this.id = builder.id;
@@ -73,6 +77,8 @@ final class PluginConfiguration {
         this.authBasicPassword = builder.authBasicPassword;
         this.cloudAuth = builder.cloudAuth;
         this.apiKey = builder.apiKey;
+        // pipeline name resolver
+        this.pipelineNameTemplate = builder.pipelineNameTemplate;
     }
 
     private static <T> List<T> copyOfNullableList(final List<T> source) {
@@ -155,6 +161,10 @@ final class PluginConfiguration {
         return Optional.ofNullable(apiKey);
     }
 
+    public Optional<String> pipelineNameTemplate() {
+        return Optional.ofNullable(pipelineNameTemplate);
+    }
+
     @Override
     public String toString() {
         final List<String> config = new ArrayList<>();
@@ -175,6 +185,7 @@ final class PluginConfiguration {
         if (Objects.nonNull(authBasicPassword)) { config.add(String.format("authBasicPassword=%s", authBasicPassword)); }
         if (Objects.nonNull(cloudAuth)) { config.add(String.format("cloudAuth=%s", cloudAuth)); }
         if (Objects.nonNull(apiKey)) { config.add(String.format("sslKeyPassphrase=%s", apiKey)); }
+        if (Objects.nonNull(pipelineNameTemplate)) { config.add(String.format("pipelineNameTemplate=%s", pipelineNameTemplate)); }
 
         return String.format("PluginConfiguration{%s}", String.join(", ", config));
     }
@@ -206,6 +217,7 @@ final class PluginConfiguration {
         Password authBasicPassword;
         Password cloudAuth;
         Password apiKey;
+        String pipelineNameTemplate;
 
         public PluginConfiguration build() {
             return new PluginConfiguration(this);
@@ -297,6 +309,11 @@ final class PluginConfiguration {
 
         public Builder setApiKey(final Password apiKey) {
             this.apiKey = apiKey;
+            return this;
+        }
+
+        public Builder setPipelineNameTemplate(final String pipelineNameTemplate) {
+            this.pipelineNameTemplate = pipelineNameTemplate;
             return this;
         }
     }

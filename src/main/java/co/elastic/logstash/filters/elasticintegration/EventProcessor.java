@@ -8,6 +8,7 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
+import co.elastic.logstash.filters.elasticintegration.util.EventUtil;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
@@ -19,14 +20,14 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.UUID;
 import java.util.function.Consumer;
+
+import static co.elastic.logstash.filters.elasticintegration.util.EventUtil.eventAsMap;
+import static co.elastic.logstash.filters.elasticintegration.util.EventUtil.serializeEventForLog;
 
 /**
  * An {@link EventProcessor} processes {@link Event}s by:
@@ -94,14 +95,14 @@ public class EventProcessor implements Closeable {
         try {
             final Optional<String> resolvedPipelineName = eventToPipelineNameResolver.resolve(incomingEvent, EventProcessor::throwingHandler);
             if (resolvedPipelineName.isEmpty()) {
-                LOGGER.debug(() -> String.format("No pipeline resolved for event %s", serializeEventForLog(incomingEvent)));
+                LOGGER.debug(() -> String.format("No pipeline resolved for event %s", serializeEventForLog(LOGGER, incomingEvent)));
                 eventConsumer.accept(incomingEvent);
                 return;
             }
 
             final String pipelineName = resolvedPipelineName.get();
             if (pipelineName.equals(PIPELINE_MAGIC_NONE)) {
-                LOGGER.debug(() -> String.format("Ingest Pipeline bypassed with pipeline `%s` for event `%s`", pipelineName, serializeEventForLog(incomingEvent)));
+                LOGGER.debug(() -> String.format("Ingest Pipeline bypassed with pipeline `%s` for event `%s`", pipelineName, serializeEventForLog(LOGGER, incomingEvent)));
                 eventConsumer.accept(incomingEvent);
                 return;
             }
@@ -129,7 +130,7 @@ public class EventProcessor implements Closeable {
                 } else {
                     // If no exception, then the original event is to be _replaced_ by the result
                     if (Objects.isNull(resultIngestDocument)) {
-                        LOGGER.trace(() -> String.format("event cancelled by ingest pipeline `%s`: %s", pipelineName, serializeEventForLog(incomingEvent)));
+                        LOGGER.trace(() -> String.format("event cancelled by ingest pipeline `%s`: %s", pipelineName, serializeEventForLog(LOGGER, incomingEvent)));
                         incomingEvent.cancel();
                         eventConsumer.accept(incomingEvent);
                     } else {
@@ -168,21 +169,6 @@ public class EventProcessor implements Closeable {
     static private Throwable unwrapException(final Exception exception) {
         if (exception.getCause() instanceof FailProcessorException) { return exception.getCause(); }
         return exception;
-    }
-
-    static private String serializeEventForLog(final Event event) {
-        if (LOGGER.isTraceEnabled()) {
-            return String.format("Event{%s}", eventAsMap(event));
-        } else {
-            return event.toString();
-        }
-    }
-
-    static private Map<String,Object> eventAsMap(final Event event) {
-        final Event eventClone = event.clone();
-        final Map<String,Object> intermediate = new HashMap<>(eventClone.toMap());
-        intermediate.put("@metadata", Map.copyOf(eventClone.getMetadata()));
-        return Collections.unmodifiableMap(intermediate);
     }
 
     static private String diff(final Event original, final Event changed) {

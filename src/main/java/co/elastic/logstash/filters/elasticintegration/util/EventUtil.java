@@ -11,6 +11,9 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.logstash.FieldReference;
 
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 public class EventUtil {
@@ -48,5 +51,20 @@ public class EventUtil {
             throw new IllegalArgumentException(String.format("Invalid field reference for `%s`: `%s`", descriptor, fieldReference));
         }
         return fieldReference;
+    }
+
+    public static String serializeEventForLog(final Logger logger, final Event event) {
+        if (logger.isTraceEnabled()) {
+            return String.format("Event{%s}", eventAsMap(event));
+        } else {
+            return event.toString();
+        }
+    }
+
+    public static Map<String,Object> eventAsMap(final Event event) {
+        final Event eventClone = event.clone();
+        final Map<String,Object> intermediate = new HashMap<>(eventClone.toMap());
+        intermediate.put("@metadata", Map.copyOf(eventClone.getMetadata()));
+        return Collections.unmodifiableMap(intermediate);
     }
 }

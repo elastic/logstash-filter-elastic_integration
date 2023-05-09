@@ -91,6 +91,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # A directory containing one or more Maxmind Datbase files in *.mmdb format
   config :geoip_database_directory, :validate => :path
 
+  # a sprintf template for resolving the pipeline name; when this template does
+  # not fully-resolve no pipeline will be run.
+  config :pipeline_name, :validate => :string
+
   ##
   # Validates that this plugin can be initialized BEFORE loading dependencies
   # and delegating to super, so that when this plugin CANNOT be run the process
@@ -296,36 +300,37 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # Builds a `PluginConfiguration` from the previously-validated config
   def extract_immutable_config
     java_import('co.elastic.logstash.filters.elasticintegration.PluginConfiguration')
+    @immutable_config ||= PluginConfiguration::Builder.new.tap do |builder|
+      builder.setId @id
 
-    builder = PluginConfiguration::Builder.new
+      builder.setHosts @hosts&.map(&:to_s)
+      builder.setCloudId @cloud_id
 
-    builder.setId @id
+      builder.setSslEnabled @ssl_enabled
 
-    builder.setHosts @hosts&.map(&:to_s)
-    builder.setCloudId @cloud_id
+      # ssl trust
+      builder.setSslVerificationMode @ssl_verification_mode
+      builder.setSslTruststorePath @ssl_truststore_path
+      builder.setSslTruststorePassword @ssl_truststore_password
+      builder.setSslCertificateAuthorities @ssl_certificate_authorities
 
-    builder.setSslEnabled @ssl_enabled
+      # ssl identity
+      builder.setSslKeystorePath @keystore
+      builder.setSslKeystorePassword @ssl_keystore_password
+      builder.setSslCertificate @ssl_certificate
+      builder.setSslKey @ssl_key
+      builder.setSslKeyPassphrase @ssl_key_passphrase
 
-    # ssl trust
-    builder.setSslVerificationMode @ssl_verification_mode
-    builder.setSslTruststorePath @ssl_truststore_path
-    builder.setSslTruststorePassword @ssl_truststore_password
-    builder.setSslCertificateAuthorities @ssl_certificate_authorities
+      # request auth
+      builder.setAuthBasicUsername @username
+      builder.setAuthBasicPassword @password
+      builder.setCloudAuth @cloud_auth
+      builder.setApiKey @api_key
 
-    # ssl identity
-    builder.setSslKeystorePath @keystore
-    builder.setSslKeystorePassword @ssl_keystore_password
-    builder.setSslCertificate @ssl_certificate
-    builder.setSslKey @ssl_key
-    builder.setSslKeyPassphrase @ssl_key_passphrase
+      # pipeline resolving
+      builder.setPipelineNameTemplete @pipeline_name
 
-    # request auth
-    builder.setAuthBasicUsername @username
-    builder.setAuthBasicPassword @password
-    builder.setCloudAuth @cloud_auth
-    builder.setApiKey @api_key
-
-    builder.build
+    end.build
   end
 
   def initialize_elasticsearch_rest_client!
@@ -340,7 +345,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
     java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpProcessorFactory')
 
-    @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client)
+    @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client, extract_immutable_config)
                                             .setFilterMatchListener(method(:filter_matched_java).to_proc)
                                             .addProcessor("geoip") { GeoIpProcessorFactory.new(@geoip_database_provider) }
                                             .build(@plugin_context)

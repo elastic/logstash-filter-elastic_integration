@@ -7,6 +7,7 @@
 package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
+import co.elastic.logstash.filters.elasticintegration.resolver.AbstractSimpleResolver;
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloader;
 import co.elastic.logstash.filters.elasticintegration.resolver.UncacheableResolver;
 

@@ -152,7 +152,11 @@ public class ElasticsearchRestClientBuilder {
     }
 
     public RestClient build() {
-        return configureHttpClient(restClientBuilderSupplier.get(), httpClientBuilder -> {
+        return build(restClientBuilderSupplier.get());
+    }
+
+    RestClient build(final RestClientBuilder restClientBuilder) {
+        return configureHttpClient(restClientBuilder, httpClientBuilder -> {
             this.trustConfig.configureHttpClient(httpClientBuilder);
             this.requestAuthConfig.configureHttpClient(httpClientBuilder);
 
