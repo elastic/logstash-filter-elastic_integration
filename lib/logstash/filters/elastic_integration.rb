@@ -75,10 +75,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   config :ssl_keystore_password, :validate => :password
 
   # Username for basic authentication
-  config :auth_basic_username, :validate => :string
+  config :username, :validate => :string
 
   # Password for basic authentication
-  config :auth_basic_password, :validate => :password
+  config :password, :validate => :password
 
   # Cloud authentication string ("<username>:<password>" format) to connect to Elastic cloud.
   #
@@ -199,16 +199,16 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def validate_auth_settings!
     @cloud_auth           = @cloud_auth&.freeze
     @api_key              = @api_key&.freeze
-    @auth_basic_username  = @auth_basic_username&.freeze
-    @auth_basic_password  = @auth_basic_password&.freeze
+    @username             = @username&.freeze
+    @password             = @password&.freeze
 
-    raise_config_error! "`auth_basic_username` requires `auth_basic_password`" if @auth_basic_username && !@auth_basic_password
-    raise_config_error! "`auth_basic_password` is not allowed unless `auth_basic_username` is specified" if !@auth_basic_username && @auth_basic_password
-    if @auth_basic_username && @auth_basic_password
-      raise_config_error! "Empty `auth_basic_username` or `auth_basic_password` is not allowed" if @auth_basic_username.empty? || @auth_basic_password.value.empty?
+    raise_config_error! "`username` requires `password`" if @username && !@password
+    raise_config_error! "`password` is not allowed unless `username` is specified" if !@username && @password
+    if @username && @password
+      raise_config_error! "Empty `username` or `password` is not allowed" if @username.empty? || @password.value.empty?
     end
 
-    possible_auth_options = original_params.keys & %w(auth_basic_password cloud_auth api_key)
+    possible_auth_options = original_params.keys & %w(password cloud_auth api_key)
     raise_config_error!("Multiple authentication #{possible_auth_options} options cannot be used together. Please provide ONLY one.") if possible_auth_options.size > 1
 
     raise_config_error! "Empty `cloud_auth` is not allowed" if @cloud_auth && @cloud_auth.value.empty?
@@ -320,8 +320,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     builder.setSslKeyPassphrase @ssl_key_passphrase
 
     # request auth
-    builder.setAuthBasicUsername @auth_basic_username
-    builder.setAuthBasicPassword @auth_basic_password
+    builder.setAuthBasicUsername @username
+    builder.setAuthBasicPassword @password
     builder.setCloudAuth @cloud_auth
     builder.setApiKey @api_key
 

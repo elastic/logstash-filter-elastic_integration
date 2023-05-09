@@ -671,38 +671,38 @@ describe LogStash::Filters::ElasticIntegration do
         describe "basic auth" do
           let(:config) { super().merge("hosts" => "my-es-cluster.com") }
 
-          context "with `auth_basic_username`" do
-            let(:config) { super().merge("auth_basic_username" => "test_user") }
+          context "with `username`" do
+            let(:config) { super().merge("username" => "test_user") }
 
-            it "requires `auth_basic_password`" do
-              expected_message = "`auth_basic_username` requires `auth_basic_password`"
+            it "requires `password`" do
+              expected_message = "`username` requires `password`"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
 
-          context "with `auth_basic_password`" do
-            let(:config) { super().merge("auth_basic_password" => "pa$$") }
+          context "with `password`" do
+            let(:config) { super().merge("password" => "pa$$") }
 
-            it "requires `auth_basic_username`" do
-              expected_message = "`auth_basic_password` is not allowed unless `auth_basic_username` is specified"
+            it "requires `username`" do
+              expected_message = "`password` is not allowed unless `username` is specified"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
 
-          context "when `auth_basic_username` is an empty" do
-            let(:config) { super().merge("auth_basic_username" => "", "auth_basic_password" => "p$d") }
+          context "when `username` is an empty" do
+            let(:config) { super().merge("username" => "", "password" => "p$d") }
 
-            it "requires non-empty `auth_basic_username`" do
-              expected_message = "Empty `auth_basic_username` or `auth_basic_password` is not allowed"
+            it "requires non-empty `username`" do
+              expected_message = "Empty `username` or `password` is not allowed"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end
 
-          context "when `auth_basic_password` is an empty" do
-            let(:config) { super().merge("auth_basic_username" => "test_user", "auth_basic_password" => "") }
+          context "when `password` is an empty" do
+            let(:config) { super().merge("username" => "test_user", "password" => "") }
 
-            it "requires non-empty `auth_basic_username`" do
-              expected_message = "Empty `auth_basic_username` or `auth_basic_password` is not allowed"
+            it "requires non-empty `username`" do
+              expected_message = "Empty `username` or `password` is not allowed"
               expect{ registered_plugin }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
             end
           end

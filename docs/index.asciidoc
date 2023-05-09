@@ -102,7 +102,7 @@ You can configure this plugin to present authentication credentials to {es} in o
 
 * ApiKey: (see <<plugins-{type}s-{plugin}-api_key>>)
 * Cloud Auth: (see <<plugins-{type}s-{plugin}-cloud_auth>>)
-* HTTP Basic Auth: (see <<plugins-{type}s-{plugin}-auth_basic_username>> and <<plugins-{type}s-{plugin}-auth_basic_password>>)
+* HTTP Basic Auth: (see <<plugins-{type}s-{plugin}-username>> and <<plugins-{type}s-{plugin}-password>>)
 
 NOTE: Your request credentials are only as secure as the connection they are being passed over.
       They provide neither privacy nor secrecy on their own, and can easily be recovered by an adversary when SSL is disabled.
@@ -240,11 +240,11 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 |=======================================================================
 |Setting |Input type|Required
 | <<plugins-{type}s-{plugin}-api_key>> | <<password,password>>|No
-| <<plugins-{type}s-{plugin}-auth_basic_password>> | <<password,password>>|No
-| <<plugins-{type}s-{plugin}-auth_basic_username>> | <<string,string>>|No
 | <<plugins-{type}s-{plugin}-cloud_auth>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-cloud_id>> | <<string,string>>|No
+| <<plugins-{type}s-{plugin}-geoip_database_directory>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-hosts>> |<<array,array>>|No
+| <<plugins-{type}s-{plugin}-password>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-ssl_certificate_authorities>> |<<array,array>>|No
 | <<plugins-{type}s-{plugin}-ssl_enabled>> | <<boolean,boolean>>|No
@@ -255,6 +255,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 | <<plugins-{type}s-{plugin}-ssl_truststore_path>> | <<path,path>>|No
 | <<plugins-{type}s-{plugin}-ssl_truststore_password>> | <<password,password>>|No
 | <<plugins-{type}s-{plugin}-ssl_verification_mode>> | <<string,string>>, one of `["full", "certificate", "none"]`|No
+| <<plugins-{type}s-{plugin}-username>> | <<string,string>>|No
 |=======================================================================
 
 // Variables for re-use in per-option docs
@@ -270,24 +271,6 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 
 The encoded form of an API key that is used to authenticate this plugin to {es}
 
-[id="plugins-{type}s-{plugin}-auth_basic_password"]
-===== `auth_basic_password`
-
-* Value type is <<password,password>>
-* There is no default value for this setting.
-* Required when request auth is configured with <<plugins-{type}s-{plugin}-auth_basic_username>>
-
-A password when using HTTP Basic Authentication to connect to {es}.
-
-[id="plugins-{type}s-{plugin}-auth_basic_username"]
-===== `auth_basic_username`
-
-* Value type is <<string,string>>
-* There is no default value for this setting.
-* When present, <<plugins-{type}s-{plugin}-auth_basic_password>> is also required.
-
-A user name when using HTTP Basic Authentication to connect to {es}.
-
 [id="plugins-{type}s-{plugin}-cloud_auth"]
 ===== `cloud_auth`
 
@@ -295,7 +278,7 @@ A user name when using HTTP Basic Authentication to connect to {es}.
 * There is no default value for this setting.
 
 Cloud authentication string ("<username>:<password>" format) is an alternative
-for the `auth_basic_username`/`auth_basic_password` pair and can be obtained from Elastic Cloud web console.
+for the `username`/`password` pair and can be obtained from Elastic Cloud web console.
 
 [id="plugins-{type}s-{plugin}-cloud_id"]
 ===== `cloud_id`
@@ -310,6 +293,22 @@ When connecting with a Cloud Id, communication to {es} is secured with SSL.
 
 For more details, check out the
 {logstash-ref}/connecting-to-cloud.html[Logstash-to-Cloud documentation].
+
+[id="plugins-{type}s-{plugin}-geoip_database_directory"]
+===== `geoip_database_directory`
+
+* Value type is <<path,path>>
+* There is no default value for this setting.
+
+When using the GeoIp processor, this plugin does _not_ have access to the GeoIp databases that are a part of the {es} cluster, and must be configured with locally-available database files.
+
+Databases are registered by file name, and most integrations rely on databases being present named:
+
+* `GeoLite2-ASN.mmdb`
+* `GeoLite2-City.mmdb`
+* `GeoLite2-Country.mmdb`
+
+This plugin will discover any regular file with the `.mmdb` suffix in the provided directory, and expects the files it finds to be in the MaxMind DB format.
 
 [id="plugins-{type}s-{plugin}-hosts"]
 ===== `hosts`
@@ -346,6 +345,15 @@ There are two ways to disable SSL:
 * Set <<plugins-{type}s-{plugin}-ssl_enabled, `+ssl_enabled => false+`>>
 
 ============
+
+[id="plugins-{type}s-{plugin}-password"]
+===== `password`
+
+* Value type is <<password,password>>
+* There is no default value for this setting.
+* Required when request auth is configured with <<plugins-{type}s-{plugin}-username>>
+
+A password when using HTTP Basic Authentication to connect to {es}.
 
 [id="plugins-{type}s-{plugin}-ssl_certificate"]
 ===== `ssl_certificate`
@@ -461,21 +469,14 @@ SSL certificates presented by {es} are fully-validated by default.
 ** `certificate`: validates the server-provided certificate is signed by a trusted certificate authority and that the server can prove possession of its associated private key (less secure)
 ** `full` (default): performs the same validations as `certificate` and also verifies that the provided certificate has an identity claim matching the server we are attempting to connect to (most secure)
 
-[id="plugins-{type}s-{plugin}-geoip_database_directory"]
-===== `geoip_database_directory`
+[id="plugins-{type}s-{plugin}-username"]
+===== `username`
 
-* Value type is <<path,path>>
+* Value type is <<string,string>>
 * There is no default value for this setting.
+* When present, <<plugins-{type}s-{plugin}-password>> is also required.
 
-When using the GeoIp processor, this plugin does _not_ have access to the GeoIp databases that are a part of the {es} cluster, and must be configured with locally-available database files.
-
-Databases are registered by file name, and most integrations rely on databases being present named:
-
- * `GeoLite2-ASN.mmdb`
- * `GeoLite2-City.mmdb`
- * `GeoLite2-Country.mmdb`
-
-This plugin will discover any regular file with the `.mmdb` suffix in the provided directory, and expects the files it finds to be in the MaxMind DB format.
+A user name when using HTTP Basic Authentication to connect to {es}.
 
 &nbsp;
 

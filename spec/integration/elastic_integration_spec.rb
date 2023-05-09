@@ -21,8 +21,8 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   let(:settings) {
     {
       "hosts" => "https://elasticsearch:9200",
-      "auth_basic_username" => integ_user_name,
-      "auth_basic_password" => integ_user_password,
+      "username" => integ_user_name,
+      "password" => integ_user_password,
       "ssl_enabled" => true,
       "ssl_verification_mode" => "certificate",
       "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt",
