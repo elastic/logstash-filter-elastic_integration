@@ -50,12 +50,7 @@ public class PreflightCheck {
         this.elasticsearchRestClient = elasticsearchRestClient;
     }
 
-    public void check() {
-        checkCredentialsPrivileges();
-        checkLicense();
-    }
-
-    void checkCredentialsPrivileges() {
+    public void checkUserPrivileges() {
         try {
             final Request hasPrivilegesRequest = new Request("POST", "/_security/user/_has_privileges");
             hasPrivilegesRequest.setJsonEntity(OBJECT_MAPPER.writeValueAsString(Map.of("cluster", REQUIRED_CLUSTER_PRIVILEGES.keySet())));
@@ -77,12 +72,11 @@ public class PreflightCheck {
         } catch (Failure f) {
             throw f;
         } catch (Exception e) {
-            logger.error(String.format("Exception checking has_privileges: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
     }
 
-    void checkLicense() {
+    public void checkLicense() {
         try {
             final Request licenseRequest = new Request("GET", "/_license");
             final Response licenseResponse = elasticsearchRestClient.performRequest(licenseRequest);
@@ -120,4 +114,5 @@ public class PreflightCheck {
             super(message);
         }
     }
+
 }

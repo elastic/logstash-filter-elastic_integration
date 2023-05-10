@@ -8,6 +8,9 @@
   - Fix: now plugin is able to establish a connection to Elasticsearch on Elastic cloud with `cloud_id` and `cloud_auth` authentication pair [#62](https://github.com/elastic/logstash-filter-elastic_integration/pull/62)
   - Adds `pipeline_name` to _override_ the default behaviour of auto-detecting the pipeline name from its data stream [#69](https://github.com/elastic/logstash-filter-elastic_integration/pull/69)
   - BREAKING: http basic authentication with Elasticsearch is now configured with `username` and `password` options to make this plugin behave more similarly to other Elasticsearch-related plugins [#61](https://github.com/elastic/logstash-filter-elastic_integration/pull/61)
+  - Improves user-experience when connected to an Elasticsearch that does not have security features enabled (such as when testing against an on-prem cluster) [#64](https://github.com/elastic/logstash-filter-elastic_integration/pull/64)
+    - Provides helpful guidance when providing request credentials to an unsecured Elasticsearch cluster. 
+    - Tolerates anonymous access of an unsecured Elasticsearch cluster by allowing the plugin to start in an "unsafe" mode without pre-validating permission to use the necessary Elasticsearch APIs.
 
 [#47]: https://github.com/elastic/logstash-filter-elastic_integration/issues/47
 [#54]: https://github.com/elastic/logstash-filter-elastic_integration/issues/54
