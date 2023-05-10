@@ -371,7 +371,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def check_user_privileges!
     PreflightCheck.new(@elasticsearch_rest_client).checkUserPrivileges
   rescue => e
-    # security is manageable in on-premise env, on cloud it is not allowed
     security_error_message = "no handler found for uri [/_security/user/_has_privileges]"
     if e.message.include?(security_error_message)
       cred_desc = case
