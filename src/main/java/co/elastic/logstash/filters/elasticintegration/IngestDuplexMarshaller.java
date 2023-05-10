@@ -100,7 +100,7 @@ public class IngestDuplexMarshaller {
         // When an IngestDocument is initialized, its "ingestMetadata" is only expected to contain the
         // event's timestamp, which is copied into the event and can be either a String or a ZonedDateTime.
         final Timestamp eventTimestamp = safeTimestampFrom(event.getField(org.logstash.Event.TIMESTAMP));
-        Map<String, Object> ingestMetadata = Map.of(INGEST_METADATA_TIMESTAMP_FIELD, Objects.requireNonNullElseGet(eventTimestamp, Timestamp::now).toInstant().atZone(UTC));
+        Map<String, Object> ingestMetadata = Map.of(INGEST_METADATA_TIMESTAMP_FIELD, Objects.requireNonNullElseGet(eventTimestamp, Timestamp::now).toString());
 
         return new IngestDocument(sourceAndMetadata, ingestMetadata);
     }
@@ -132,8 +132,7 @@ public class IngestDuplexMarshaller {
         // then java-ify and perform further conversions
         final Object javafiedInternalObject = Javafier.deep(internalObject);
         if (javafiedInternalObject instanceof Timestamp internalTimestamp) {
-            final ZonedDateTime equivalentZonedDateTime = internalTimestamp.toInstant().atZone(UTC);
-            return equivalentZonedDateTime;
+            return internalTimestamp.toString();
         } else {
             return javafiedInternalObject;
         }

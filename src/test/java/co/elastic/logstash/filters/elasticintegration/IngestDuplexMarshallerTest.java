@@ -206,8 +206,8 @@ class IngestDuplexMarshallerTest {
 
     @Test
     void ingestDocToEventIncludingReservedAtTimestampField() {
-        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("@timestamp",
-                "2023-01-17T23:19:04.765182352Z",
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message",
                 "hello, world"));
@@ -367,11 +367,14 @@ class IngestDuplexMarshallerTest {
 
         final String iso8601value = "2023-05-03T03:17:59.182736455Z";
         final ZonedDateTime zonedDateTime = ZonedDateTime.parse(iso8601value);
-        intermediate.setFieldValue("nested.hierarchy.ts", zonedDateTime);
+        intermediate.setFieldValue("nested.hierarchy.ts-zdt", zonedDateTime);
+        intermediate.setFieldValue("nested.hierarchy.ts-str", iso8601value);
 
         validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
-            final Object retrievedValue = output.getField("[nested][hierarchy][ts]");
-            assertThat(retrievedValue, is(instanceOfMatching(Timestamp.class, where(Timestamp::toInstant, is(equalTo(zonedDateTime.toInstant()))))));
+            assertThat(output, allOf(
+                    includesField("[nested][hierarchy][ts-zdt]").withValue(instanceOfMatching(Timestamp.class, where(Timestamp::toInstant, is(equalTo(zonedDateTime.toInstant()))))),
+                    includesField("[nested][hierarchy][ts-str]").withValue(instanceOfMatching(String.class, equalTo(iso8601value))))
+            );
         });
     }
 
@@ -388,9 +391,9 @@ class IngestDuplexMarshallerTest {
 
         final IngestDocument ingestDocument = idm.toIngestDocument(input);
 
-        final ZonedDateTime ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
+        final String ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
         assertThat(ingestTimestamp, is(notNullValue()));
-        assertThat(ingestTimestamp.toInstant(), is(equalTo(getEventTimestamp(input))));
+        assertThat(Instant.parse(ingestTimestamp), is(equalTo(getEventTimestamp(input))));
 
         assertThat(ingestDocument.getMetadata().getVersion(), is(equalTo(3L)));
     }
@@ -427,8 +430,8 @@ class IngestDuplexMarshallerTest {
 
         final IngestDocument ingestDocument = idm.toIngestDocument(input);
 
-        final ZonedDateTime ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
-        assertThat(ingestTimestamp, is(recentCurrentTimestamp()));
+        final String ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
+        assertThat(ingestTimestamp, where(Instant::parse, is(recentCurrentTimestamp())));
     }
 
     @Test
@@ -441,7 +444,7 @@ class IngestDuplexMarshallerTest {
 
         validateIngestDocument(idm.toIngestDocument(input), (output) -> {
             final Object retrievedValue = output.getFieldValue("nested.hierarchy.ts", Object.class);
-            assertThat(retrievedValue, is(instanceOfMatching(ZonedDateTime.class, where(ZonedDateTime::toInstant, is(equalTo(timestamp.toInstant()))))));
+            assertThat(retrievedValue, is(instanceOfMatching(String.class, where((ts) -> new Timestamp((String)ts), is(equalTo(timestamp))))));
         });
     }
 
@@ -449,8 +452,8 @@ class IngestDuplexMarshallerTest {
         return ((org.logstash.Timestamp) event.getField(org.logstash.Event.TIMESTAMP)).toInstant();
     }
 
-    ZonedDateTime getIngestDocumentTimestamp(final IngestDocument ingestDocument) {
-        return ingestDocument.getFieldValue(IngestDocument.INGEST_KEY + "." + INGEST_METADATA_TIMESTAMP_FIELD, ZonedDateTime.class);
+    String getIngestDocumentTimestamp(final IngestDocument ingestDocument) {
+        return ingestDocument.getFieldValue(IngestDocument.INGEST_KEY + "." + INGEST_METADATA_TIMESTAMP_FIELD, String.class);
     }
 
     void validateIngestDocument(final IngestDocument ingestDocument, Consumer<IngestDocument> ingestDocumentConsumer) {
