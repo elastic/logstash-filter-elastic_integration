@@ -364,7 +364,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def perform_preflight_check!
     java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
-    check_user_privileges! if @password || @cloud_auth || @api_key
+    check_user_privileges!
     check_es_cluster_license!
   end
 
@@ -373,16 +373,22 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   rescue => e
     security_error_message = "no handler found for uri [/_security/user/_has_privileges]"
     if e.message.include?(security_error_message)
-      cred_desc = case
-                  when @password   then "`username` and `password`"
-                  when @cloud_auth then "`cloud_auth`"
-                  when @api_key    then "`api_key`"
-                  end
+      if @password || @cloud_auth || @api_key
+        cred_desc = case
+                    when @password   then "`username` and `password`"
+                    when @cloud_auth then "`cloud_auth`"
+                    when @api_key    then "`api_key`"
+                    end
 
-      recommend_message = "The Elasticsearch cluster does not have security features enabled but request credentials were provided. Either enable security in Elasticsearch (recommended!) or remove the #{cred_desc} request credentials. "
-      raise_config_error! recommend_message.concat(e.message)
+        recommend_message = "The Elasticsearch cluster does not have security features enabled but request credentials were provided. Either enable security in Elasticsearch (recommended!) or remove the #{cred_desc} request credentials. "
+        raise_config_error! recommend_message.concat(e.message)
+      else
+        # Elasticsearch cluster security disabled, auth also isn't provided, running plugin unsecurily
+        @logger.warn("`elastic_integration` plugin is unable to verify user privileges. It has started with unsafe mode which may cause unexpected failure. Enabling security in Elasticsearch and using user authentication is recommended.")
+      end
+    else
+      raise_config_error!(e.message)
     end
-    raise_config_error!(e.message)
   end
 
   def check_es_cluster_license!
