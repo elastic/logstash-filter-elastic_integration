@@ -2,6 +2,9 @@
 
 set -e
 
+echo "Current dir:" $PWD
+echo "List of files: " . $(ls)
+
 cd .. && cd ..
 bundle install
 bundle exec rake prepare_geoip_resources
