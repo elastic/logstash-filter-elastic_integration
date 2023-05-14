@@ -3,7 +3,7 @@
 set -e
 
 # resolve latest elastic stack version from n.x (ex, 8.x). Resolved version would be 8.7.0
-./e2e-framework/resolve_stack_version.sh
+source ./e2e-framework/resolve_stack_version.sh
 
 # download latest released elastic-package
 ./e2e-framework/download_elastic_package.sh $1 # the platform can be either macos or debian
