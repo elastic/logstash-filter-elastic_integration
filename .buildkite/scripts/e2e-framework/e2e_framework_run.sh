@@ -2,6 +2,15 @@
 
 set -e
 
+if [ "$(command -v apt-get)" ]; then \
+  apt-get update -y --fix-missing && \
+  apt-get install -y shared-mime-info; \
+  sudo apt-get install ruby ruby-dev
+  sudo gem install bundler
+else \
+  echo "Try to use environment bundler."
+fi
+
 # resolve latest elastic stack version from n.x (ex, 8.x). Resolved version would be 8.7.0
 source ./e2e-framework/resolve_stack_version.sh
 
