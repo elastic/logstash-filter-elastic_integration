@@ -36,7 +36,7 @@ steps:
   # ------------- E2E tests ---------------------
   - label: ":hammer: E2E tests run on :docker:"
     command:
-      - .buildkite/scripts/e2e_tests.sh
+      - .buildkite/scripts/e2e_tests.sh debian
     env:
       ELASTIC_STACK_VERSION: "8.x"
 

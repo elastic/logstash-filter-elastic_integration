@@ -2,7 +2,7 @@
 outputs:
   default:
     type: logstash
-    hosts: '172.18.0.5:5044'
+    hosts: 'logstash-host:5044'
 
 inputs:
   - type: system/metrics
@@ -20,4 +20,4 @@ inputs:
         data_stream.dataset: system.filesystem
 
 # Log levels are: error, warning, info, debug
-agent.logging.level: debug
+agent.logging.level: info
