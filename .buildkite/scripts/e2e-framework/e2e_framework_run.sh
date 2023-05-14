@@ -3,9 +3,9 @@
 set -e
 
 if [ "$(command -v apt-get)" ]; then \
-  apt-get update -y --fix-missing && \
-  apt-get install -y shared-mime-info; \
-  sudo apt-get install ruby ruby-dev
+  sudo apt-get update -y --fix-missing && \
+  sudo apt-get install -y shared-mime-info; \
+  sudo apt-get install ruby-full
   sudo gem install bundler
 else \
   echo "Try to use environment bundler."
@@ -62,7 +62,7 @@ cd .. && cd .. && cd ..
 docker cp logstash-filter-elastic_integration logstash-container:/usr/share/logstash/plugins/
 cd logstash-filter-elastic_integration/.buildkite/scripts
 
-# Replace if plugin is embedded, otherwise append at tail
+# TODO: Replace if plugin is embedded, otherwise append at tail
 docker exec -it logstash-container sh -c "echo 'gem \"logstash-filter-elastic_integration\", :path=>\"/usr/share/logstash/plugins/logstash-filter-elastic_integration\"' >> /usr/share/logstash/Gemfile"
 
 # Install the plugin
