@@ -5,7 +5,7 @@ set -e
 if [ "$(command -v apt-get)" ]; then \
   sudo apt-get update -y --fix-missing && \
   sudo apt-get install -y shared-mime-info; \
-  sudo apt-get install ruby-full
+  sudo apt-get install -y ruby-full
   sudo gem install bundler
 else \
   echo "Try to use environment bundler."
