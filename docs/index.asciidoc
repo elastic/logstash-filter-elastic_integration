@@ -112,11 +112,8 @@ NOTE: Your request credentials are only as secure as the connection they are bei
 [id="plugins-{type}s-{plugin}-minimum_required_privileges"]
 ==== Minimum required privileges
 
-NOTE: Plugin can not verify user privileges and runs with _unsafe_ mode when connecting to security disabled {es} cluster. This may lead unexpected pipeline runtime failure(s).
-      Enabling security in {es} and using user authentication is recommended.
-
-At the startup phase, plugin confirms that current user has sufficient privileges to _safely_ resolve ingest pipelines and able to execute their processors.
-The required minimum privileges are:
+This plugin communicates with Elasticsearch to resolve events into pipeline definitions and needs to be configured with credentials with appropriate privileges to read from the relevant APIs.
+At the startup phase, this plugin confirms that current user has sufficient privileges, including:
 
 [cols="<1,<1",options="header"]
 |=======================================================================
@@ -128,11 +125,13 @@ The required minimum privileges are:
 
 |=======================================================================
 
+NOTE: When either connecting to an {es} cluster that has security features disabled or when not providing credentials, this plugin can not pre-verify that the anonymous user has the required privileges to use the necessary APIs.
+      In this case the plugin will start in an unsafe mode in which insufficient API permissions will be a runtime error that prevents events from being processed by their ingest pipeline.
+      Enabling security in {es} and using user authentication is recommended.
+      
 [id="plugins-{type}s-{plugin}-supported_ingest_processors"]
 ==== Supported Ingest Processors
 
-When you install integrations like Nginx and Apache HTTP Server, they create `logs-nginx.access-` and `logs-apache.access-` similar ingest pipelines.
-These ingest pipelines consist of one or multiple processors. When running the plugin for integration ingest pipelines, make sure that the plugin supports integration processors.
 This filter can run {es} Ingest Node pipelines that are _wholly_ comprised of the supported subset of processors.
 It has access to the Painless and Mustache scripting engines where applicable:
 
@@ -181,20 +180,6 @@ h| GeoIp
 
 |=======================================================================
 
-[id="plugins-{type}s-{plugin}-unsupported_ingest_processors"]
-==== Unsupported Ingest Processors
-
-Currently, following ingest processors are not supported due to limited {ls} ability to access {es} internal assets/processes.
-
-[cols="<1,<1",options="header"]
-|=======================================================================
-| Processor | Reason
-
-| `set_security_user` | Limited access to {es} internal authentication to retrieve user information
-| `inference` | Limited access to {es} analytics or NLP models
-| `enrich` | Limited ability to execute {es} enrich policies
-
-|=======================================================================
 
 [id="plugins-{type}s-{plugin}-field_mappings"]
 ===== Field Mappings
