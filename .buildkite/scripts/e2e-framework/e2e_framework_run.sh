@@ -2,17 +2,6 @@
 
 set -e
 
-if [ "$(command -v apt-get)" ]; then \
-  sudo apt-get update -y --fix-missing && \
-  sudo apt-get install -y shared-mime-info; \
-  sudo apt-get install -y ruby-full
-  sudo apt install -y default-jdk
-  sudo apt install -y default-jre
-  sudo gem install bundler
-else \
-  echo "Try to use environment bundler."
-fi
-
 # resolve latest elastic stack version from n.x (ex, 8.x). Resolved version would be 8.7.0
 source ./e2e-framework/resolve_stack_version.sh
 
@@ -26,8 +15,6 @@ pull_docker_file_of() {
   echo "Pulling $docker_image"
   docker pull "$docker_image"
 }
-
-pull_docker_file_of "logstash"
 
 ################### Built plugin ##############################
 ./e2e-framework/configs/build-plugin.sh
@@ -47,38 +34,7 @@ docker cp elastic-package-stack-elasticsearch-1:/usr/share/elasticsearch/config/
 ###############################################################
 
 ################### Logstash ##################################
-# create a logstash-container docker container
-docker create --name logstash-container --network elastic-package-stack_default \
-  -h logstash-host \
-  -p 9600:9600 -p 5044:5044/tcp \
-  docker.elastic.co/logstash/logstash:"${ELASTIC_STACK_VERSION}"
-
-# copy ES certificates
-docker cp tmp/certs logstash-container:/usr/share/logstash/config
-
-# run logstash-container, copy locally built plugin to container and install plugin
-docker start logstash-container &
-sleep 10
-docker exec -it logstash-container sh -c "mkdir plugins"
-cd .. && cd .. && cd ..
-docker cp logstash-filter-elastic_integration logstash-container:/usr/share/logstash/plugins/
-cd logstash-filter-elastic_integration/.buildkite/scripts
-
-# TODO: Replace if plugin is embedded, otherwise append at tail
-docker exec -it logstash-container sh -c "echo 'gem \"logstash-filter-elastic_integration\", :path=>\"/usr/share/logstash/plugins/logstash-filter-elastic_integration\"' >> /usr/share/logstash/Gemfile"
-
-# Install the plugin
-docker exec -it logstash-container sh -c "bin/logstash-plugin install --no-verify"
-
-# copy config files to container and rerun logstash-container
-docker cp e2e-framework/configs/logstash.conf logstash-container:/usr/share/logstash/pipeline
-docker cp e2e-framework/configs/logstash.yml logstash-container:/usr/share/logstash/config
-
-# restarting Logstash after installing the plugin
-docker stop logstash-container
-sleep 5
-docker start logstash-container
-sleep 5
+# todo: use docker composer to run Logstash
 ###############################################################
 
 source e2e-framework/configs/stacks.conf

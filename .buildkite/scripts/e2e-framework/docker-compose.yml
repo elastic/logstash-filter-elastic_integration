@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+
+  logstash:
+    command: /usr/share/plugins/plugin/.ci/logstash-run.sh
+    build:
+      args:
+        - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
+    environment:
+      - ELASTIC_STACK_VERSION=$ELASTIC_STACK_VERSION
