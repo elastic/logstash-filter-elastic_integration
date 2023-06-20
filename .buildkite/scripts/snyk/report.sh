@@ -5,6 +5,10 @@ set -e
 TARGET_BRANCHES=("main")
 cd .buildkite/scripts
 
+install_java() {
+  sudo apt install default-jre
+}
+
 # Resolves the branches we are going to track
 resolve_latest_branches() {
   source snyk/resolve_stack_version.sh
@@ -63,6 +67,7 @@ report() {
   cd ..
 }
 
+install_java
 resolve_latest_branches
 clone_logstash_repo
 download_auth_snyk
