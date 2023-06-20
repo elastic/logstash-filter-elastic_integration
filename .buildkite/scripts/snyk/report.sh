@@ -35,6 +35,7 @@ build_logstash() {
 
 # Downloads snyk distribution
 download_auth_snyk() {
+  export VAULT_ADDR=https://vault-ci-prod.elastic.dev
   cd logstash
   echo "Downloading snyk..."
   curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
