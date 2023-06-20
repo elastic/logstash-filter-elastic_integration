@@ -6,7 +6,7 @@ TARGET_BRANCHES=("main")
 cd .buildkite/scripts
 
 install_java() {
-  sudo apt update && sudo apt install -y openjdk-17-jdk && sudo apt install -y openjdk-18-jre
+  sudo apt update && sudo apt install -y openjdk-17-jdk && sudo apt install -y openjdk-17-jre
 }
 
 # Resolves the branches we are going to track
