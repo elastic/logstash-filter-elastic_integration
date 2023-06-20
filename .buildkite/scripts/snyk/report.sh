@@ -35,15 +35,14 @@ build_logstash() {
 
 # Downloads snyk distribution
 download_auth_snyk() {
-  export VAULT_ADDR=https://vault-ci-prod.elastic.dev
   cd logstash
   echo "Downloading snyk..."
   curl https://static.snyk.io/cli/latest/snyk-linux -o snyk
   chmod +x ./snyk
 
-  vault_path=secret/ci/elastic-logstash-filter-elastic-integration/snyk-creds
-  SNYK_TOKEN=$(vault read -field=token "${vault_path}")
-  ./snyk auth "$SNYK_TOKEN"
+  #vault_path=secret/ci/elastic-logstash-filter-elastic-integration/snyk-creds
+  #SNYK_TOKEN=$(vault read -field=token "${vault_path}")
+  #./snyk auth "$SNYK_TOKEN"
   cd ..
 }
 
@@ -60,7 +59,7 @@ report() {
 
   # adding git commit hash to Snyk tag to improve visibility
   GIT_HEAD=$(git rev-parse --short HEAD 2> /dev/null | sed "s/\(.*\)/\1/")
-  ./snyk monitor --all-projects --org=logstash --remote-repo-url="$REMOTE_REPO_URL" --target-reference="$REMOTE_REPO_URL" --detection-depth=6 --exclude=requirements.txt --project-tags=branch="$TARGET_BRANCH",git_head="$GIT_HEAD" && true
+  #./snyk monitor --all-projects --org=logstash --remote-repo-url="$REMOTE_REPO_URL" --target-reference="$REMOTE_REPO_URL" --detection-depth=6 --exclude=requirements.txt --project-tags=branch="$TARGET_BRANCH",git_head="$GIT_HEAD" && true
   cd ..
 }
 
