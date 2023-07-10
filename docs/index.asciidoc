@@ -125,9 +125,13 @@ At the startup phase, this plugin confirms that current user has sufficient priv
 
 |=======================================================================
 
-NOTE: When either connecting to an {es} cluster that has security features disabled or when not providing credentials, this plugin can not pre-verify that the anonymous user has the required privileges to use the necessary APIs.
-      In this case the plugin will start in an unsafe mode in which insufficient API permissions will be a runtime error that prevents events from being processed by their ingest pipeline.
-      Enabling security in {es} and using user authentication is recommended.
+[NOTE] 
+--
+This plugin cannot determine if an anonymous user has the required privileges when it connects to an {es} cluster that has security features disabled or when the user does not provide credentials.
+The plugin starts in an unsafe mode with a runtime error indicating that API permissions are insufficient, and prevents events from being processed by the ingest pipeline.
+
+To avoid these issues, set up user authentication and ensure that security in {es} is enabled (default). 
+--
       
 [id="plugins-{type}s-{plugin}-supported_ingest_processors"]
 ==== Supported Ingest Processors
