@@ -13,7 +13,6 @@ import javax.crypto.EncryptedPrivateKeyInfo;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
-import java.io.DataInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -26,7 +25,6 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -59,7 +57,7 @@ public class KeyStoreUtil {
 
             return keyStore;
         } catch (Exception e) {
-            throw new RuntimeException(String.format("Failed to load keystore from `%s`", keyStorePath), e);
+            throw Exceptions.wrap(e, String.format("Failed to load keystore from `%s`", keyStorePath));
         }
     }
 
@@ -78,13 +76,13 @@ public class KeyStoreUtil {
                         keyStore.setCertificateEntry(trustedCert.getSubjectX500Principal().getName(), trustedCert);
                     }
                 } catch (Exception e) {
-                    throw new RuntimeException(String.format("Failed to extract certificates from `%s`", certAuthorityPath), e);
+                    throw Exceptions.wrap(e, String.format("Failed to extract certificates from `%s`", certAuthorityPath));
                 }
             }
 
             return keyStore;
         } catch (Exception e) {
-            throw new RuntimeException(String.format("Failed to build keystore from certificate authorities `%s`", certAuthoritiesPaths), e);
+            throw Exceptions.wrap(e, String.format("Failed to build keystore from certificate authorities `%s`", certAuthoritiesPaths));
         }
     }
 
@@ -115,7 +113,7 @@ public class KeyStoreUtil {
 
             return keyStore;
         } catch (Exception e) {
-            throw new RuntimeException(String.format("Failed to build keystore from certificate/key pair `%s`/`%s`", cert, key), e);
+            throw Exceptions.wrap(e, String.format("Failed to build keystore from certificate/key pair `%s`/`%s`", cert, key));
         }
     }
 
@@ -140,7 +138,7 @@ public class KeyStoreUtil {
 
             return encryptedPrivateKeyInfo.getKeySpec(cipher);
         } catch (Exception e) {
-            throw new RuntimeException(String.format("failed to import possibly-encrypted PKCS8-encoded key from file: %s", key), e);
+            throw Exceptions.wrap(e, String.format("failed to import possibly-encrypted PKCS8-encoded key from file: %s", key));
         }
     }
 }

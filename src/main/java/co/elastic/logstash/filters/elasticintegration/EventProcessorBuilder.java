@@ -13,6 +13,7 @@ import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorInge
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
 import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCache;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
+import co.elastic.logstash.filters.elasticintegration.util.Exceptions;
 import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Service;
@@ -207,7 +208,7 @@ public class EventProcessorBuilder {
             return new EventProcessor(filterMatchListener, cachingInternalPipelineResolver, eventToPipelineNameResolver, resourcesToClose);
         } catch (Exception e) {
             IOUtils.closeWhileHandlingException(resourcesToClose);
-            throw new RuntimeException("Failed to build EventProcessor", e);
+            throw Exceptions.wrap(e, "Failed to build EventProcessor");
         }
     }
 
