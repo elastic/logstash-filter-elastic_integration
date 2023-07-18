@@ -46,10 +46,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import static co.elastic.logstash.filters.elasticintegration.ingest.SafeSubsetIngestPlugin.safeSubset;
 import static com.google.common.util.concurrent.AbstractScheduledService.Scheduler.newFixedRateSchedule;
 
 @SuppressWarnings("UnusedReturnValue")
@@ -78,7 +80,41 @@ public class EventProcessorBuilder {
     }
 
     public EventProcessorBuilder() {
-        this.addProcessorsFromPlugin(IngestCommonPlugin::new);
+        this.addProcessorsFromPlugin(IngestCommonPlugin::new, Set.of(
+                org.elasticsearch.ingest.common.AppendProcessor.TYPE,
+                org.elasticsearch.ingest.common.BytesProcessor.TYPE,
+                org.elasticsearch.ingest.common.CommunityIdProcessor.TYPE,
+                org.elasticsearch.ingest.common.ConvertProcessor.TYPE,
+                org.elasticsearch.ingest.common.CsvProcessor.TYPE,
+                org.elasticsearch.ingest.common.DateIndexNameProcessor.TYPE,
+                org.elasticsearch.ingest.common.DateProcessor.TYPE,
+                org.elasticsearch.ingest.common.DissectProcessor.TYPE,
+                "dot_expander", // note: upstream constant is package-private
+                org.elasticsearch.ingest.DropProcessor.TYPE, // note: not in ingest-common
+                org.elasticsearch.ingest.common.FailProcessor.TYPE,
+                org.elasticsearch.ingest.common.FingerprintProcessor.TYPE,
+                org.elasticsearch.ingest.common.ForEachProcessor.TYPE,
+                org.elasticsearch.ingest.common.GrokProcessor.TYPE,
+                org.elasticsearch.ingest.common.GsubProcessor.TYPE,
+                org.elasticsearch.ingest.common.HtmlStripProcessor.TYPE,
+                org.elasticsearch.ingest.common.JoinProcessor.TYPE,
+                org.elasticsearch.ingest.common.JsonProcessor.TYPE,
+                org.elasticsearch.ingest.common.KeyValueProcessor.TYPE,
+                org.elasticsearch.ingest.common.LowercaseProcessor.TYPE,
+                org.elasticsearch.ingest.common.NetworkDirectionProcessor.TYPE,
+                // note: no `pipeline` processor, as we provide our own
+                org.elasticsearch.ingest.common.RegisteredDomainProcessor.TYPE,
+                org.elasticsearch.ingest.common.RemoveProcessor.TYPE,
+                org.elasticsearch.ingest.common.RenameProcessor.TYPE,
+                org.elasticsearch.ingest.common.RerouteProcessor.TYPE,
+                org.elasticsearch.ingest.common.ScriptProcessor.TYPE,
+                org.elasticsearch.ingest.common.SetProcessor.TYPE,
+                org.elasticsearch.ingest.common.SortProcessor.TYPE,
+                org.elasticsearch.ingest.common.SplitProcessor.TYPE,
+                org.elasticsearch.ingest.common.TrimProcessor.TYPE,
+                org.elasticsearch.ingest.common.URLDecodeProcessor.TYPE,
+                org.elasticsearch.ingest.common.UppercaseProcessor.TYPE,
+                org.elasticsearch.ingest.common.UriPartsProcessor.TYPE));
         this.addProcessorsFromPlugin(IngestUserAgentPlugin::new);
         this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
@@ -133,6 +169,10 @@ public class EventProcessorBuilder {
         return this.addProcessorsFromPlugin(SingleProcessorIngestPlugin.of(type, processorFactorySupplier));
     }
 
+    public EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPlugin> pluginSupplier, Set<String> requiredProcessors) {
+        return this.addProcessorsFromPlugin(safeSubset(pluginSupplier, requiredProcessors));
+    }
+
     public synchronized EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPlugin> pluginSupplier) {
         this.ingestPlugins.add(pluginSupplier);
         return this;
@@ -167,7 +207,8 @@ public class EventProcessorBuilder {
                     (delay, command) -> threadPool.schedule(command, TimeValue.timeValueMillis(delay), ThreadPool.Names.GENERIC),
                     null,
                     null,
-                    threadPool.generic()::execute
+                    threadPool.generic()::execute,
+                    null
             );
 
             IngestPipelineFactory ingestPipelineFactory = new IngestPipelineFactory(scriptService);

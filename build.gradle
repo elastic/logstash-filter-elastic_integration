@@ -260,11 +260,11 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
                 include jarPackageNamed("elasticsearch-x-content")
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
+                include jarPackageNamed("elasticsearch-grok")
             }
 
             from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
-                include jarPackageNamed("elasticsearch-grok")
                 include jarPackageNamed("elasticsearch-dissect")
             }
 
@@ -306,6 +306,9 @@ tasks.withType(JavaCompile) {
 
 test {
     useJUnitPlatform()
+    testLogging {
+        exceptionFormat "full"
+    }
 }
 
 task generateTestCertificates(type: Exec) {

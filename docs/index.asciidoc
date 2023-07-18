@@ -142,7 +142,6 @@ It has access to the Painless and Mustache scripting engines where applicable:
 | `lowercase` | _none_
 | `networkdirection` | _none_
 | `pipeline` | resolved pipeline _must_ be wholly-composed of supported processors
-| `redact` | _none_
 | `registereddomain` | _none_
 | `remove` | _none_
 | `rename` | _none_
