@@ -22,6 +22,7 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.env.Environment;
+import org.elasticsearch.ingest.IngestService;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.common.IngestCommonPlugin;
 import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
@@ -198,8 +199,9 @@ public class EventProcessorBuilder {
             final ScriptService scriptService = initScriptService(settings, threadPool);
             resourcesToClose.add(scriptService);
 
+            final Environment env = new Environment(settings, null);
             final Processor.Parameters processorParameters = new Processor.Parameters(
-                    new Environment(settings, null),
+                    env,
                     scriptService,
                     null,
                     threadPool.getThreadContext(),
@@ -208,7 +210,7 @@ public class EventProcessorBuilder {
                     null,
                     null,
                     threadPool.generic()::execute,
-                    null
+                    IngestService.createGrokThreadWatchdog(env, threadPool)
             );
 
             IngestPipelineFactory ingestPipelineFactory = new IngestPipelineFactory(scriptService);
