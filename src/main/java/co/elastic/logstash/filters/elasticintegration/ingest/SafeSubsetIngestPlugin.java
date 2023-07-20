@@ -1,8 +1,10 @@
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
+import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.plugins.IngestPlugin;
 
+import javax.annotation.Nonnull;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
@@ -16,13 +18,20 @@ public class SafeSubsetIngestPlugin implements IngestPlugin, Closeable {
     private final IngestPlugin ingestPlugin;
     private final Set<String> requiredProcessors;
 
-    public static Supplier<IngestPlugin> safeSubset(Supplier<IngestPlugin> ingestPluginSupplier, Set<String> requiredProcessors) {
-        return () -> new SafeSubsetIngestPlugin(ingestPluginSupplier.get(), Set.copyOf(requiredProcessors));
+    public static Supplier<IngestPlugin> safeSubset(final @Nonnull Supplier<IngestPlugin> ingestPluginSupplier,
+                                                    final @Nonnull Set<String> requiredProcessors) {
+        return () -> new SafeSubsetIngestPlugin(ingestPluginSupplier, requiredProcessors);
     }
 
-    private SafeSubsetIngestPlugin(final IngestPlugin ingestPlugin, final Set<String> requiredProcessors) {
-        this.ingestPlugin = ingestPlugin;
-        this.requiredProcessors = requiredProcessors;
+    private SafeSubsetIngestPlugin(final @Nonnull Supplier<IngestPlugin> ingestPluginSupplier,
+                                   final @Nonnull Set<String> requiredProcessors) {
+        try {
+            this.ingestPlugin = Objects.requireNonNull(ingestPluginSupplier.get(), "an IngestPlugin must be supplied!");
+            this.requiredProcessors = Set.copyOf(requiredProcessors);
+        } catch (Exception e) {
+            IOUtils.closeWhileHandlingException(this);
+            throw e;
+        }
     }
 
     @Override
