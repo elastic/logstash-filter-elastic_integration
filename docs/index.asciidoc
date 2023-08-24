@@ -109,6 +109,30 @@ You can configure this plugin to present authentication credentials to {es} in o
 NOTE: Your request credentials are only as secure as the connection they are being passed over.
       They provide neither privacy nor secrecy on their own, and can easily be recovered by an adversary when SSL is disabled.
 
+[id="plugins-{type}s-{plugin}-minimum_required_privileges"]
+==== Minimum required privileges
+
+This plugin communicates with Elasticsearch to resolve events into pipeline definitions and needs to be configured with credentials with appropriate privileges to read from the relevant APIs.
+At the startup phase, this plugin confirms that current user has sufficient privileges, including:
+
+[cols="<1,<1",options="header"]
+|=======================================================================
+| Privilege name | Description
+
+| `monitor` | A read-only privilege for cluster operations such as cluster health or state. Plugin requires it when checks {es} license.
+| `read_pipeline` | A read-only get and simulate access to ingest pipeline. It is required when plugin reads {es} ingest pipeline definitions.
+| `manage_index_templates` | All operations on index templates privilege. It is required when plugin resolves default pipeline based on event data stream name.
+
+|=======================================================================
+
+[NOTE] 
+--
+This plugin cannot determine if an anonymous user has the required privileges when it connects to an {es} cluster that has security features disabled or when the user does not provide credentials.
+The plugin starts in an unsafe mode with a runtime error indicating that API permissions are insufficient, and prevents events from being processed by the ingest pipeline.
+
+To avoid these issues, set up user authentication and ensure that security in {es} is enabled (default). 
+--
+      
 [id="plugins-{type}s-{plugin}-supported_ingest_processors"]
 ==== Supported Ingest Processors
 
