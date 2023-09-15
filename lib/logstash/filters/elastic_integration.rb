@@ -339,6 +339,13 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
                                                                .map(&:build)
                                                                .orElseThrow() # todo: ruby/java bridge better exception
+
+    if PreflightCheck.new(@elasticsearch_rest_client).isServerless
+      @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
+                                                                 .map {|builder| builder.serverless = true}
+                                                                 .map(&:build)
+                                                                 .orElseThrow()
+    end
   end
 
   def initialize_event_processor!

@@ -61,6 +61,7 @@ public class ElasticsearchRestClientBuilder {
     private final TrustConfig trustConfig = new TrustConfig();
     private final IdentityConfig identityConfig = new IdentityConfig();
     private final RequestAuthConfig requestAuthConfig = new RequestAuthConfig();
+    private final ServerlessConfig serverlessConfig = new ServerlessConfig();
 
     public static ElasticsearchRestClientBuilder forCloudId(final String cloudId) {
         return ElasticsearchRestClientBuilder.forCloudId(cloudId, CloudIdRestClientBuilderFactory.DEFAULT);
@@ -151,12 +152,17 @@ public class ElasticsearchRestClientBuilder {
         return this;
     }
 
+    public ElasticsearchRestClientBuilder setServerless(final boolean b) {
+        this.serverlessConfig.setServerless(b);
+        return this;
+    }
+
     public RestClient build() {
         return build(restClientBuilderSupplier.get());
     }
 
     RestClient build(final RestClientBuilder restClientBuilder) {
-        return configureHttpClient(restClientBuilder, httpClientBuilder -> {
+        final RestClientBuilder builder = configureHttpClient(restClientBuilder, httpClientBuilder -> {
             this.trustConfig.configureHttpClient(httpClientBuilder);
             this.requestAuthConfig.configureHttpClient(httpClientBuilder);
 
@@ -164,7 +170,12 @@ public class ElasticsearchRestClientBuilder {
                 this.trustConfig.configureSSLContext(sslContextBuilder);
                 this.identityConfig.configureSSLContext(sslContextBuilder);
             }));
-        }).build();
+        });
+
+        if (this.serverlessConfig.isServerless())
+            builder.setDefaultHeaders(serverlessConfig.getHeaders());
+
+        return builder.build();
     }
 
     private static SSLContext configureSSLContext(final SSLContextConfigurator sslContextConfigurator) {
@@ -378,6 +389,24 @@ public class ElasticsearchRestClientBuilder {
             if (Objects.nonNull(httpClientConfigurator)) {
                 httpClientConfigurator.configure(httpClientBuilder);
             }
+        }
+    }
+
+    public static class ServerlessConfig {
+        private boolean isServerless;
+        private final Header defaultEAV = new BasicHeader("Elastic-Api-Version", "2023-10-31");
+        private final Header[] headers = new Header[]{defaultEAV};
+
+        public void setServerless(boolean b) {
+            this.isServerless = b;
+        }
+
+        public boolean isServerless() {
+            return this.isServerless;
+        }
+
+        public Header[] getHeaders() {
+            return this.headers;
         }
     }
 }
