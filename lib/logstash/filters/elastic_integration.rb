@@ -335,6 +335,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def initialize_elasticsearch_rest_client!
     java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
     @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
                                                                .map(&:build)
@@ -342,7 +343,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     if PreflightCheck.new(@elasticsearch_rest_client).isServerless
       @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
-                                                                 .map {|builder| builder.serverless = true}
+                                                                 .map {|builder| builder.setServerless(true) }
                                                                  .map(&:build)
                                                                  .orElseThrow()
     end
