@@ -25,7 +25,7 @@ import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 class PreflightCheckTest {
@@ -195,9 +195,68 @@ class PreflightCheckTest {
         }));
     }
 
+    @Test
+    void checkIsServerlessTrue() throws Exception {
+        wireMock.stubFor(get("/")
+                .willReturn(okJson(getBodyFixture("is_serverless.true.json"))
+                        .withTransformers("response-template")));
+        withWiremockElasticsearch((restClient -> {
+            final Logger logger = Mockito.mock(Logger.class);
+            boolean result = new PreflightCheck(logger, restClient).isServerless();
+
+            assertTrue(result);
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch build_flavor: serverless")));
+        }));
+    }
+
+    @Test
+    void checkIsServerlessFalse() throws Exception {
+        wireMock.stubFor(get("/")
+                .willReturn(okJson(getBodyFixture("is_serverless.false.json"))
+                        .withTransformers("response-template")));
+        withWiremockElasticsearch((restClient -> {
+            final Logger logger = Mockito.mock(Logger.class);
+            boolean result = new PreflightCheck(logger, restClient).isServerless();
+
+            assertFalse(result);
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch build_flavor: default")));
+        }));
+    }
+
+    @Test
+    void checkIsServerless401Response() throws Exception {
+        wireMock.stubFor(get("/")
+                        .willReturn(jsonResponse(getBodyFixture("is_serverless.resp.401.json"), 401)));
+        withWiremockElasticsearch((restClient -> {
+            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
+                new PreflightCheck(restClient).isServerless();
+            });
+            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Preflight check failed", "401 Unauthorized")));
+        }));
+    }
+
+    @Test
+    void checkServerlessRequestContainsHeader() throws Exception {
+        wireMock.stubFor(get("/")
+                        .withHeader("Elastic-Api-Version", containing("2023-10-31"))
+                .willReturn(okJson(getBodyFixture("is_serverless.true.json"))
+                        .withTransformers("response-template")));
+        withWiremockServerlessElasticsearch((restClient -> {
+            boolean result = new PreflightCheck(restClient).isServerless();
+            assertTrue(result);
+        }));
+    }
+
     private void withWiremockElasticsearch(final Consumer<RestClient> handler) throws Exception{
         final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
         try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(Collections.singletonList(wiremockElasticsearch)).build()) {
+            handler.accept(restClient);
+        }
+    }
+
+    private void withWiremockServerlessElasticsearch(final Consumer<RestClient> handler) throws Exception{
+        final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
+        try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(Collections.singletonList(wiremockElasticsearch)).setServerless(true).build()) {
             handler.accept(restClient);
         }
     }
