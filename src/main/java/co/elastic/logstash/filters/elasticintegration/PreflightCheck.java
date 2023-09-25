@@ -111,13 +111,12 @@ public class PreflightCheck {
             final Response res = elasticsearchRestClient.performRequest(req);
 
             final String resBody = new String(res.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
+            logger.debug(() -> String.format("Elasticsearch '/' RAW: %s", resBody));
 
             final JsonNode versionNode = OBJECT_MAPPER.readTree(resBody).get("version");
 
             final String buildFlavor = versionNode.get("build_flavor").asText();
             logger.info(String.format("Elasticsearch build_flavor: %s", buildFlavor));
-
-            logger.debug(() -> String.format("Elasticsearch '/' RAW: %s", resBody));
 
             return buildFlavor.equals("serverless");
         } catch (Exception e) {

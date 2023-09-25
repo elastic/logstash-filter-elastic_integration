@@ -341,7 +341,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
                                                                .map(&:build)
                                                                .orElseThrow() # todo: ruby/java bridge better exception
 
-    if PreflightCheck.new(@elasticsearch_rest_client).isServerless
+    if serverless!
       @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
                                                                  .map {|builder| builder.setServerless(true) }
                                                                  .map(&:build)
@@ -401,6 +401,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def check_es_cluster_license!
     PreflightCheck.new(@elasticsearch_rest_client).checkLicense
+  rescue => e
+    raise_config_error!(e.message)
+  end
+
+  def serverless!
+    PreflightCheck.new(@elasticsearch_rest_client).isServerless
   rescue => e
     raise_config_error!(e.message)
   end
