@@ -10,6 +10,7 @@ import co.elastic.logstash.api.Password;
 import co.elastic.logstash.filters.elasticintegration.util.KeyStoreUtil;
 import org.apache.http.Header;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
@@ -27,7 +28,6 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,7 +61,7 @@ public class ElasticsearchRestClientBuilder {
     private final TrustConfig trustConfig = new TrustConfig();
     private final IdentityConfig identityConfig = new IdentityConfig();
     private final RequestAuthConfig requestAuthConfig = new RequestAuthConfig();
-    private final ServerlessConfig serverlessConfig = new ServerlessConfig();
+    private final ElasticApiConfig elasticApiConfig = new ElasticApiConfig();
 
     public static ElasticsearchRestClientBuilder forCloudId(final String cloudId) {
         return ElasticsearchRestClientBuilder.forCloudId(cloudId, CloudIdRestClientBuilderFactory.DEFAULT);
@@ -126,9 +126,6 @@ public class ElasticsearchRestClientBuilder {
         return () -> new IllegalArgumentException(String.format("missing required `%s`", param));
     }
 
-
-
-
     private static Optional<ElasticsearchRestClientBuilder> builderInit(final PluginConfiguration config) {
         return config.cloudId().map(ElasticsearchRestClientBuilder::forCloudId)
                 .or(() -> config.hosts().map(ElasticsearchRestClientBuilder::forURLs));
@@ -152,8 +149,8 @@ public class ElasticsearchRestClientBuilder {
         return this;
     }
 
-    public ElasticsearchRestClientBuilder setServerless(final boolean b) {
-        this.serverlessConfig.setServerless(b);
+    public ElasticsearchRestClientBuilder configureElasticApi(final Consumer<ElasticApiConfig> elasticApiConfigConsumer) {
+        elasticApiConfigConsumer.accept(this.elasticApiConfig);
         return this;
     }
 
@@ -162,7 +159,7 @@ public class ElasticsearchRestClientBuilder {
     }
 
     RestClient build(final RestClientBuilder restClientBuilder) {
-        final RestClientBuilder builder = configureHttpClient(restClientBuilder, httpClientBuilder -> {
+        return configureHttpClient(restClientBuilder, httpClientBuilder -> {
             this.trustConfig.configureHttpClient(httpClientBuilder);
             this.requestAuthConfig.configureHttpClient(httpClientBuilder);
 
@@ -170,12 +167,9 @@ public class ElasticsearchRestClientBuilder {
                 this.trustConfig.configureSSLContext(sslContextBuilder);
                 this.identityConfig.configureSSLContext(sslContextBuilder);
             }));
-        });
 
-        if (this.serverlessConfig.isServerless())
-            builder.setDefaultHeaders(serverlessConfig.getHeaders());
-
-        return builder.build();
+            this.elasticApiConfig.configureHttpClient(httpClientBuilder);
+        }).build();
     }
 
     private static SSLContext configureSSLContext(final SSLContextConfigurator sslContextConfigurator) {
@@ -214,6 +208,18 @@ public class ElasticsearchRestClientBuilder {
     @FunctionalInterface
     interface HttpClientConfigurator {
         void configure(HttpAsyncClientBuilder httpAsyncClientBuilder);
+
+        static HttpClientConfigurator forInterceptRequestSetHeader(final Header header) {
+            return httpAsyncClientBuilder -> {
+                httpAsyncClientBuilder.addInterceptorFirst((HttpRequestInterceptor) (request, context) -> {
+                    final String method = request.getRequestLine().getMethod();
+                    if (method.equalsIgnoreCase("CONNECT")) {
+                        return;
+                    }
+                    request.setHeader(header);
+                });
+            };
+        }
     }
 
     private enum SSLVerificationMode {
@@ -357,7 +363,7 @@ public class ElasticsearchRestClientBuilder {
             Objects.requireNonNull(apiKey, "apiKey");
 
             final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", apiKey.getPassword()));
-            return this.setHttpClientConfigurator((httpAsyncClientBuilder -> httpAsyncClientBuilder.setDefaultHeaders(Collections.singletonList(authorizationHeader))));
+            return this.setHttpClientConfigurator(HttpClientConfigurator.forInterceptRequestSetHeader(authorizationHeader));
         }
 
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
@@ -392,21 +398,20 @@ public class ElasticsearchRestClientBuilder {
         }
     }
 
-    public static class ServerlessConfig {
-        private boolean isServerless;
-        private final Header defaultEAV = new BasicHeader("Elastic-Api-Version", "2023-10-31");
-        private final Header[] headers = new Header[]{defaultEAV};
-
-        public void setServerless(boolean b) {
-            this.isServerless = b;
+    public static class ElasticApiConfig {
+        private String apiVersion;
+        public synchronized ElasticApiConfig setApiVersion(final String apiVersion) {
+            if (Objects.nonNull(this.apiVersion)) {
+                throw new IllegalStateException("Only one Elastic Api Version may be provided");
+            }
+            this.apiVersion = apiVersion;
+            return this;
         }
-
-        public boolean isServerless() {
-            return this.isServerless;
-        }
-
-        public Header[] getHeaders() {
-            return this.headers;
+        public void configureHttpClient(final HttpAsyncClientBuilder httpClientBuilder) {
+            if (Objects.nonNull(apiVersion)) {
+                final BasicHeader elasticApiVersionHeader = new BasicHeader("Elastic-Api-Version", apiVersion);
+                HttpClientConfigurator.forInterceptRequestSetHeader(elasticApiVersionHeader).configure(httpClientBuilder);
+            }
         }
     }
 }

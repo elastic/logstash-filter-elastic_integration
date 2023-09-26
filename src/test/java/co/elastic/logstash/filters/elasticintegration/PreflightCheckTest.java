@@ -256,7 +256,10 @@ class PreflightCheckTest {
 
     private void withWiremockServerlessElasticsearch(final Consumer<RestClient> handler) throws Exception{
         final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
-        try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(Collections.singletonList(wiremockElasticsearch)).setServerless(true).build()) {
+        try (RestClient restClient = ElasticsearchRestClientBuilder
+                .forURLs(Collections.singletonList(wiremockElasticsearch))
+                .configureElasticApi(c -> c.setApiVersion("2023-10-31"))
+                .build()) {
             handler.accept(restClient);
         }
     }

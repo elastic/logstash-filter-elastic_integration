@@ -337,13 +337,14 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
     java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
 
-    @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
+    config = extract_immutable_config
+    @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
                                                                .map(&:build)
                                                                .orElseThrow() # todo: ruby/java bridge better exception
 
-    if serverless!
-      @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(extract_immutable_config)
-                                                                 .map {|builder| builder.setServerless(true) }
+    if serverless?
+      @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
+                                                                 .map {|builder| builder.configureElasticApi(elasticApi -> elasticApi.setApiVersion("2023-10-31")) }
                                                                  .map(&:build)
                                                                  .orElseThrow()
     end
@@ -405,7 +406,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     raise_config_error!(e.message)
   end
 
-  def serverless!
+  def serverless?
     PreflightCheck.new(@elasticsearch_rest_client).isServerless
   rescue => e
     raise_config_error!(e.message)
