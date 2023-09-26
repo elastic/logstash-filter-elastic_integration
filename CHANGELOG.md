@@ -1,5 +1,6 @@
 ## 0.0.3 (UNRELEASED)
   - Documentation added for required privileges and unsupported processors [#72](https://github.com/elastic/logstash-filter-elastic_integration/pull/72)
+  - Added request header `Elastic-Api-Version` for serverless [#84](https://github.com/elastic/logstash-filter-elastic_integration/pull/84)
 
 ## 0.0.2
   - Fixes several related issues with how fields are mapped from the Logstash Event to the IngestDocument and back again [#51](https://github.com/elastic/logstash-filter-elastic_integration/pull/51)
