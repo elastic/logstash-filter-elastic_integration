@@ -344,7 +344,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     if serverless?
       @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
-                                                                 .map {|builder| builder.configureElasticApi(elasticApi -> elasticApi.setApiVersion("2023-10-31")) }
+                                                                 .map do |builder|
+                                                                    builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion("2023-10-31") }
+                                                                  end
                                                                  .map(&:build)
                                                                  .orElseThrow()
     end

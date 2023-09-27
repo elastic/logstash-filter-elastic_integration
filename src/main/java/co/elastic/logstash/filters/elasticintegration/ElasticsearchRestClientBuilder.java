@@ -8,9 +8,7 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Password;
 import co.elastic.logstash.filters.elasticintegration.util.KeyStoreUtil;
-import org.apache.http.Header;
-import org.apache.http.HttpHost;
-import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.*;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
@@ -19,11 +17,13 @@ import org.apache.http.conn.ssl.TrustAllStrategy;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 
 import javax.net.ssl.SSLContext;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.security.KeyStore;
@@ -209,16 +209,44 @@ public class ElasticsearchRestClientBuilder {
     interface HttpClientConfigurator {
         void configure(HttpAsyncClientBuilder httpAsyncClientBuilder);
 
-        static HttpClientConfigurator forInterceptRequestSetHeader(final Header header) {
+        static HttpClientConfigurator forInterceptRequestSetHeader(final HttpRequestInterceptor interceptor) {
             return httpAsyncClientBuilder -> {
-                httpAsyncClientBuilder.addInterceptorFirst((HttpRequestInterceptor) (request, context) -> {
-                    final String method = request.getRequestLine().getMethod();
-                    if (method.equalsIgnoreCase("CONNECT")) {
-                        return;
-                    }
-                    request.setHeader(header);
-                });
+                httpAsyncClientBuilder.addInterceptorFirst(interceptor);
             };
+        }
+    }
+
+    /**
+     * These HeaderInterceptor classes are replacement of lambda object instantiation
+     * HttpProcessor has ChainBuilder.ensureUnique() to ensure the classes of interceptor are unique
+     * Lambda instances are unfortunately treated as the same class, hence, the first header is removed
+     */
+    abstract static class HeaderInterceptor implements HttpRequestInterceptor {
+        private final Header header;
+
+        HeaderInterceptor(Header h) {
+            this.header = h;
+        }
+
+        @Override
+        public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+            final String method = request.getRequestLine().getMethod();
+            if (method.equalsIgnoreCase("CONNECT")) {
+                return;
+            }
+            request.setHeader(header);
+        }
+    }
+
+    static class ApiKeyHttpRequestInterceptor extends HeaderInterceptor {
+        ApiKeyHttpRequestInterceptor(Header h) {
+            super(h);
+        }
+    }
+
+    static class EAVHttpRequestInterceptor extends HeaderInterceptor {
+        EAVHttpRequestInterceptor(Header h) {
+            super(h);
         }
     }
 
@@ -363,7 +391,8 @@ public class ElasticsearchRestClientBuilder {
             Objects.requireNonNull(apiKey, "apiKey");
 
             final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", apiKey.getPassword()));
-            return this.setHttpClientConfigurator(HttpClientConfigurator.forInterceptRequestSetHeader(authorizationHeader));
+            final HttpRequestInterceptor interceptor = new ApiKeyHttpRequestInterceptor(authorizationHeader);
+            return this.setHttpClientConfigurator(HttpClientConfigurator.forInterceptRequestSetHeader(interceptor));
         }
 
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
@@ -410,7 +439,8 @@ public class ElasticsearchRestClientBuilder {
         public void configureHttpClient(final HttpAsyncClientBuilder httpClientBuilder) {
             if (Objects.nonNull(apiVersion)) {
                 final BasicHeader elasticApiVersionHeader = new BasicHeader("Elastic-Api-Version", apiVersion);
-                HttpClientConfigurator.forInterceptRequestSetHeader(elasticApiVersionHeader).configure(httpClientBuilder);
+                final HttpRequestInterceptor interceptor = new EAVHttpRequestInterceptor(elasticApiVersionHeader);
+                HttpClientConfigurator.forInterceptRequestSetHeader(interceptor).configure(httpClientBuilder);
             }
         }
     }
