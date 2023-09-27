@@ -235,8 +235,29 @@ task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugi
     relocate('com.fasterxml.jackson', "${shadeNamespace}.com.fasterxml.jackson")
     relocate('com.maxmind',           "${shadeNamespace}.com.maxmind")
 
-    exclude 'module-info.class'
-    exclude 'META-INF/versions/9/module-info.class'
+    exclude '**/module-info.class'
+}
+
+task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades embedded dependencies of the Elasticsearch Grok implementation"
+
+    dependsOn buildElasticsearchLocalDistro
+
+    from(buildElasticsearchLocalDistro.lib.orElse(objects.fileCollection())) {
+        include jarPackageNamed("elasticsearch-grok")
+        include jarPackageNamed("joni")
+        include jarPackageNamed("jcodings")
+    }
+
+    archiveFileName = "elasticsearch-grok-uber.jar"
+    destinationDirectory = file("${buildDir}/shaded")
+
+    mergeServiceFiles()
+    String shadeNamespace = "org.elasticsearch.grok.shaded"
+    relocate('org.joni', "${shadeNamespace}.org.joni")
+    relocate('org.jcodings', "${shadeNamespace}.org.jcodings")
+
+    exclude '**/module-info.class'
 }
 
 task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
@@ -244,6 +265,7 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
 
     dependsOn buildElasticsearchLocalDistro
     dependsOn shadeElasticsearchIngestGeoIpModule
+    dependsOn shadeElasticsearchGrokImplementation
 
     ext.jars = "${buildDir}/elasticsearch-minimal-jars"
 
@@ -261,10 +283,10 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
             }
+            from(shadeElasticsearchGrokImplementation)
 
             from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
-                include jarPackageNamed("elasticsearch-grok")
                 include jarPackageNamed("elasticsearch-dissect")
             }
 
@@ -306,6 +328,9 @@ tasks.withType(JavaCompile) {
 
 test {
     useJUnitPlatform()
+    testLogging {
+        exceptionFormat "full"
+    }
 }
 
 task generateTestCertificates(type: Exec) {
