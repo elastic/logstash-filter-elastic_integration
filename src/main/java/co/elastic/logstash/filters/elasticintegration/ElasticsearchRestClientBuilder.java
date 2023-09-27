@@ -392,7 +392,7 @@ public class ElasticsearchRestClientBuilder {
 
             final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", apiKey.getPassword()));
             final HttpRequestInterceptor interceptor = new ApiKeyHttpRequestInterceptor(authorizationHeader);
-            return this.setHttpClientConfigurator(HttpClientConfigurator.forInterceptRequestSetHeader(interceptor));
+            return this.setHttpClientConfigurator(HttpClientConfigurator. forAddInterceptorFirst(interceptor));
         }
 
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
