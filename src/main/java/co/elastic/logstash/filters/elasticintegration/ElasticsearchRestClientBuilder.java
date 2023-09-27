@@ -440,7 +440,7 @@ public class ElasticsearchRestClientBuilder {
             if (Objects.nonNull(apiVersion)) {
                 final BasicHeader elasticApiVersionHeader = new BasicHeader("Elastic-Api-Version", apiVersion);
                 final HttpRequestInterceptor interceptor = new EAVHttpRequestInterceptor(elasticApiVersionHeader);
-                HttpClientConfigurator.forInterceptRequestSetHeader(interceptor).configure(httpClientBuilder);
+                HttpClientConfigurator. forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
             }
         }
     }
