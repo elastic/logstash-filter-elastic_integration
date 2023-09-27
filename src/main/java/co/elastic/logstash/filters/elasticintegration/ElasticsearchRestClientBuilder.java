@@ -209,7 +209,7 @@ public class ElasticsearchRestClientBuilder {
     interface HttpClientConfigurator {
         void configure(HttpAsyncClientBuilder httpAsyncClientBuilder);
 
-        static HttpClientConfigurator forInterceptRequestSetHeader(final HttpRequestInterceptor interceptor) {
+        static HttpClientConfigurator forAddInterceptorFirst(final HttpRequestInterceptor interceptor) {
             return httpAsyncClientBuilder -> {
                 httpAsyncClientBuilder.addInterceptorFirst(interceptor);
             };
