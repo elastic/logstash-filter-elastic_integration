@@ -18,6 +18,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   ELASTICSEARCH_DEFAULT_PATH = '/'.freeze
   HTTP_PROTOCOL = "http".freeze
   HTTPS_PROTOCOL = "https".freeze
+  ELASTIC_API_VERSION = "2023-10-31".freeze
 
   # Sets the host(s) of the remote instance. If given an array it will load balance
   # requests across the hosts specified in the `hosts` parameter. Hosts can be any of
@@ -345,7 +346,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     if serverless?
       @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
                                                                  .map do |builder|
-                                                                    builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion("2023-10-31") }
+                                                                    builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
                                                                   end
                                                                  .map(&:build)
                                                                  .orElseThrow()
