@@ -6,6 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
+import co.elastic.logstash.api.Password;
 import com.github.tomakehurst.wiremock.extension.responsetemplating.ResponseTemplateTransformer;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
@@ -235,10 +236,13 @@ class PreflightCheckTest {
         }));
     }
 
+    public static final String ELASTIC_API_VERSION = "2023-10-31";
+    public static final String API_KEY = "iamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiama==";
     @Test
-    void checkServerlessRequestContainsHeader() throws Exception {
+    void checkServerlessRequestContainsHeaders() throws Exception {
         wireMock.stubFor(get("/")
-                        .withHeader("Elastic-Api-Version", containing("2023-10-31"))
+                        .withHeader("Elastic-Api-Version", containing(ELASTIC_API_VERSION))
+                        .withHeader("Authorization", containing(API_KEY))
                 .willReturn(okJson(getBodyFixture("is_serverless.true.json"))
                         .withTransformers("response-template")));
         withWiremockServerlessElasticsearch((restClient -> {
@@ -258,7 +262,8 @@ class PreflightCheckTest {
         final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
         try (RestClient restClient = ElasticsearchRestClientBuilder
                 .forURLs(Collections.singletonList(wiremockElasticsearch))
-                .configureElasticApi(c -> c.setApiVersion("2023-10-31"))
+                .configureElasticApi(c -> c.setApiVersion(ELASTIC_API_VERSION))
+                .configureRequestAuth(c -> c.setApiKey(new Password(API_KEY)))
                 .build()) {
             handler.accept(restClient);
         }
