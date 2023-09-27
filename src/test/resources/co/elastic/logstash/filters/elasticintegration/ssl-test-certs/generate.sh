@@ -45,9 +45,9 @@ openssl verify -CAfile root.crt client_no_matching_subject.crt
 openssl verify -CAfile client_self_signed.crt client_self_signed.crt
 
 # create encrypted pkcs8 versions of all keys
-openssl pkcs8 -topk8 -inform PEM -outform PEM -passout "pass:12345678" -in client_from_root.key -out client_from_root.key.pkcs8
-openssl pkcs8 -topk8 -inform PEM -outform PEM -passout "pass:12345678" -in server_from_root.key -out server_from_root.key.pkcs8
-openssl pkcs8 -topk8 -inform PEM -outform PEM -passout "pass:12345678" -in client_no_matching_subject.key -out client_no_matching_subject.key.pkcs8
+openssl pkcs8 -topk8 -v1 PBE-SHA1-3DES -inform PEM -outform PEM -passout "pass:12345678" -in client_from_root.key -out client_from_root.key.pkcs8
+openssl pkcs8 -topk8 -v1 PBE-SHA1-3DES -inform PEM -outform PEM -passout "pass:12345678" -in server_from_root.key -out server_from_root.key.pkcs8
+openssl pkcs8 -topk8 -v1 PBE-SHA1-3DES -inform PEM -outform PEM -passout "pass:12345678" -in client_no_matching_subject.key -out client_no_matching_subject.key.pkcs8
 
 # create pkcs12 keystores (pass:12345678)
 openssl pkcs12 -export -in server_from_root.crt -inkey server_from_root.key -out server_from_root.p12 -name "server_from_root" -passout 'pass:12345678'
