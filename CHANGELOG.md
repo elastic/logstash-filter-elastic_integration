@@ -1,3 +1,8 @@
+## 0.0.3 (UNRELEASED)
+  - Re-syncs with Elasticsearch 8.10 [#78](https://github.com/elastic/logstash-filter-elastic_integration/pull/78)
+    - BREAKING: The `redact` processor was removed from upstream IngestCommon, and therefore no longer available here.
+  - Documentation added for required privileges and unsupported processors [#72](https://github.com/elastic/logstash-filter-elastic_integration/pull/72)
+
 ## 0.0.2
   - Fixes several related issues with how fields are mapped from the Logstash Event to the IngestDocument and back again [#51](https://github.com/elastic/logstash-filter-elastic_integration/pull/51)
     - `IngestDocument` metadata fields are now separately routed to `[@metadata][_ingest_document]` on the resulting `Event`, fixing an issue where the presence of Elasticsearch-reserved fields such as the top-level `_version` would cause a downstream Elasticsearch output to be unable to index the event [#47][]
