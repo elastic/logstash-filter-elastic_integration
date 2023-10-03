@@ -1115,6 +1115,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       it "ensures that user doesn't have privileges to read pipelines and cannot execute pipeline" do
         # plugin register fails
         expected_message = "The cluster privilege `monitor` is REQUIRED in order to validate Elasticsearch license"
+        expect(subject).to receive(:serverless?).and_return(false)
         expect{ subject.register }.to raise_error(LogStash::ConfigurationError).with_message(expected_message)
 
         # send event and check

@@ -63,6 +63,7 @@ describe LogStash::Filters::ElasticIntegration do
   describe "plugin register" do
 
     before(:each) { allow(plugin).to receive(:perform_preflight_check!).and_return(true) }
+    before(:each) { allow(plugin).to receive(:serverless?).and_return(false) }
 
     let(:registered_plugin) { plugin.tap(&:register) }
     after(:each) { plugin.close }

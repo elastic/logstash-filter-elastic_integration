@@ -8,8 +8,7 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Password;
 import co.elastic.logstash.filters.elasticintegration.util.KeyStoreUtil;
-import org.apache.http.Header;
-import org.apache.http.HttpHost;
+import org.apache.http.*;
 import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
@@ -18,16 +17,17 @@ import org.apache.http.conn.ssl.TrustAllStrategy;
 import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 
 import javax.net.ssl.SSLContext;
+import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.security.KeyStore;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -61,6 +61,7 @@ public class ElasticsearchRestClientBuilder {
     private final TrustConfig trustConfig = new TrustConfig();
     private final IdentityConfig identityConfig = new IdentityConfig();
     private final RequestAuthConfig requestAuthConfig = new RequestAuthConfig();
+    private final ElasticApiConfig elasticApiConfig = new ElasticApiConfig();
 
     public static ElasticsearchRestClientBuilder forCloudId(final String cloudId) {
         return ElasticsearchRestClientBuilder.forCloudId(cloudId, CloudIdRestClientBuilderFactory.DEFAULT);
@@ -125,9 +126,6 @@ public class ElasticsearchRestClientBuilder {
         return () -> new IllegalArgumentException(String.format("missing required `%s`", param));
     }
 
-
-
-
     private static Optional<ElasticsearchRestClientBuilder> builderInit(final PluginConfiguration config) {
         return config.cloudId().map(ElasticsearchRestClientBuilder::forCloudId)
                 .or(() -> config.hosts().map(ElasticsearchRestClientBuilder::forURLs));
@@ -151,6 +149,11 @@ public class ElasticsearchRestClientBuilder {
         return this;
     }
 
+    public ElasticsearchRestClientBuilder configureElasticApi(final Consumer<ElasticApiConfig> elasticApiConfigConsumer) {
+        elasticApiConfigConsumer.accept(this.elasticApiConfig);
+        return this;
+    }
+
     public RestClient build() {
         return build(restClientBuilderSupplier.get());
     }
@@ -164,6 +167,8 @@ public class ElasticsearchRestClientBuilder {
                 this.trustConfig.configureSSLContext(sslContextBuilder);
                 this.identityConfig.configureSSLContext(sslContextBuilder);
             }));
+
+            this.elasticApiConfig.configureHttpClient(httpClientBuilder);
         }).build();
     }
 
@@ -203,6 +208,46 @@ public class ElasticsearchRestClientBuilder {
     @FunctionalInterface
     interface HttpClientConfigurator {
         void configure(HttpAsyncClientBuilder httpAsyncClientBuilder);
+
+        static HttpClientConfigurator forAddInterceptorFirst(final HttpRequestInterceptor interceptor) {
+            return httpAsyncClientBuilder -> {
+                httpAsyncClientBuilder.addInterceptorFirst(interceptor);
+            };
+        }
+    }
+
+    /**
+     * These HeaderInterceptor classes are replacement of lambda object instantiation
+     * HttpProcessor has ChainBuilder.ensureUnique() to ensure the classes of interceptor are unique
+     * Lambda instances are unfortunately treated as the same class, hence, the first header is removed
+     */
+    abstract static class HeaderInterceptor implements HttpRequestInterceptor {
+        private final Header header;
+
+        HeaderInterceptor(Header h) {
+            this.header = h;
+        }
+
+        @Override
+        public void process(HttpRequest request, HttpContext context) throws HttpException, IOException {
+            final String method = request.getRequestLine().getMethod();
+            if (method.equalsIgnoreCase("CONNECT")) {
+                return;
+            }
+            request.setHeader(header);
+        }
+    }
+
+    static class ApiKeyHttpRequestInterceptor extends HeaderInterceptor {
+        ApiKeyHttpRequestInterceptor(Header h) {
+            super(h);
+        }
+    }
+
+    static class EAVHttpRequestInterceptor extends HeaderInterceptor {
+        EAVHttpRequestInterceptor(Header h) {
+            super(h);
+        }
     }
 
     private enum SSLVerificationMode {
@@ -346,7 +391,8 @@ public class ElasticsearchRestClientBuilder {
             Objects.requireNonNull(apiKey, "apiKey");
 
             final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", apiKey.getPassword()));
-            return this.setHttpClientConfigurator((httpAsyncClientBuilder -> httpAsyncClientBuilder.setDefaultHeaders(Collections.singletonList(authorizationHeader))));
+            final HttpRequestInterceptor interceptor = new ApiKeyHttpRequestInterceptor(authorizationHeader);
+            return this.setHttpClientConfigurator(HttpClientConfigurator. forAddInterceptorFirst(interceptor));
         }
 
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
@@ -377,6 +423,24 @@ public class ElasticsearchRestClientBuilder {
         public void configureHttpClient(final HttpAsyncClientBuilder httpClientBuilder) {
             if (Objects.nonNull(httpClientConfigurator)) {
                 httpClientConfigurator.configure(httpClientBuilder);
+            }
+        }
+    }
+
+    public static class ElasticApiConfig {
+        private String apiVersion;
+        public synchronized ElasticApiConfig setApiVersion(final String apiVersion) {
+            if (Objects.nonNull(this.apiVersion)) {
+                throw new IllegalStateException("Only one Elastic Api Version may be provided");
+            }
+            this.apiVersion = apiVersion;
+            return this;
+        }
+        public void configureHttpClient(final HttpAsyncClientBuilder httpClientBuilder) {
+            if (Objects.nonNull(apiVersion)) {
+                final BasicHeader elasticApiVersionHeader = new BasicHeader("Elastic-Api-Version", apiVersion);
+                final HttpRequestInterceptor interceptor = new EAVHttpRequestInterceptor(elasticApiVersionHeader);
+                HttpClientConfigurator. forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
             }
         }
     }

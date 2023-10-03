@@ -1,0 +1,29 @@
+{
+  "error": {
+    "root_cause": [
+      {
+        "type": "security_exception",
+        "reason": "unable to authenticate with provided credentials and anonymous access is not allowed for this request",
+        "additional_unsuccessful_credentials": "API key: Illegal base64 character 7b",
+        "header": {
+          "WWW-Authenticate": [
+            "Basic realm=\"security\" charset=\"UTF-8\"",
+            "Bearer realm=\"security\"",
+            "ApiKey"
+          ]
+        }
+      }
+    ],
+    "type": "security_exception",
+    "reason": "unable to authenticate with provided credentials and anonymous access is not allowed for this request",
+    "additional_unsuccessful_credentials": "API key: Illegal base64 character 7b",
+    "header": {
+      "WWW-Authenticate": [
+        "Basic realm=\"security\" charset=\"UTF-8\"",
+        "Bearer realm=\"security\"",
+        "ApiKey"
+      ]
+    }
+  },
+  "status": 401
+}
