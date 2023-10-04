@@ -7,6 +7,7 @@
 package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Password;
+import co.elastic.logstash.filters.elasticintegration.util.Exceptions;
 import co.elastic.logstash.filters.elasticintegration.util.KeyStoreUtil;
 import org.apache.http.*;
 import org.apache.http.auth.AuthScope;
@@ -180,7 +181,7 @@ public class ElasticsearchRestClientBuilder {
         try {
             return sslContextBuilder.build();
         } catch (Exception e) {
-            throw new RuntimeException("Failed to build SSL Context", e);
+            throw Exceptions.wrap(e, "Failed to build SSL Context");
         }
     }
 
@@ -322,7 +323,7 @@ public class ElasticsearchRestClientBuilder {
                     }
                 }
             } catch (Exception e) {
-                throw new RuntimeException("Failed to configure SSL Context", e);
+                throw Exceptions.wrap(e, "Failed to configure SSL Context");
             }
         }
 
@@ -366,7 +367,7 @@ public class ElasticsearchRestClientBuilder {
             try {
                 sslContextBuilder.loadKeyMaterial(keyStore, keyPassword.getPassword().toCharArray());
             } catch (Exception e) {
-                throw new RuntimeException("Failed to configure SSL Context", e);
+                throw Exceptions.wrap(e, "Failed to configure SSL Context");
             }
         }
     }
