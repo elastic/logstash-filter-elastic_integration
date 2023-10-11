@@ -106,8 +106,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     require_relative "elastic_integration/jar_dependencies"
     require_relative "elastic_integration/event_api_bridge"
+    require_relative "elastic_integration/geoip_database_provider_bridge"
 
     extend EventApiBridge
+    extend GeoipDatabaseProviderBridge
 
     super
 
@@ -363,14 +365,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
                                             .build(@plugin_context)
   rescue => exception
     raise_config_error!("configuration did not produce an EventProcessor: #{exception}")
-  end
-
-  def initialize_geoip_database_provider!
-    java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
-
-    @geoip_database_provider ||= GeoIpDatabaseProvider::Builder.new.tap do |builder|
-      builder.setDatabases(java.io.File.new(@geoip_database_directory)) if @geoip_database_directory
-    end.build
   end
 
   def perform_preflight_check!

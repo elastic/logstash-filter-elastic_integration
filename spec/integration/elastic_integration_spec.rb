@@ -11,10 +11,14 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       ssl: {
         ca_file: 'spec/fixtures/test_certs/root.crt',
         verify: :none
-      }
+      },
+      socket_timeout: 60,
     }
   }
   let(:es_http_client) { Manticore::Client.new(es_http_client_options) }
+
+  let(:mock_geoip_database_manager) { double("LogStash::GeoipDatabaseManagement::Manager", :enabled? => false) }
+  let(:mock_logger) { double("Logger").as_null_object }
 
   let(:integ_user_name) { "admin" }
   let(:integ_user_password) { "elastic" }
@@ -78,7 +82,14 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
     }'
   }
 
-  subject(:elastic_integration_plugin) { LogStash::Filters::ElasticIntegration.new(settings) }
+  subject(:elastic_integration_plugin) do
+    allow(LogStash::Filters::ElasticIntegration).to receive(:logger).and_return(mock_logger)
+
+    LogStash::Filters::ElasticIntegration.new(settings).tap do |plugin|
+      # needs to be done _after_ instantiating the plugin so that extensions that require java-native code are available
+      allow_any_instance_of(LogStash::Filters::ElasticIntegration::GeoipDatabaseProviderBridge).to receive(:load_geoip_database_manager!).and_return(mock_geoip_database_manager)
+    end
+  end
 
   before(:each) do
     # create an ingest pipeline
@@ -929,11 +940,49 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
     end
 
     describe 'with geoip processor' do
-      let(:settings) {
-        super().merge(
-          "geoip_database_directory" => "src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases"
-        )
-      }
+      shared_examples "geoip enrichment" do
+        it 'resolves IP geo-location information' do
+          events = [LogStash::Event.new(
+            "message" => "IP address in Sweden, Europe.",
+            "ip" => "89.160.20.128",
+            "data_stream" => data_stream)]
+
+          subject.multi_filter(events).to_a.tap do |filter_result|
+            expect(filter_result.size).to eql 1
+            filter_result.first.tap do |event|
+              aggregate_failures "geo enrichment (#{event.to_hash_with_metadata.inspect})" do
+                expect(event.get("[geoip][continent_name]")).to eql "Europe"
+                expect(event.get("[geoip][country_name]")).to eql "Sweden"
+                expect(event.get("[geoip][country_iso_code]")).to eql "SE"
+                expect(event.get("[geoip][city_name]")).to eql "Tumba"
+                expect(event.get("[geoip][region_iso_code]")).to eql "SE-AB"
+                expect(event.get("[geoip][region_name]")).to eql "Stockholm"
+                expect(event.get("[geoip][location][lat]")).to be_within(0.01).of(59.2)    # ~1km
+                expect(event.get("[geoip][location][lon]")).to be_within(0.02).of(17.8167) # ~1km @ lat 60
+              end
+            end
+          end
+        end
+      end
+
+      shared_examples "geoip unavailable" do
+        it 'tags events with `_geoip_database_unavailable_`' do
+          events = [LogStash::Event.new(
+            "message" => "IP address in Sweden, Europe.",
+            "ip" => "89.160.20.128",
+            "data_stream" => data_stream)]
+
+          subject.multi_filter(events).to_a.tap do |filter_result|
+            expect(filter_result.size).to eql 1
+            filter_result.first.tap do |event|
+              aggregate_failures "geo enrichment (#{event.to_hash_with_metadata.inspect})" do
+                expect(event.get("[tags]")).to include "_geoip_database_unavailable_GeoLite2-City.mmdb"
+              end
+            end
+          end
+        end
+      end
+
       let(:pipeline_processor) {
         '{
           "geoip" : {
@@ -942,28 +991,80 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         }'
       }
 
-      it 'resolves IP geo-location information' do
-        events = [LogStash::Event.new(
-          "message" => "IP address in Sweden, Europe.",
-          "ip" => "89.160.20.128",
-          "data_stream" => data_stream)]
-
-        subject.multi_filter(events).to_a.tap do |filter_result|
-          expect(filter_result.size).to eql 1
-          filter_result.first.tap do |event|
-            aggregate_failures "geo enrichment (#{event.to_hash_with_metadata.inspect})" do
-              expect(event.get("[geoip][continent_name]")).to eql "Europe"
-              expect(event.get("[geoip][country_name]")).to eql "Sweden"
-              expect(event.get("[geoip][country_iso_code]")).to eql "SE"
-              expect(event.get("[geoip][city_name]")).to eql "Tumba"
-              expect(event.get("[geoip][region_iso_code]")).to eql "SE-AB"
-              expect(event.get("[geoip][region_name]")).to eql "Stockholm"
-              expect(event.get("[geoip][location][lat]")).to be_within(0.01).of(59.2)    # ~1km
-              expect(event.get("[geoip][location][lon]")).to be_within(0.02).of(17.8167) # ~1km @ lat 60
-            end
-          end 
-        end
+      context "with `geoip_database_directory`" do
+        let(:settings) {
+          super().merge(
+            "geoip_database_directory" => "src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases"
+          )
+        }
+        include_examples "geoip enrichment"
       end
+
+      context "with no `geoip_database_directory`" do
+        context "running on Logstash without Geoip Management" do
+          let(:mock_geoip_database_manager) { :UNAVAILABLE }
+          it 'warns about geoip not being available' do
+            expect(mock_logger).to have_received(:warn).with(a_string_including "Geoip Database Management is not available")
+          end
+
+          include_examples "geoip unavailable"
+        end
+
+        context "running on Logstash with Geoip Management disabled" do
+          let(:mock_geoip_database_manager) { double("LogStash::GeoipDatabaseManagement::Manager", :enabled? => false) }
+          it 'warns about geoip not being available' do
+            expect(mock_logger).to have_received(:warn).with(a_string_including "Geoip Database Management is disabled")
+          end
+
+          include_examples "geoip unavailable"
+        end
+
+        def load_impl(const_path, require_paths: [], &mock_impl_builder)
+          Array(require_paths).each(&Kernel.method(:require))
+          Kernel.const_get(const_path)
+        rescue LoadError, NameError
+          return yield
+        end
+
+        let(:subscription_impl) do
+          load_impl("LogStash::GeoipDatabaseManagement::Subscription", require_paths: "logstash/geoip_database_management/subscription") do
+            Class.new do
+              def initialize(db_info); @db_info = db_info; end
+              def observe(observer); observer.construct(@db_info); return self; end
+              def release!; end
+            end
+          end
+        end
+        let(:db_info_impl) do
+          load_impl("LogStash::GeoipDatabaseManagement::DbInfo", require_paths: "logstash/geoip_database_management/db_info") do
+            Class.new do
+              def initialize(path:, pending: false, expired: false); @path, @pending, @expired = path, pending, expired; end
+              def removed?; !@pending && @path.nil?; end
+              def expired?; @expired; end
+              def pending?; @pending; end
+              def path; @path; end
+            end
+          end
+        end
+
+        # if actual_geoip_available
+          context "running on Logstash with Geoip Management enabled" do
+
+            let(:mock_geoip_database_manager) do
+              double("LogStash::GeoipDatabaseManagement::Manager").tap do |manager|
+                expect(manager).to receive(:enabled?).with(no_args).and_return(true)
+                expect(manager).to receive(:supported_database_types).with(no_args).and_return(%w(City ASN))
+                expect(manager).to receive(:subscribe_database_path) do |database_type|
+                  db_info = db_info_impl.new(path: "src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases/GeoLite2-#{database_type}.mmdb")
+                  subscription_impl.new(db_info)
+                end.at_least(:once)
+              end
+            end
+
+            include_examples "geoip enrichment"
+          end
+        end
+      # end
     end
 
   end

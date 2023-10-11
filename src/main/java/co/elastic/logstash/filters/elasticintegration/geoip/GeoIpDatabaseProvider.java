@@ -6,7 +6,6 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.core.IOUtils;
@@ -27,37 +26,46 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
 
     private static final Logger LOGGER = LogManager.getLogger(GeoIpDatabaseProvider.class);
 
-    private final Map<String, ValidatableGeoIpDatabase> databaseMap;
+    private final Map<String, GeoipDatabaseHolder> databaseMap;
 
-    GeoIpDatabaseProvider(Map<String, ValidatableGeoIpDatabase> databaseMap) {
+    GeoIpDatabaseProvider(Map<String, GeoipDatabaseHolder> databaseMap) {
         this.databaseMap = Map.copyOf(databaseMap);
     }
 
     @Override
     public Boolean isValid(String databaseIdentifierFileName) {
-        final ValidatableGeoIpDatabase database = databaseMap.get(databaseIdentifierFileName);
-        return Objects.nonNull(database) && database.isValid();
+        final GeoipDatabaseHolder holder = databaseMap.get(databaseIdentifierFileName);
+        return Objects.nonNull(holder) && holder.isValid();
     }
 
     @Override
     public GeoIpDatabase getDatabase(String databaseIdentifierFileName) {
-        return databaseMap.get(databaseIdentifierFileName);
+        final GeoipDatabaseHolder holder = databaseMap.get(databaseIdentifierFileName);
+        if (Objects.isNull(holder)) {
+            return null;
+        } else {
+            return holder.getDatabase();
+        }
+    }
+
+    public String info() {
+        return null;
     }
 
     @Override
     public void close() throws IOException {
-        databaseMap.forEach((name, database) -> {
-            if (database instanceof Closeable) {
-                IOUtils.closeWhileHandlingException((Closeable) database);
+        databaseMap.forEach((name, holder) -> {
+            if (holder instanceof Closeable) {
+                IOUtils.closeWhileHandlingException((Closeable) holder);
             }
         });
     }
 
     public static class Builder {
-        private final Map<String, ValidatableGeoIpDatabase> databaseMap = new HashMap<>();
+        private final Map<String, GeoipDatabaseHolder> databaseMap = new HashMap<>();
 
-        public synchronized Builder setDatabase(final String identifierFileName, final ValidatableGeoIpDatabase database) {
-            final ValidatableGeoIpDatabase previous = databaseMap.put(identifierFileName, database);
+        public synchronized Builder setDatabaseHolder(final String identifierFileName, final GeoipDatabaseHolder holder) {
+            final GeoipDatabaseHolder previous = databaseMap.put(identifierFileName, holder);
             if (Objects.nonNull(previous)) {
                 LOGGER.warn(String.format("de-registered previous entry for `%s`: %s", identifierFileName, previous));
                 if (previous instanceof Closeable) {
@@ -67,7 +75,7 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
             return this;
         }
 
-        public Builder setDatabases(final File directory) throws IOException {
+        public Builder discoverDatabases(final File directory) throws IOException {
             //noinspection resource immediately consumed to list
             final List<Path> databases = Files.find(directory.toPath(), 3, Builder::isMaxMindDatabase).toList();
 
@@ -76,8 +84,9 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
             } else {
                 for (Path database : databases) {
                     try {
-                        this.setDatabase(database.getFileName().toString(),
-                                new StaticGeoIpDatabase.Builder(database.toFile()).setCache(new CHMCache(10_000)).build());
+                        final GeoIpDatabaseAdapter adapter = GeoIpDatabaseAdapter.defaultForPath(database);
+                        final GeoipDatabaseHolder holder = new ConstantGeoipDatabaseHolder(adapter);
+                        this.setDatabaseHolder(database.getFileName().toString(), holder);
                     } catch (IOException e) {
                         throw new RuntimeException(e);
                     }

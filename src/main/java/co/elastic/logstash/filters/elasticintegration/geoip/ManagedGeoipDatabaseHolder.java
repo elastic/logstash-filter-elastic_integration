@@ -5,18 +5,18 @@ import org.elasticsearch.ingest.geoip.GeoIpDatabase;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Function;
 import java.util.function.Supplier;
 
-public class SubscribedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeable {
+public class ManagedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeable {
 
-    private ValidatableGeoIpDatabase currentDatabase;
-
-    private final Function<String,ValidatableGeoIpDatabase> databaseInitializer;
+    private GeoIpDatabaseAdapter currentDatabase;
+    private final String databaseTypeIdentifier;
 
     private final ReentrantReadWriteLock.ReadLock readLock;
     private final ReentrantReadWriteLock.WriteLock writeLock;
@@ -26,8 +26,8 @@ public class SubscribedGeoipDatabaseHolder implements GeoipDatabaseHolder, Close
         writeLock = readWriteLock.writeLock();
     }
 
-    public SubscribedGeoipDatabaseHolder(Function<String, ValidatableGeoIpDatabase> databaseInitializer) {
-        this.databaseInitializer = databaseInitializer;
+    public ManagedGeoipDatabaseHolder(final String databaseTypeIdentifier) {
+        this.databaseTypeIdentifier = databaseTypeIdentifier;
     }
 
     @Override
@@ -40,10 +40,21 @@ public class SubscribedGeoipDatabaseHolder implements GeoipDatabaseHolder, Close
         return withLock(readLock, () -> this.currentDatabase);
     }
 
+    @Override
+    public String getTypeIdentifier() {
+        return databaseTypeIdentifier;
+    }
+
+    @Override
+    public String info() {
+        return withLock(readLock, () -> String.format("ManagedGeoipDatabase{type=%s, valid=%s}", getTypeIdentifier(), isValid()));
+    }
+
     public void setDatabasePath(final String newDatabasePath) {
         withLock(writeLock, () -> {
             this.currentDatabase = Optional.ofNullable(newDatabasePath)
-                    .map(this.databaseInitializer)
+                    .map(Paths::get)
+                    .map(this::loadDatabase)
                     .orElse(null);
         });
     }
@@ -51,11 +62,25 @@ public class SubscribedGeoipDatabaseHolder implements GeoipDatabaseHolder, Close
     @Override
     public void close() throws IOException {
         withLock(writeLock, () -> {
-            if (Objects.nonNull(this.currentDatabase) && this.currentDatabase instanceof Closeable) {
-                IOUtils.closeWhileHandlingException((Closeable) this.currentDatabase);
+            if (Objects.nonNull(this.currentDatabase)) {
+                IOUtils.closeWhileHandlingException(this.currentDatabase);
                 this.currentDatabase = null;
             }
         });
+    }
+
+    private GeoIpDatabaseAdapter loadDatabase(final Path databasePath) {
+        try {
+            final GeoIpDatabaseAdapter candidate = GeoIpDatabaseAdapter.defaultForPath(databasePath);
+            final String candidateType = candidate.getDatabaseType();
+            if (!Objects.equals(candidateType, this.databaseTypeIdentifier)) {
+                throw new IllegalStateException(String.format("Incompatible database type `%s` (expected `%s`)", candidateType, this.databaseTypeIdentifier));
+            }
+            return candidate;
+        } catch (IOException e) {
+            // TODO: log
+            return null;
+        }
     }
 
     private <T> T withLock(final Lock lock,
@@ -74,4 +99,5 @@ public class SubscribedGeoipDatabaseHolder implements GeoipDatabaseHolder, Close
             return null;
         });
     }
+
 }

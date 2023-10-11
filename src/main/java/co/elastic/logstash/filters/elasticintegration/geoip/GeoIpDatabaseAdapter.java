@@ -6,6 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
+import org.elasticsearch.ingest.geoip.GeoIpDatabase;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.DatabaseReader;
@@ -22,17 +23,17 @@ import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 
-public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase, Closeable {
+public class GeoIpDatabaseAdapter implements GeoIpDatabase, Closeable {
     private final DatabaseReader databaseReader;
     private final String databaseType;
 
-    public StaticGeoIpDatabase(final DatabaseReader databaseReader) {
+    public GeoIpDatabaseAdapter(final DatabaseReader databaseReader) {
         this.databaseReader = databaseReader;
         this.databaseType = databaseReader.getMetadata().getDatabaseType();
     }
 
     @Override
-    public String getDatabaseType() throws IOException {
+    public String getDatabaseType() {
         return this.databaseType;
     }
 
@@ -59,11 +60,6 @@ public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase, Closeable 
         }
     }
 
-    @Override
-    public boolean isValid() {
-        return true;
-    }
-
     interface MaxmindTryLookup<T extends AbstractResponse> {
         Optional<T> lookup(InetAddress inetAddress) throws Exception;
     }
@@ -81,7 +77,7 @@ public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase, Closeable 
         this.databaseReader.close();
     }
 
-    public static StaticGeoIpDatabase defaultForPath(final Path database) throws IOException {
+    public static GeoIpDatabaseAdapter defaultForPath(final Path database) throws IOException {
         return new Builder(database.toFile()).setCache(new CHMCache(10_000)).build();
     }
 
@@ -98,12 +94,12 @@ public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase, Closeable 
             return this;
         }
 
-        public StaticGeoIpDatabase build() throws IOException {
+        public GeoIpDatabaseAdapter build() throws IOException {
             final DatabaseReader.Builder readerBuilder = new DatabaseReader.Builder(this.databasePath);
             if (Objects.nonNull(this.nodeCache)) {
                 readerBuilder.withCache(this.nodeCache);
             }
-            return new StaticGeoIpDatabase(readerBuilder.build());
+            return new GeoIpDatabaseAdapter(readerBuilder.build());
         }
 
     }
