@@ -395,7 +395,7 @@ task vendorShadowJar(dependsOn: shadowJar) {
     File shadowJar = project.file("${buildDir}/libs/${project.name}-${project.version}-all.jar")
 
     inputs.file shadowJar
-    outputs.file projectJarFile
+    outputs.dir vendorPathPrefix
 
     doLast {
         projectJarFile.mkdirs()
@@ -475,6 +475,10 @@ task unitSpecs(dependsOn: bundleInstall) {
 
     def unitSpecFiles = project.fileTree("spec/unit") { include "**/*_spec.rb" }.files*.path
     assert unitSpecFiles : "No unit spec files could be found"
+
+    inputs.files unitSpecFiles
+    inputs.files project.fileTree("lib/**/*.rb")
+    inputs.files tasks.named('compileJava').map { it.outputs.files }
 
     doLast {
         exec {

@@ -6,6 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.DatabaseReader;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AbstractResponse;
@@ -17,6 +18,7 @@ import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
+import java.nio.file.Path;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -77,6 +79,10 @@ public class StaticGeoIpDatabase implements ValidatableGeoIpDatabase, Closeable 
     @Override
     public void close() throws IOException {
         this.databaseReader.close();
+    }
+
+    public static StaticGeoIpDatabase defaultForPath(final Path database) throws IOException {
+        return new Builder(database.toFile()).setCache(new CHMCache(10_000)).build();
     }
 
     public static class Builder {
