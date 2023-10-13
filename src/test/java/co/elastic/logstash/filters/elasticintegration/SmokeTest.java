@@ -27,6 +27,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 import static co.elastic.logstash.filters.elasticintegration.EventMatchers.*;
+import static co.elastic.logstash.filters.elasticintegration.EventProcessor.PIPELINE_MAGIC_NONE;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
@@ -59,7 +60,7 @@ public class SmokeTest {
             });
 
             assertThat(firstEvent, is(in(matchedEvents)));
-            assertThat(firstEvent, includesField("[@metadata][target_ingest_pipeline]").withValue(equalTo("_none")));
+            assertThat(firstEvent, includesField("[@metadata][target_ingest_pipeline]").withValue(equalTo(PIPELINE_MAGIC_NONE)));
         });
     }
 
