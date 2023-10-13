@@ -32,6 +32,36 @@ import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertAll;
 
 public class SmokeTest {
+    @Test
+    public void givenAFieldWithUserAgentStringTheCorrespondingProcessorIsAbleToParseIt() {
+        final List<Event> inputEvents = List.of(
+                newEvent(Map.of("webbrowser", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36"),
+                        Map.of("meta", "ok"))
+        );
+        final List<Event> matchedEvents = new ArrayList<>();
+        final EventProcessorBuilder eventProcessorBuilder = EventProcessor.builder()
+                .setEventPipelineNameResolver((event, exceptionConsumer) -> Optional.of("user-agent-mutate"))
+                .setPipelineConfigurationResolver(new LocalDirectoryPipelineConfigurationResolver(getPreparedPipelinesResourcePath("simple-mutate-pipelines")))
+                .setFilterMatchListener(matchedEvents::add);
+
+        withEventProcessor(eventProcessorBuilder, (eventProcessor) -> {
+            final Collection<Event> outputEvents = eventProcessor.processEvents(inputEvents);
+
+            assertThat("event count is unchanged", outputEvents, hasSize(inputEvents.size()));
+            Event firstEvent = outputEvents.iterator().next();
+
+            assertAll("user_agent is correctly decomposed", () -> {
+                assertThat(firstEvent, includesField("[user_agent][version]").withValue(equalTo("109.0.0.0")));
+                assertThat(firstEvent, includesField("[user_agent][os][name]").withValue(equalTo("Windows")));
+                assertThat(firstEvent, includesField("[user_agent][os][version]").withValue(equalTo("10")));
+                assertThat(firstEvent, includesField("[user_agent][name]").withValue(equalTo("Chrome")));
+                assertThat(firstEvent, includesField("[user_agent][device][name]").withValue(equalTo("Other")));
+            });
+
+            assertThat(firstEvent, is(in(matchedEvents)));
+            assertThat(firstEvent, includesField("[@metadata][target_ingest_pipeline]").withValue(equalTo("_none")));
+        });
+    }
 
     @Test
     public void testSinglePipelineMutatingEvents() {
