@@ -177,6 +177,7 @@ It has access to the Painless and Mustache scripting engines where applicable:
 | `uppercase` | _none_
 | `uriparts` | _none_
 | `urldecode` | _none_
+| `user_agent` | _none_
 
 h| GeoIp
 | `geoip` | Requires local MaxMind GeoIp databases <<plugins-{type}s-{plugin}-geoip_database_directory>>
