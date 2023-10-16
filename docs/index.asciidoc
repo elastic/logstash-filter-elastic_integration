@@ -142,7 +142,7 @@ It has access to the Painless and Mustache scripting engines where applicable:
 [cols="<1,<1,<4",options="header"]
 |=======================================================================
 |Source | Processor | Caveats
-.34+h|Ingest Common
+.33+h|Ingest Common
 
 | `append` | _none_
 | `bytes` | _none_
@@ -179,7 +179,7 @@ It has access to the Painless and Mustache scripting engines where applicable:
 | `urldecode` | _none_
 
 h| GeoIp
-| `geoip` | Requires local MaxMind GeoIp databases <<plugins-{type}s-{plugin}-geoip_database_directory>>
+| `geoip` | requires MaxMind GeoIP2 databases, which may be provided by Logstash's Geoip Database Management _OR_ configured using <<plugins-{type}s-{plugin}-geoip_database_directory>>
 
 |=======================================================================
 
