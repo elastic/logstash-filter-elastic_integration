@@ -259,13 +259,31 @@ task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plug
 
     exclude '**/module-info.class'
 }
+task shadeElasticsearchRedactPlugin(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades Elasticsearch Redact plugin to reference Grok's shaded dependencies"
+    dependsOn buildElasticsearchLocalDistro
 
-task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
+    from(buildElasticsearchLocalDistro.module("x-pack-redact").orElse(objects.fileCollection())) {
+        include jarPackageNamed("x-pack-redact")
+    }
+    archiveFileName = "elasticsearch-x-pack-redact-shaded.jar"
+    destinationDirectory = file("${buildDir}/shaded")
+
+    // relocate elasticsearch-grok's dependencies to match
+    String shadeNamespace = "org.elasticsearch.grok.shaded"
+    relocate('org.joni', "${shadeNamespace}.org.joni")
+    relocate('org.jcodings', "${shadeNamespace}.org.jcodings")
+
+    exclude '**/module-info.class'
+}
+
+task importMinimalElasticsearch() {
     description "Imports minimal portions of Elasticsearch localDistro"
 
     dependsOn buildElasticsearchLocalDistro
     dependsOn shadeElasticsearchIngestGeoIpModule
     dependsOn shadeElasticsearchGrokImplementation
+    dependsOn shadeElasticsearchRedactPlugin
 
     ext.jars = "${buildDir}/elasticsearch-minimal-jars"
 
@@ -284,6 +302,7 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
                 include jarPackageNamed("lucene-analysis-common")
             }
             from(shadeElasticsearchGrokImplementation)
+            from(buildElasticsearchLocalDistro.module("x-pack-core"))
 
             from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
@@ -295,6 +314,7 @@ task importMinimalElasticsearch(dependsOn: buildElasticsearchLocalDistro) {
             }
 
             from(shadeElasticsearchIngestGeoIpModule)
+            from(shadeElasticsearchRedactPlugin)
 
             from(buildElasticsearchLocalDistro.module("lang-mustache")) {
                 include jarPackageNamed("lang-mustache")
