@@ -1,0 +1,11 @@
+{
+  "description": "Pipeline that leverages user_agent processor",
+  "processors": [
+    {
+      "user_agent": {
+        "description": "user_agent processor definition to parse a field containing browser user_agent string",
+        "field": "webbrowser"
+      }
+    }
+  ]
+}
