@@ -1,5 +1,5 @@
 ## 0.0.4
-  - Restores support for `redact` processor using its x-pack licensed implementation [#79](https://github.com/elastic/logstash-filter-elastic_integration/issues/79)
+  - Restores support for `redact` processor using its x-pack licensed implementation [#90](https://github.com/elastic/logstash-filter-elastic_integration/issues/90)
 
 ## 0.0.3
   - Re-syncs with Elasticsearch 8.10 [#78](https://github.com/elastic/logstash-filter-elastic_integration/pull/78)
