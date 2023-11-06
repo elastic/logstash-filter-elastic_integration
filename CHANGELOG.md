@@ -1,5 +1,6 @@
 ## 0.0.4
   - Adds support for Geoip Processor to use databases from Logstash's Geoip Database Management service [#88](https://github.com/elastic/logstash-filter-elastic_integration/pull/88)
+  - Restores support for `redact` processor using its x-pack licensed implementation [#90](https://github.com/elastic/logstash-filter-elastic_integration/issues/90)
 
 ## 0.0.3
   - Re-syncs with Elasticsearch 8.10 [#78](https://github.com/elastic/logstash-filter-elastic_integration/pull/78)

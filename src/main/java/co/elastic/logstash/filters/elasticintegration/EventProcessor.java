@@ -52,7 +52,7 @@ public class EventProcessor implements Closeable {
 
     private static final String METADATA_FAILURE_TEMPLATE = "[@metadata][_ingest_pipeline_failure][%s]";
     private static final String TARGET_PIPELINE_FIELD = "[@metadata][target_ingest_pipeline]";
-    private static final String PIPELINE_MAGIC_NONE = "_none";
+    static final String PIPELINE_MAGIC_NONE = "_none";
 
     EventProcessor(final FilterMatchListener filterMatchListener,
                    final IngestPipelineResolver internalPipelineProvider,

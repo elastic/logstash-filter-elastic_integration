@@ -631,6 +631,34 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
     end
 
+    describe 'with redact processor' do
+      let(:pipeline_processor) {
+        '{
+          "redact": {
+            "field": "message",
+            "patterns": [
+              "%{IP:REDACTED-IP}",
+              "%{EMAILADDRESS:REDACTED-EMAIL}"
+            ],
+            "prefix": "[",
+            "suffix": "]"
+          }
+        }'
+      }
+
+      it "performs the redaction" do
+        events = [LogStash::Event.new("message" => "55.3.244.1 GET /index.html 15824 0.043 test@elastic.co",
+                                      "data_stream" => data_stream)]
+        result = subject.multi_filter(events)
+        expect(result).to have_attributes(size: 1)
+        processed = result.first
+        aggregate_failures do
+          expect(processed.get("message")).to eq("[REDACTED-IP] GET /index.html 15824 0.043 [REDACTED-EMAIL]")
+          expect(processed.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
+        end
+      end
+    end
+
     describe 'with registered domain processor' do
       let(:pipeline_processor) {
         '{
