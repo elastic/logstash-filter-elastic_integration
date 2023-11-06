@@ -1049,13 +1049,16 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         def load_impl(const_path, require_paths: [], &mock_impl_builder)
           Array(require_paths).each(&Kernel.method(:require))
-          Kernel.const_get(const_path)
-        rescue LoadError, NameError
+          Kernel.const_get(const_path).tap do |impl|
+            $stderr.puts("using actual #{const_path} from LS-core")
+          end
+        rescue LoadError, NameError => e
+          $stderr.puts("falling back to locally-mocked #{const_path} (got #{e})")
           return yield
         end
 
         let(:subscription_impl) do
-          load_impl("LogStash::GeoipDatabaseManagement::Subscription", require_paths: "logstash/geoip_database_management/subscription") do
+          load_impl("LogStash::GeoipDatabaseManagement::Subscription", require_paths: "geoip_database_management/subscription") do
             Class.new do
               def initialize(db_info); @db_info = db_info; end
               def observe(observer); observer.construct(@db_info); return self; end
@@ -1064,7 +1067,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           end
         end
         let(:db_info_impl) do
-          load_impl("LogStash::GeoipDatabaseManagement::DbInfo", require_paths: "logstash/geoip_database_management/db_info") do
+          load_impl("LogStash::GeoipDatabaseManagement::DbInfo", require_paths: "geoip_database_management/db_info") do
             Class.new do
               def initialize(path:, pending: false, expired: false); @path, @pending, @expired = path, pending, expired; end
               def removed?; !@pending && @path.nil?; end

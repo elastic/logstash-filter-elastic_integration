@@ -38,7 +38,7 @@ module LogStash::Filters::ElasticIntegration::GeoipDatabaseProviderBridge
   end
 
   def load_geoip_database_manager!
-    require 'logstash/geoip_database_management/manager'
+    require 'geoip_database_management/manager'
 
     LogStash::GeoipDatabaseManagement::Manager.instance
   rescue LoadError
