@@ -48,10 +48,6 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
         }
     }
 
-    public String info() {
-        return null;
-    }
-
     @Override
     public void close() throws IOException {
         databaseMap.forEach((name, holder) -> {
