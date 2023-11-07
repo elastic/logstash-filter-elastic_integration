@@ -63,7 +63,7 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
         public synchronized Builder setDatabaseHolder(final String identifierFileName, final GeoipDatabaseHolder holder) {
             final GeoipDatabaseHolder previous = databaseMap.put(identifierFileName, holder);
             if (Objects.nonNull(previous)) {
-                LOGGER.warn(String.format("de-registered previous entry for `%s`: %s", identifierFileName, previous));
+                LOGGER.warn(String.format("de-registered previous entry for `%s`: %s", identifierFileName, previous.info()));
                 if (previous instanceof Closeable) {
                     IOUtils.closeWhileHandlingException((Closeable) previous);
                 }
