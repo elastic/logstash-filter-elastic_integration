@@ -21,19 +21,23 @@ module LogStash::Filters::ElasticIntegration::GeoipDatabaseProviderBridge
 
   def initialize_geoip_database_provider!
     java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
-    @geoip_database_provider = GeoIpDatabaseProvider::Builder.new.tap do |builder|
-      geoip_database_manager = load_geoip_database_manager!
-      if :UNAVAILABLE == geoip_database_manager
-        logger.warn("Geoip Database Management is not available in the running version of Logstash; #{GUIDANCE}")
-      elsif geoip_database_manager.enabled?
-        geoip_database_manager.supported_database_types.each do |type|
-          builder.setDatabaseHolder("GeoLite2-#{type}.mmdb", ObservingDatabaseHolder.new(type, eula_manager: geoip_database_manager, logger: logger))
+    @geoip_database_provider ||= GeoIpDatabaseProvider::Builder.new.tap do |builder|
+      if geoip_database_directory
+        logger.debug("discovering geoip databases from #{geoip_database_directory}")
+        builder.discoverDatabases(java.io.File.new(geoip_database_directory))
+      else
+        geoip_database_manager = load_geoip_database_manager!
+        if :UNAVAILABLE == geoip_database_manager
+          logger.warn("Geoip Database Management is not available in the running version of Logstash; #{GUIDANCE}")
+        elsif geoip_database_manager.enabled?
+          geoip_database_manager.supported_database_types.each do |type|
+            logger.debug("subscribing to managed geoip database #{type}")
+            builder.setDatabaseHolder("GeoLite2-#{type}.mmdb", ObservingDatabaseHolder.new(type, eula_manager: geoip_database_manager, logger: logger))
+          end
+        elsif geoip_database_directory.nil?
+          logger.warn("Geoip Database Management is disabled; #{GUIDANCE}")
         end
-      elsif geoip_database_directory.nil?
-        logger.warn("Geoip Database Management is disabled; #{GUIDANCE}")
       end
-
-      builder.discoverDatabases(java.io.File.new(geoip_database_directory)) if geoip_database_directory
     end.build
   end
 

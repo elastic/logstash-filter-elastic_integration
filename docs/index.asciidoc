@@ -331,7 +331,9 @@ For more details, check out the
 * Value type is <<path,path>>
 * There is no default value for this setting.
 
-When using the GeoIp processor, this plugin does _not_ have access to the GeoIp databases that are a part of the {es} cluster, and must be configured with locally-available database files.
+When running in a Logstash process that has Geoip Database Management enabled, integrations that use the Geoip Processor wil use managed Maxmind databases by default.
+
+You may instead configure this plugin with the path to a local directory containing database files.
 
 Databases are registered by file name, and most integrations rely on databases being present named:
 
