@@ -332,6 +332,7 @@ For more details, check out the
 * There is no default value for this setting.
 
 When running in a Logstash process that has Geoip Database Management enabled, integrations that use the Geoip Processor wil use managed Maxmind databases by default.
+By using managed databases you accept and agree to the https://www.maxmind.com/en/geolite2/eula[MaxMind EULA].
 
 You may instead configure this plugin with the path to a local directory containing database files.
 
