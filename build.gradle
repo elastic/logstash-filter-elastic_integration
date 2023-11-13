@@ -155,6 +155,20 @@ def _requiredLogstashJar(pathPrefix, jarSpec, flavorSpec = null) {
     }
 }
 
+// https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
+String githubArchivePath(org, repo, treeish="main", archiveFormat="zip") {
+    def pathFragment = {
+        switch(treeish) {
+            case ~'^refs/(?:heads|tags)/'       : return "${treeish}" // unambiguous ref
+            case ~'^[0-9a-f]{8,40}$'            : return "${treeish}" // possibly-abbreviated commit sha
+            case ~'^v[0-9]+[.][0-9]+[.][0-9]+$' : return "refs/tags/${treeish}"  // guess: version tag
+            default                             : return "refs/heads/${treeish}" // guess: branch name
+        }
+    }()
+
+    "https://github.com/${org}/${repo}/archive/${pathFragment}.${archiveFormat}"
+}
+
 task downloadElasticsearchSourceZip(type: Download) {
     def esTreeish = envOrPropertyValue("ELASTICSEARCH_TREEISH")
     inputs.property("ELASTICSEARCH_TREEISH", esTreeish)
@@ -162,11 +176,13 @@ task downloadElasticsearchSourceZip(type: Download) {
     if (!esTreeish) {
         throw new StopActionException("""
             The property ELASTICSEARCH_TREEISH must be defined, and be a tree-ish (branch, commit hash, or tag)
-            available on the github repository for elastic/elasticsearch (e.g., `v8.7.0`, `8.7`, `main`, `ff1caebad1dea`)
+            available on the github repository for elastic/elasticsearch (e.g., `v8.7.0`, `8.7`, `main`,
+            `ff1caebad1dea`, `refs/heads/branch-name`, `refs/tags/tag-name`)
         """)
     }
 
-    src "https://github.com/elastic/elasticsearch/archive/refs/heads/${esTreeish}.zip"
+
+    src githubArchivePath("elastic", "elasticsearch", esTreeish, "zip")
     dest "${buildDir}/elasticsearch-source.zip"
     onlyIfModified true
     useETag "all"
@@ -415,7 +431,7 @@ task vendorShadowJar(dependsOn: shadowJar) {
     File shadowJar = project.file("${buildDir}/libs/${project.name}-${project.version}-all.jar")
 
     inputs.file shadowJar
-    outputs.file projectJarFile
+    outputs.dir vendorPathPrefix
 
     doLast {
         projectJarFile.mkdirs()
@@ -495,6 +511,10 @@ task unitSpecs(dependsOn: bundleInstall) {
 
     def unitSpecFiles = project.fileTree("spec/unit") { include "**/*_spec.rb" }.files*.path
     assert unitSpecFiles : "No unit spec files could be found"
+
+    inputs.files unitSpecFiles
+    inputs.files project.fileTree("lib/**/*.rb")
+    inputs.files tasks.named('compileJava').map { it.outputs.files }
 
     doLast {
         exec {
