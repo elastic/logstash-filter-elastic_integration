@@ -15,6 +15,9 @@ describe LogStash::Filters::ElasticIntegration do
 
   subject(:plugin) { LogStash::Filters::ElasticIntegration.new(config) }
 
+  let(:mock_geoip_database_manager) { double("LogStash::GeoipDatabaseManagement::Manager", :enabled? => false) }
+  before(:each) { allow(plugin).to receive(:load_geoip_database_manager!).and_return(mock_geoip_database_manager) }
+
   describe 'the plugin class' do
     subject { described_class }
     it { is_expected.to be_a_kind_of Class }

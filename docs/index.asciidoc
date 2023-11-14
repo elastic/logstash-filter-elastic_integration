@@ -182,7 +182,7 @@ It has access to the Painless and Mustache scripting engines where applicable:
 h| Redact | `redact` | _none_
 
 h| GeoIp
-| `geoip` | Requires local MaxMind GeoIp databases <<plugins-{type}s-{plugin}-geoip_database_directory>>
+| `geoip` | requires MaxMind GeoIP2 databases, which may be provided by Logstash's Geoip Database Management _OR_ configured using <<plugins-{type}s-{plugin}-geoip_database_directory>>
 
 |=======================================================================
 
@@ -331,7 +331,10 @@ For more details, check out the
 * Value type is <<path,path>>
 * There is no default value for this setting.
 
-When using the GeoIp processor, this plugin does _not_ have access to the GeoIp databases that are a part of the {es} cluster, and must be configured with locally-available database files.
+When running in a Logstash process that has Geoip Database Management enabled, integrations that use the Geoip Processor wil use managed Maxmind databases by default.
+By using managed databases you accept and agree to the https://www.maxmind.com/en/geolite2/eula[MaxMind EULA].
+
+You may instead configure this plugin with the path to a local directory containing database files.
 
 Databases are registered by file name, and most integrations rely on databases being present named:
 

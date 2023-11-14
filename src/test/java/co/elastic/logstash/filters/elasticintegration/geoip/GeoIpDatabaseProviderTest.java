@@ -95,7 +95,7 @@ class GeoIpDatabaseProviderTest {
 
     static GeoIpDatabaseProvider loadVendoredGeoIpDatabases() throws IOException {
         final Path databases = ResourcesUtil.getResourcePath(GeoIpDatabaseProviderTest.class, "databases").orElseThrow();
-        return new GeoIpDatabaseProvider.Builder().setDatabases(databases.toFile()).build();
+        return new GeoIpDatabaseProvider.Builder().discoverDatabases(databases.toFile()).build();
     }
 
     static void withGeoIpDatabaseProvider(final SupplierWithIO<GeoIpDatabaseProvider> geoIpDatabaseProviderSupplier,
