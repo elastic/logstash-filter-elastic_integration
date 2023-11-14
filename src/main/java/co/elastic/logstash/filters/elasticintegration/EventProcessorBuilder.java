@@ -209,7 +209,7 @@ public class EventProcessorBuilder {
                     null,
                     threadPool.getThreadContext(),
                     threadPool::relativeTimeInMillis,
-                    (delay, command) -> threadPool.schedule(command, TimeValue.timeValueMillis(delay), ThreadPool.Names.GENERIC),
+                    (delay, command) -> threadPool.schedule(command, TimeValue.timeValueMillis(delay), threadPool.generic()),
                     null,
                     null,
                     threadPool.generic()::execute,
