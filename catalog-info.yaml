@@ -1,0 +1,21 @@
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: buildkite-pipeline-logstash-filter-elastic-integration-ci
+spec:
+  implementation:
+    apiVersion: buildkite.elastic.dev/v1
+    kind: Pipeline
+    metadata:
+      description: ':logstash: The logstash-filter-elastic_integration :pipeline:'
+      name: logstash-filter-elastic_integration-ci
+    spec:
+      pipeline_file: .buildkite/pipeline.yml
+      provider_settings:
+        build_pull_request_forks: true
+      repository: elastic/logstash-filter-elastic_integration
+      teams:
+        ingest-fp:
+          access_level: BUILD_AND_READ
+  owner: group:ingestion-team
+  type: buildkite-pipeline
