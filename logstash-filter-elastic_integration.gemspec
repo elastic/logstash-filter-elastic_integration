@@ -19,7 +19,8 @@ Gem::Specification.new do |s|
     vendor/jar-dependencies/**/*.jar
     VERSION
     LICENSE.md
-    NOTICE.txt
+    NOTICE.txt,
+    docs/**/*
   }]
 
   # Special flag to let us know this is actually a logstash plugin
