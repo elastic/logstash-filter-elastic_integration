@@ -1,7 +1,22 @@
+---
+# yaml-language-server: $schema=https://gist.githubusercontent.com/elasticmachine/988b80dae436cafea07d9a4a460a011d/raw/rre.schema.json
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
   name: buildkite-pipeline-logstash-filter-elastic-integration-ci
+  description: A plugin that can be used in a Logstash pipeline to perform the transformations that are applied by many [Elastic Integrations](https://www.elastic.co/integrations/data-integrations) before sending the events to Elasticsearch.
+  annotations:
+    backstage.io/source-location: url:https://github.com/elastic/logstash-filter-elastic_integration/
+    github.com/project-slug: elastic/logstash-filter-elastic_integration/
+    github.com/team-slug: elastic/logstash
+    buildkite.com/project-slug: elastic/logstash
+  tags:
+    - logstash
+    - filter
+    - elastic-integration
+  links:
+    - title: Logstash filter for Elastic integration
+      url: https://github.com/elastic/logstash-filter-elastic_integration
 spec:
   implementation:
     apiVersion: buildkite.elastic.dev/v1
