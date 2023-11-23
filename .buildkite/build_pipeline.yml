@@ -1,22 +1,33 @@
 # yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
 
-# define a GCP VM agent to support container management (by default agent doesn't support)
 agents:
-  provider: "gcp"
-  machineType: "n1-standard-4"
-  image: family/core-ubuntu-2204
+  image: "docker.elastic.co/ci-agent-images/platform-ingest/buildkite-agent-logstash-ci-no-root"
+  cpu: "4"
+  memory: "8Gi"
+  ephemeralStorage: "64Gi"
+  # Run as non root (logstash) user. UID is hardcoded in image.
+  imageUID: "1002"
 
 steps:
   # ------------- Build with ES released versions ---------------------
-  - label: ":hammer: Build plugin with released Elasticsearch versions :elasticsearch:"
+  # 8.x + (SNAPSHOT=FALSE) -> treeish: v8.11.1  artifact: 8.11.1
+  - label: ":hammer: Build plugin with released Elasticsearch version :elasticsearch:"
     command:
-      - .buildkite/scripts/build_plugin.sh
+      - .buildkite/scripts/resolve_es_branch.sh && .buildkite/scripts/run_tests.sh
     env:
+      ELASTIC_STACK_VERSION: "8.x"
       SNAPSHOT: false
+      INTEGRATION: true
+      SECURE_INTEGRATION: true
 
   # ------------- Build with ES snapshot versions and main branch ---------------------
+  # main + (SNAPSHOT=TRUE) -> treeish: main     artifact:8.12.0-SNAPSHOT
   - label: ":hammer: Build plugin with Elasticsearch snapshot versions and `main` branch :elasticsearch:"
     command:
-      - .buildkite/scripts/build_plugin.sh
+      - .buildkite/scripts/run_tests.sh
     env:
+      ELASTIC_STACK_VERSION: "8.x"
+      ELASTICSEARCH_TREEISH: "main"
       SNAPSHOT: true
+      INTEGRATION: true
+      SECURE_INTEGRATION: true
