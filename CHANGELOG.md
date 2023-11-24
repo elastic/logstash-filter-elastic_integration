@@ -1,3 +1,6 @@
+## 0.0.5
+  - Add a version preflight check so that the plugin can connect only to Elasticsearch of the same or previous versions of the Ingest node code bundled within the plugin [#96](https://github.com/elastic/logstash-filter-elastic_integration/pull/96)
+
 ## 0.0.4
   - Re-syncs with Elasticsearch 8.11 [#91](https://github.com/elastic/logstash-filter-elastic_integration/pull/91)
   - Adds support for Geoip Processor to use databases from Logstash's Geoip Database Management service [#88](https://github.com/elastic/logstash-filter-elastic_integration/pull/88)
