@@ -251,6 +251,48 @@ class PreflightCheckTest {
         }));
     }
 
+    @Test
+    void checkPreflightVersionCheckIsOK() throws Exception {
+        wireMock.stubFor(get("/")
+                .willReturn(okJson(getBodyFixture("remote_version.json"))
+                        .withTransformers("response-template")
+                        .withTransformerParameter("test_fixture_version", "8.10.3")));
+        withWiremockElasticsearch((restClient -> {
+            final Logger logger = Mockito.mock(Logger.class);
+            boolean result = new PreflightCheck(logger, restClient).isCompatibleWithRemoteVersion();
+
+            assertTrue(result);
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: 8.10.3")));
+        }));
+    }
+
+    @Test
+    void checkPreflightVersionCheckIsNotOKWhenRemoteElasticSearchIsAtGreaterVersion() throws Exception {
+        wireMock.stubFor(get("/")
+                .willReturn(okJson(getBodyFixture("remote_version.json"))
+                        .withTransformers("response-template")
+                        .withTransformerParameter("test_fixture_version", "8.12.0")));
+        withWiremockElasticsearch((restClient -> {
+            final Logger logger = Mockito.mock(Logger.class);
+            boolean result = new PreflightCheck(logger, restClient).isCompatibleWithRemoteVersion();
+
+            assertFalse(result);
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: 8.12.0")));
+        }));
+    }
+
+    @Test
+    void checkPreflightVersionCheckFailOnBadAuthentication() throws Exception {
+        wireMock.stubFor(get("/")
+                .willReturn(jsonResponse(getBodyFixture("is_serverless.resp.401.json"), 401)));
+        withWiremockElasticsearch((restClient -> {
+            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
+                new PreflightCheck(restClient).isCompatibleWithRemoteVersion();
+            });
+            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Preflight check failed", "401 Unauthorized")));
+        }));
+    }
+
     private void withWiremockElasticsearch(final Consumer<RestClient> handler) throws Exception{
         final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
         try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(Collections.singletonList(wiremockElasticsearch)).build()) {

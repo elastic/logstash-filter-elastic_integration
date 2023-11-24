@@ -6,15 +6,18 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
+import co.elastic.clients.util.VisibleForTesting;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.Version;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.RestClient;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -44,6 +47,7 @@ public class PreflightCheck {
         this(LOGGER, elasticsearchRestClient);
     }
 
+    @VisibleForTesting
     PreflightCheck(final Logger logger,
                    final RestClient elasticsearchRestClient) {
         this.logger = logger;
@@ -123,6 +127,38 @@ public class PreflightCheck {
             logger.error(String.format("Exception checking serverless: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
+    }
+
+    /**
+     * Check if this hosted Elasticsearch ingest processor executor is compatible
+     * with the remote connected Elasticsearch cluster.
+     * Checks if the remote Elasticsearch version is the same or earlier of the locally hosted,
+     * verifying only major and minor parts.
+     *
+     * @return true if remote version is equal or minor than this.
+     * */
+    public boolean isCompatibleWithRemoteVersion() {
+        Version localVersion = Version.CURRENT;
+        try {
+            final JsonNode versionNode = requestToRemoteCluster("/").get("version");
+            final String retrievedVersion = versionNode.get("number").asText();
+            Version remoteVersion = Version.fromString(retrievedVersion);
+            logger.info(String.format("Elasticsearch remote version: %s", retrievedVersion));
+
+            return localVersion.major >= remoteVersion.major && localVersion.minor >= remoteVersion.minor;
+        } catch (Exception e) {
+            logger.error(String.format("Exception checking version compatibility: %s", e.getMessage()));
+            throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
+        }
+    }
+
+    private JsonNode requestToRemoteCluster(String endpoint) throws IOException {
+        final Request licenseRequest = new Request("GET", endpoint);
+        final Response licenseResponse = elasticsearchRestClient.performRequest(licenseRequest);
+
+        final String responseBody = new String(licenseResponse.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
+
+        return OBJECT_MAPPER.readTree(responseBody);
     }
     
     public static class Failure extends RuntimeException {

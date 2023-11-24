@@ -1,0 +1,17 @@
+{
+  "name": "instance-0000000003",
+  "cluster_name": "c1b40f28a22d46d192f13be7b111eba4",
+  "cluster_uuid": "GMifOH6FQueUPeq468_Cqg",
+  "version": {
+    "number" : "{{parameters.test_fixture_version}}",
+    "build_flavor" : "default",
+    "build_type" : "tar",
+    "build_hash" : "c63272efed16b5a1c25f3ce500715b7fddf9a9fb",
+    "build_date" : "2023-10-05T10:15:55.152563867Z",
+    "build_snapshot" : false,
+    "lucene_version" : "9.7.0",
+    "minimum_wire_compatibility_version" : "7.17.0",
+    "minimum_index_compatibility_version" : "7.0.0"
+  },
+  "tagline": "You Know, for Search"
+}
