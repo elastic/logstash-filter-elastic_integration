@@ -11,6 +11,7 @@ import com.github.tomakehurst.wiremock.extension.responsetemplating.ResponseTemp
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.Version;
 import org.elasticsearch.client.RestClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -252,33 +253,41 @@ class PreflightCheckTest {
     }
 
     @Test
-    void checkPreflightVersionCheckIsOK() throws Exception {
+    void checkPreflightVersionCheckIsOKWhenBothVersionsMatch() throws Exception {
+        Version localVersion = Version.CURRENT;
+
         wireMock.stubFor(get("/")
                 .willReturn(okJson(getBodyFixture("remote_version.json"))
                         .withTransformers("response-template")
-                        .withTransformerParameter("test_fixture_version", "8.10.3")));
+                        .withTransformerParameter("test_fixture_version", localVersion.toString())));
         withWiremockElasticsearch((restClient -> {
             final Logger logger = Mockito.mock(Logger.class);
             boolean result = new PreflightCheck(logger, restClient).isCompatibleWithRemoteVersion();
 
-            assertTrue(result);
-            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: 8.10.3")));
+            assertTrue(result, "When local and remote versions are the same, version check MUST be successful");
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: " + localVersion)));
         }));
     }
 
     @Test
     void checkPreflightVersionCheckIsNotOKWhenRemoteElasticSearchIsAtGreaterVersion() throws Exception {
+        Version localVersion = Version.CURRENT;
+        Version remoteVersion = nextMinor(localVersion);
         wireMock.stubFor(get("/")
                 .willReturn(okJson(getBodyFixture("remote_version.json"))
                         .withTransformers("response-template")
-                        .withTransformerParameter("test_fixture_version", "8.12.0")));
+                        .withTransformerParameter("test_fixture_version", remoteVersion.toString())));
         withWiremockElasticsearch((restClient -> {
             final Logger logger = Mockito.mock(Logger.class);
             boolean result = new PreflightCheck(logger, restClient).isCompatibleWithRemoteVersion();
 
-            assertFalse(result);
-            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: 8.12.0")));
+            assertFalse(result, "When remote version is newer than local, version check MUST fail");
+            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: " + remoteVersion)));
         }));
+    }
+
+    private static Version nextMinor(Version localVersion) {
+        return Version.fromString(String.format("%d.%d.%d", localVersion.major, localVersion.minor + 1, localVersion.revision));
     }
 
     @Test
