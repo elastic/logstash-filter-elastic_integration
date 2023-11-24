@@ -372,6 +372,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     check_user_privileges!
     check_es_cluster_license!
+    check_es_version!
   end
 
   def check_user_privileges!
@@ -402,6 +403,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   rescue => e
     raise_config_error!(e.message)
   end
+
+  def check_es_version!
+      PreflightCheck.new(@elasticsearch_rest_client).checkWithRemoteVersion
+    rescue => e
+      raise_config_error!(e.message)
+    end
 
   def serverless?
     PreflightCheck.new(@elasticsearch_rest_client).isServerless

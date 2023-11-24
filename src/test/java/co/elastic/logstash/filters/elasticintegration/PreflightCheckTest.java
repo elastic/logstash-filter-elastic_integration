@@ -28,6 +28,7 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
 class PreflightCheckTest {
@@ -262,10 +263,12 @@ class PreflightCheckTest {
                         .withTransformerParameter("test_fixture_version", localVersion.toString())));
         withWiremockElasticsearch((restClient -> {
             final Logger logger = Mockito.mock(Logger.class);
-            boolean result = new PreflightCheck(logger, restClient).isCompatibleWithRemoteVersion();
+            new PreflightCheck(logger, restClient).checkWithRemoteVersion();
 
-            assertTrue(result, "When local and remote versions are the same, version check MUST be successful");
-            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: " + localVersion)));
+            Mockito.verify(logger, Mockito.atMostOnce())
+                    .info(argThat(containsString("Elasticsearch remote version: " + localVersion)));
+            Mockito.verify(logger, Mockito.atMostOnce())
+                    .debug(argThat(stringContainsInOrder("Local version", "correctly match")));
         }));
     }
 
@@ -279,10 +282,14 @@ class PreflightCheckTest {
                         .withTransformerParameter("test_fixture_version", remoteVersion.toString())));
         withWiremockElasticsearch((restClient -> {
             final Logger logger = Mockito.mock(Logger.class);
-            boolean result = new PreflightCheck(logger, restClient).isCompatibleWithRemoteVersion();
-
-            assertFalse(result, "When remote version is newer than local, version check MUST fail");
-            Mockito.verify(logger).info(argThat(containsString("Elasticsearch remote version: " + remoteVersion)));
+            final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
+                new PreflightCheck(logger, restClient).checkWithRemoteVersion();
+            });
+            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("The cluster version", "can't be newer than")));
+            Mockito.verify(logger, Mockito.atMostOnce())
+                    .info(argThat(containsString("Elasticsearch remote version: " + remoteVersion)));
+            Mockito.verify(logger, Mockito.atMostOnce())
+                    .debug(argThat(containsString("bad Elasticsearch version matching")), anyString(), anyString());
         }));
     }
 
@@ -296,7 +303,7 @@ class PreflightCheckTest {
                 .willReturn(jsonResponse(getBodyFixture("is_serverless.resp.401.json"), 401)));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).isCompatibleWithRemoteVersion();
+                new PreflightCheck(restClient).checkWithRemoteVersion();
             });
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Preflight check failed", "401 Unauthorized")));
         }));

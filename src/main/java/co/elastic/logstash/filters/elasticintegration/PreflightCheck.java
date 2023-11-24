@@ -135,9 +135,9 @@ public class PreflightCheck {
      * Checks if the remote Elasticsearch version is the same or earlier of the locally hosted,
      * verifying only major and minor parts.
      *
-     * @return true if remote version is equal or minor than this.
+     * @throws Failure if remote version is newer than local.
      * */
-    public boolean isCompatibleWithRemoteVersion() {
+    public void checkWithRemoteVersion() {
         Version localVersion = Version.CURRENT;
         try {
             final JsonNode versionNode = requestToRemoteCluster("/").get("version");
@@ -145,7 +145,13 @@ public class PreflightCheck {
             Version remoteVersion = Version.fromString(retrievedVersion);
             logger.info(String.format("Elasticsearch remote version: %s", retrievedVersion));
 
-            return localVersion.major >= remoteVersion.major && localVersion.minor >= remoteVersion.minor;
+            if (localVersion.major < remoteVersion.major || localVersion.minor < remoteVersion.minor) {
+                logger.debug("bad Elasticsearch version matching `{}`, local: {}", remoteVersion, localVersion);
+                throw new Failure(String.format("The cluster version `%s` can't be newer than %s", remoteVersion, localVersion));
+            }
+            logger.debug("Local version %s correctly match", localVersion);
+        } catch (Failure f) {
+            throw f;
         } catch (Exception e) {
             logger.error(String.format("Exception checking version compatibility: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
