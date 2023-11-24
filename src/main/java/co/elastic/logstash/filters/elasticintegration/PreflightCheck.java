@@ -142,7 +142,7 @@ public class PreflightCheck {
         try {
             final JsonNode versionNode = requestToRemoteCluster("/").get("version");
             final String retrievedVersion = versionNode.get("number").asText();
-            Version remoteVersion = Version.fromString(retrievedVersion);
+            final Version remoteVersion = decodeVersionString(retrievedVersion);
             logger.info(String.format("Elasticsearch remote version: %s", retrievedVersion));
 
             if (localVersion.major < remoteVersion.major || localVersion.minor < remoteVersion.minor) {
@@ -156,6 +156,19 @@ public class PreflightCheck {
             logger.error(String.format("Exception checking version compatibility: %s", e.getMessage()));
             throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
         }
+    }
+
+    /**
+     * Convert version string to ES Version instance removing the eventual -SNAPSHOT modifier.
+     * */
+    private static Version decodeVersionString(String retrievedVersion) {
+        String version = retrievedVersion;
+        if (retrievedVersion.endsWith("-SNAPSHOT")) {
+            // if it's a snapshot version, remove to avoid IllegalArgumentException during parsing
+            version = retrievedVersion.substring(0, retrievedVersion.indexOf("-SNAPSHOT"));
+        }
+
+        return Version.fromString(version);
     }
 
     private JsonNode requestToRemoteCluster(String endpoint) throws IOException {

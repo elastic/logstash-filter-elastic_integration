@@ -273,6 +273,25 @@ class PreflightCheckTest {
     }
 
     @Test
+    void checkPreflightVersionCheckIsOKWhenBothVersionsMatchAndItsASnapshot() throws Exception {
+        Version localVersion = Version.CURRENT;
+
+        wireMock.stubFor(get("/")
+                .willReturn(okJson(getBodyFixture("remote_version.json"))
+                        .withTransformers("response-template")
+                        .withTransformerParameter("test_fixture_version", localVersion.toString() + "-SNAPSHOT")));
+        withWiremockElasticsearch((restClient -> {
+            final Logger logger = Mockito.mock(Logger.class);
+            new PreflightCheck(logger, restClient).checkWithRemoteVersion();
+
+            Mockito.verify(logger, Mockito.atMostOnce())
+                    .info(argThat(containsString("Elasticsearch remote version: " + localVersion)));
+            Mockito.verify(logger, Mockito.atMostOnce())
+                    .debug(argThat(stringContainsInOrder("Local version", "correctly match")));
+        }));
+    }
+
+    @Test
     void checkPreflightVersionCheckIsNotOKWhenRemoteElasticSearchIsAtGreaterVersion() throws Exception {
         Version localVersion = Version.CURRENT;
         Version remoteVersion = nextMinor(localVersion);
