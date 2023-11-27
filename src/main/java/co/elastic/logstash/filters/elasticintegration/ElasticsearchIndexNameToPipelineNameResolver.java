@@ -74,8 +74,9 @@ public class ElasticsearchIndexNameToPipelineNameResolver
         Throwable current = throwable;
         while (Objects.nonNull(current)) {
             description.append(current);
-            current = current.getCause();
-            if (Objects.nonNull(current)) {
+            final Throwable cause = current.getCause();
+            if (Objects.nonNull(cause) && cause != current) {
+                current = cause;
                 description.append(") caused by (");
             }
         }
