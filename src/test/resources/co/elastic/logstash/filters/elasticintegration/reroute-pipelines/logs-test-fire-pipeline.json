@@ -1,0 +1,19 @@
+{
+  "description": "A downstream pipeline that calls other pipelines",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-logs-test-fire-init",
+        "value": true
+      }
+    },
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-logs-test-fire-done",
+        "value": true
+      }
+    }
+  ]
+}

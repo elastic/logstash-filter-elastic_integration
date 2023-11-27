@@ -1,0 +1,24 @@
+{
+  "description": "An root pipeline that reroutes to other pipelines",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-logs-test-recursion-init",
+        "value": true
+      }
+    },
+    {
+      "reroute": {
+        "namespace": "smoke"
+      }
+    },
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-root-done",
+        "value": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "description": "A downstream pipeline that calls other pipelines",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-logs-verify-smoke-init",
+        "value": true
+      }
+    },
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-logs-verify-smoke-done",
+        "value": true
+      }
+    }
+  ]
+}

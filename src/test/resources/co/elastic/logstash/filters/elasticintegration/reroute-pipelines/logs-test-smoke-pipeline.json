@@ -1,0 +1,67 @@
+{
+  "description": "An root pipeline that reroutes to other pipelines",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-root-init",
+        "value": true
+      }
+    },
+    {
+      "reroute": {
+        "destination": "none",
+        "if": "ctx?.id?.equals('reroute-hardcoded-none')"
+      }
+    },
+    {
+      "reroute": {
+        "destination": "downstream",
+        "if": "ctx?.id?.equals('reroute-hardcoded-downstream')"
+      }
+    },
+    {
+      "reroute": {
+        "dataset": "verify",
+        "if": "ctx?.id?.equals('reroute-dataset-verify')"
+      }
+    },
+    {
+      "reroute": {
+        "dataset": "none",
+        "if": "ctx?.id?.equals('reroute-dataset-none')"
+      }
+    },
+    {
+      "reroute": {
+        "dataset": "missing",
+        "if": "ctx?.id?.equals('reroute-dataset-missing')"
+      }
+    },
+    {
+      "reroute": {
+        "namespace": "fire",
+        "if": "ctx?.id?.equals('reroute-namespace-fire')"
+      }
+    },
+    {
+      "reroute": {
+        "namespace": "none",
+        "if": "ctx?.id?.equals('reroute-namespace-none')"
+      }
+    },
+    {
+      "reroute": {
+        "namespace": "recursive",
+        "if": "ctx?.id?.equals('reroute-namespace-recursive')"
+      }
+    },
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-root-done",
+        "value": true
+      }
+    }
+  ]
+}

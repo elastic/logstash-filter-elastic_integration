@@ -26,6 +26,4 @@ import java.util.function.Consumer;
 public interface EventToPipelineNameResolver extends UncacheableResolver<Event, String> {
     @Override
     Optional<String> resolve(Event event, Consumer<Exception> exceptionHandler);
-
-    default Optional<CacheReloader> innerCacheReloader() { return Optional.empty(); };
 }
