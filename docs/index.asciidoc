@@ -142,7 +142,7 @@ It has access to the Painless and Mustache scripting engines where applicable:
 [cols="<1,<1,<4",options="header"]
 |=======================================================================
 |Source | Processor | Caveats
-.33+h|Ingest Common
+.35+h|Ingest Common
 
 | `append` | _none_
 | `bytes` | _none_
@@ -169,7 +169,8 @@ It has access to the Painless and Mustache scripting engines where applicable:
 | `registereddomain` | _none_
 | `remove` | _none_
 | `rename` | _none_
-| `script` | _none_
+| `reroute` | _none_
+| `script` | `lang` must be `painless` (default)
 | `set` | _none_
 | `sort` | _none_
 | `split` | _none_
