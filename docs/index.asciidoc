@@ -38,7 +38,7 @@ Events that are successfully handled by their ingest pipeline will have `[@metad
 NOTE: Some multi-pipeline configurations such as logstash-to-logstash over http(s) do not maintain the state of `[@metadata]` fields.
       In these setups, you may need to explicitly configure your downstream pipeline's {es} output with `+pipeline => "_none"+` to avoid re-running the default pipeline.
 
-Events that _fail_ ingest pipeline processing will be tagged with `_ingest_pipeline_failure`, and their `[@metadata][_ingest_pipeline_failure]` will be populated with details as a key/value map.
+Events that _fail_ ingest pipeline processing will be tagged with `+_ingest_pipeline_failure+`, and their `[@metadata][_ingest_pipeline_failure]` will be populated with details as a key/value map.
 
 IMPORTANT: This plugin requires minimum Java 17 and Logstash 8.7.0 versions.
 
@@ -197,7 +197,7 @@ This view contains all of the as-structured fields from the event with minimal t
 
 It also contains additional metadata fields as required by ingest pipeline processors:
 
-* `_version`: a `long`-value integer equivalent to the event's `@version`, or a sensible default value of `1`.
+* `+_version+`: a `long`-value integer equivalent to the event's `@version`, or a sensible default value of `1`.
 * `_ingest.timestamp`: a `ZonedDateTime` equivalent to the event's `@timestamp` field
 
 After execution completes the event is sanitized to ensure that Logstash-reserved fields have the expected shape, providing sensible defaults for any missing required fields.
@@ -208,20 +208,20 @@ When an ingest pipeline has set a reserved field to a value that cannot be coerc
 | {ls} field | type | value
 
 | `@timestamp` | `Timestamp` |
-First coercible value of the ingest document's `@timestamp`, `event.created`, `_ingest.timestamp`, or `_now` fields; or the current timestamp.
-When the ingest document has a value for `@timestamp` that cannot be coerced, it will be available in the event's `_@timestamp` field.
+First coercible value of the ingest document's `@timestamp`, `event.created`, `+_ingest.timestamp+`, or `+_now+` fields; or the current timestamp.
+When the ingest document has a value for `@timestamp` that cannot be coerced, it will be available in the event's `+_@timestamp+` field.
 
 | `@version`   | String-encoded integer |
-First coercible value of the ingest document's `@version`, or `_version` fields; or the current timestamp.
-When the ingest document has a value for `@version` that cannot be coerced, it will be available in the event's `_@version` field.
+First coercible value of the ingest document's `@version`, or `+_version+` fields; or the current timestamp.
+When the ingest document has a value for `@version` that cannot be coerced, it will be available in the event's `+_@version+` field.
 
 | `@metadata`  | key/value map |
 The ingest document's `@metadata`; or an empty map.
-When the ingest document has a value for `@metadata` that cannot be coerced, it will be available in the event's `_@metadata` field.
+When the ingest document has a value for `@metadata` that cannot be coerced, it will be available in the event's `+_@metadata+` field.
 
 | `tags`  | a String or a list of Strings |
 The ingest document's `tags`.
-When the ingest document has a value for `tags` that cannot be coerced, it will be available in the event's `_tags` field.
+When the ingest document has a value for `tags` that cannot be coerced, it will be available in the event's `+_tags+` field.
 |=======================================================================
 
 Additionally, the following Elasticsearch IngestDocument Metadata fields are made available on the resulting event _if-and-only-if_ they were set during pipeline execution:
@@ -232,12 +232,12 @@ Additionally, the following Elasticsearch IngestDocument Metadata fields are mad
 |=======================================================================
 | {es} document metadata | {ls} field
 
-| `_id`                  | `{mcc-prefix}[id]`
-| `_index`               | `{mcc-prefix}[index]`
-| `_routing`             | `{mcc-prefix}[routing]`
-| `_version`             | `{mcc-prefix}[version]`
-| `_version_type`        | `{mcc-prefix}[version_type]`
-| `_ingest.timestamp`    | `{mcc-prefix}[timestamp]`
+| `+_id+`                | `{mcc-prefix}[id]`
+| `+_index+`             | `{mcc-prefix}[index]`
+| `+_routing+`           | `{mcc-prefix}[routing]`
+| `+_version+`           | `{mcc-prefix}[version]`
+| `+_version_type+`      | `{mcc-prefix}[version_type]`
+| `+_ingest.timestamp+`  | `{mcc-prefix}[timestamp]`
 |=======================================================================
 
 
