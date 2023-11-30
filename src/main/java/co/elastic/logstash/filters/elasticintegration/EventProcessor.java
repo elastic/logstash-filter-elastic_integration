@@ -172,6 +172,7 @@ public class EventProcessor implements Closeable {
 
     private void executePipeline(final IngestDocument ingestDocument, final IngestPipeline ingestPipeline, final IntegrationRequest request) {
         final String pipelineName = ingestPipeline.getId();
+        final String originalIndex = ingestDocument.getMetadata().getIndex();
         ingestPipeline.execute(ingestDocument, (resultIngestDocument, ingestPipelineException) -> {
             // If no exception, then the original event is to be _replaced_ by the result
             if (Objects.nonNull(ingestPipelineException)) {
@@ -191,9 +192,9 @@ public class EventProcessor implements Closeable {
                 });
             } else {
 
-                if (LogstashInternalBridge.isReroute(resultIngestDocument)) {
+                final String newIndex = resultIngestDocument.getMetadata().getIndex();
+                if (!Objects.equals(originalIndex, newIndex) && LogstashInternalBridge.isReroute(resultIngestDocument)) {
                     LogstashInternalBridge.resetReroute(resultIngestDocument);
-                    final String newIndex = resultIngestDocument.getMetadata().getIndex();
                     boolean cycle = !resultIngestDocument.updateIndexHistory(newIndex);
                     if (cycle) {
                         request.complete(incomingEvent -> {
