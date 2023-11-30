@@ -209,7 +209,6 @@ public class EventProcessor implements Closeable {
 
 
                     final Optional<String> reroutePipelineName = resolve(newIndex, indexNameToPipelineNameResolver);
-                    System.err.format("RESOLVE REROUTE %s -> %s", newIndex, reroutePipelineName);
                     if (reroutePipelineName.isPresent() && !reroutePipelineName.get().equals(PIPELINE_MAGIC_NONE)) {
                         final Optional<IngestPipeline> reroutePipeline = resolve(reroutePipelineName.get(), internalPipelineProvider);
                         if (reroutePipeline.isEmpty()) {

@@ -22,7 +22,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 public class ElasticsearchIndexNameToPipelineNameResolver
-        extends AbstractSimpleCacheableResolver<String,String>
+        extends AbstractSimpleCacheableResolver<String, String>
         implements IndexNameToPipelineNameResolver.Cacheable {
 
     private static final Logger LOGGER = LogManager.getLogger();
