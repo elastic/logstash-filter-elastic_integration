@@ -1,0 +1,19 @@
+{
+  "description": "A downstream pipeline that calls other pipelines",
+  "processors": [
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-downstream-init",
+        "value": true
+      }
+    },
+    {
+      "set": {
+        "description": "Tag handled",
+        "field": "handled-by-downstream-done",
+        "value": true
+      }
+    }
+  ]
+ }

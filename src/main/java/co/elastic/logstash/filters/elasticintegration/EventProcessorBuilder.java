@@ -12,11 +12,11 @@ import co.elastic.logstash.filters.elasticintegration.ingest.RedactPlugin;
 import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
+import co.elastic.logstash.filters.elasticintegration.resolver.CachingResolver;
 import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCache;
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
 import co.elastic.logstash.filters.elasticintegration.util.Exceptions;
 import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
-import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
@@ -72,13 +72,14 @@ public class EventProcessorBuilder {
 
         if (pluginConfiguration.pipelineNameTemplate().isPresent()) {
             builder.setEventPipelineNameResolver(SprintfTemplateEventToPipelineNameResolver.from(pluginConfiguration.pipelineNameTemplate().get()));
-        } else {
-            builder.setEventPipelineNameResolver(new DatastreamEventToPipelineNameResolver(elasticsearchRestClient, new SimpleResolverCache<>("datastream-to-pipeline",
-                    new SimpleResolverCache.Configuration(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE))));
         }
 
+        builder.setEventIndexNameResolver(new DatastreamEventToIndexNameResolver());
+        builder.setIndexNamePipelineNameResolver(new ElasticsearchIndexNameToPipelineNameResolver(elasticsearchRestClient));
+        builder.setPipelineNameResolverCacheConfig(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE);
+
         builder.setPipelineConfigurationResolver(new ElasticsearchPipelineConfigurationResolver(elasticsearchRestClient));
-        builder.setPipelineResolverCacheConfig(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE);
+        builder.setIngestPipelineResolverCacheConfig(CACHE_MAXIMUM_AGE, CACHE_MAXIMUM_AGE);
         return builder;
     }
 
@@ -123,12 +124,24 @@ public class EventProcessorBuilder {
         this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
-    private PipelineConfigurationResolver pipelineConfigurationResolver;
+    // event -> pipeline name
     private EventToPipelineNameResolver eventToPipelineNameResolver;
 
+    // event -> index name
+    private EventToIndexNameResolver eventToIndexNameResolver;
+
+    // index name -> pipeline name
+    private IndexNameToPipelineNameResolver indexNameToPipelineNameResolver;
+    private Supplier<ResolverCache<String, String>> pipelineNameResolverCacheSupplier;
+
+
+    // pipeline name -> executable ingest pipeline
+    private PipelineConfigurationResolver pipelineConfigurationResolver;
+    private Supplier<ResolverCache<String, IngestPipeline>> ingestPipelineResolverCacheSupplier;
+
+    // filer match listener
     private FilterMatchListener filterMatchListener;
 
-    private Supplier<ResolverCache<String, IngestPipeline>> pipelineResolverCacheSupplier;
     private final List<Supplier<IngestPlugin>> ingestPlugins = new ArrayList<>();
 
     public synchronized EventProcessorBuilder setPipelineConfigurationResolver(final PipelineConfigurationResolver pipelineConfigurationResolver) {
@@ -139,13 +152,13 @@ public class EventProcessorBuilder {
         return this;
     }
 
-    public EventProcessorBuilder setPipelineResolverCacheConfig(final Duration maxHitTtl,
-                                                                final Duration maxMissTtl) {
-        return this.setPipelineResolverCacheSupplier(() -> new SimpleResolverCache<>("pipeline", new SimpleResolverCache.Configuration(maxHitTtl, maxMissTtl)));
+    public EventProcessorBuilder setIngestPipelineResolverCacheConfig(final Duration maxHitTtl,
+                                                                      final Duration maxMissTtl) {
+        return this.setIngestPipelineResolverCacheSupplier(() -> new SimpleResolverCache<>("pipeline", new SimpleResolverCache.Configuration(maxHitTtl, maxMissTtl)));
     }
 
-    public synchronized EventProcessorBuilder setPipelineResolverCacheSupplier(final Supplier<ResolverCache<String, IngestPipeline>> cacheSupplier) {
-        this.pipelineResolverCacheSupplier = cacheSupplier;
+    public synchronized EventProcessorBuilder setIngestPipelineResolverCacheSupplier(final Supplier<ResolverCache<String, IngestPipeline>> cacheSupplier) {
+        this.ingestPipelineResolverCacheSupplier = cacheSupplier;
         return this;
     }
 
@@ -154,6 +167,31 @@ public class EventProcessorBuilder {
             throw new IllegalStateException("eventToPipelineNameResolver already set");
         }
         this.eventToPipelineNameResolver = eventToPipelineNameResolver;
+        return this;
+    }
+
+    public synchronized EventProcessorBuilder setEventIndexNameResolver(final EventToIndexNameResolver eventToIndexNameResolver) {
+        if (Objects.nonNull(this.eventToIndexNameResolver)) {
+            throw new IllegalStateException("eventToIndexNameResolver already set");
+        }
+        this.eventToIndexNameResolver = eventToIndexNameResolver;
+        return this;
+    }
+
+    public EventProcessorBuilder setPipelineNameResolverCacheConfig(final Duration maxHitTtl,
+                                                                    final Duration maxMissTtl) {
+        return this.setPipelineNameResolverCacheSupplier(() -> new SimpleResolverCache<>("pipeline-name", new SimpleResolverCache.Configuration(maxHitTtl, maxMissTtl)));
+    }
+    public synchronized EventProcessorBuilder setPipelineNameResolverCacheSupplier(final Supplier<ResolverCache<String,String>> cacheSupplier) {
+        this.pipelineNameResolverCacheSupplier = cacheSupplier;
+        return this;
+    }
+
+    public synchronized EventProcessorBuilder setIndexNamePipelineNameResolver(final IndexNameToPipelineNameResolver indexNameToPipelineNameResolver) {
+        if (Objects.nonNull(this.indexNameToPipelineNameResolver)) {
+            throw new IllegalStateException("indexNameToPipelineNameResolver already set");
+        }
+        this.indexNameToPipelineNameResolver = indexNameToPipelineNameResolver;
         return this;
     }
 
@@ -184,7 +222,8 @@ public class EventProcessorBuilder {
 
     synchronized EventProcessor build(final PluginContext pluginContext) {
         Objects.requireNonNull(this.pipelineConfigurationResolver, "pipeline configuration resolver is REQUIRED");
-        Objects.requireNonNull(this.eventToPipelineNameResolver, "event to pipeline name resolver is REQUIRED");
+        Objects.requireNonNull(this.eventToIndexNameResolver, "event index name resolver is REQUIRED");
+        Objects.requireNonNull(this.indexNameToPipelineNameResolver, "pipeline name resolver is REQUIRED");
 
         final Settings settings = Settings.builder()
                 .put("path.home", "/")
@@ -196,6 +235,8 @@ public class EventProcessorBuilder {
         final List<Closeable> resourcesToClose = new ArrayList<>();
 
         try {
+            final ArrayList<Service> services = new ArrayList<>();
+
             final ThreadPool threadPool = new ThreadPool(settings);
             resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
 
@@ -219,30 +260,33 @@ public class EventProcessorBuilder {
             IngestPipelineFactory ingestPipelineFactory = new IngestPipelineFactory(scriptService);
             for (Supplier<IngestPlugin> ingestPluginSupplier : ingestPlugins) {
                 final IngestPlugin ingestPlugin = ingestPluginSupplier.get();
-                if (ingestPlugin instanceof Closeable) {
-                    resourcesToClose.add((Closeable) ingestPlugin);
+                if (ingestPlugin instanceof Closeable closeableIngestPlugin) {
+                    resourcesToClose.add(closeableIngestPlugin);
                 }
                 final Map<String, Processor.Factory> processorFactories = ingestPlugin.getProcessors(processorParameters);
                 ingestPipelineFactory = ingestPipelineFactory.withProcessors(processorFactories);
             }
 
-            final ResolverCache<String, IngestPipeline> ingestPipelineCache = Optional.ofNullable(pipelineResolverCacheSupplier)
+            final ResolverCache<String, IngestPipeline> ingestPipelineCache = Optional.ofNullable(ingestPipelineResolverCacheSupplier)
                     .orElse(defaultCacheSupplier("ingest-pipeline"))
                     .get();
             final SimpleCachingIngestPipelineResolver cachingInternalPipelineResolver =
                     new SimpleIngestPipelineResolver(this.pipelineConfigurationResolver, ingestPipelineFactory).withCache(ingestPipelineCache);
+            services.add(CacheReloadService.newManaged(pluginContext, cachingInternalPipelineResolver.getReloader(), newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY)));
 
             final FilterMatchListener filterMatchListener = Objects.requireNonNullElse(this.filterMatchListener, (event) -> {});
 
-            // start reload services for our resolvers
-            final ArrayList<Service> services = new ArrayList<>();
-            eventToPipelineNameResolver.innerCacheReloader().ifPresent(cacheReloader -> {
-                final AbstractScheduledService.Scheduler pipelineNameReloadSchedule = newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY);
-                services.add(CacheReloadService.newManaged(pluginContext, cacheReloader, pipelineNameReloadSchedule));
-            });
-            final AbstractScheduledService.Scheduler pipelineDefinitionReloadSchedule = newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY);
-            services.add(CacheReloadService.newManaged(pluginContext, cachingInternalPipelineResolver.getReloader(), pipelineDefinitionReloadSchedule));
+            final IndexNameToPipelineNameResolver indexNameToPipelineNameResolver;
+            if (this.indexNameToPipelineNameResolver instanceof IndexNameToPipelineNameResolver.Cacheable cacheable) {
+                final ResolverCache<String, String> pipelineNameCache = Optional.ofNullable(pipelineNameResolverCacheSupplier).orElse(defaultCacheSupplier("pipeline-name")).get();
+                final CachingResolver<String, String> cachingPipelineNameResolver = cacheable.withCache(pipelineNameCache);
+                services.add(CacheReloadService.newManaged(pluginContext, cachingPipelineNameResolver.getReloader(), newFixedRateSchedule(CACHE_RELOAD_FREQUENCY, CACHE_RELOAD_FREQUENCY)));
+                indexNameToPipelineNameResolver = cachingPipelineNameResolver::resolve;
+            } else {
+                indexNameToPipelineNameResolver = this.indexNameToPipelineNameResolver;
+            }
 
+            // start the reload services for our resolvers
             final ServiceManager serviceManager = new ServiceManager(services);
             serviceManager.startAsync();
             resourcesToClose.add(() -> {
@@ -250,7 +294,12 @@ public class EventProcessorBuilder {
                 serviceManager.awaitStopped();
             });
 
-            return new EventProcessor(filterMatchListener, cachingInternalPipelineResolver, eventToPipelineNameResolver, resourcesToClose);
+            return new EventProcessor(filterMatchListener,
+                                      cachingInternalPipelineResolver,
+                                      eventToPipelineNameResolver,
+                                      eventToIndexNameResolver,
+                                      indexNameToPipelineNameResolver,
+                                      resourcesToClose);
         } catch (Exception e) {
             IOUtils.closeWhileHandlingException(resourcesToClose);
             throw Exceptions.wrap(e, "Failed to build EventProcessor");

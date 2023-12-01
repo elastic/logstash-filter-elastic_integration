@@ -23,7 +23,7 @@ import java.util.Optional;
  * We expect configuration to be pre-validated by the ruby plugin, and for fields to be {@code null}
  * when they are semantically meaningless.
  */
-final class PluginConfiguration {
+public final class PluginConfiguration {
     private final String       id;
 
     // elasticsearch-source: connection target

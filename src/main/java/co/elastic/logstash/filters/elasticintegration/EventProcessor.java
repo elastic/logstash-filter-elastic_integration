@@ -8,26 +8,31 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
-import co.elastic.logstash.filters.elasticintegration.util.EventUtil;
+import co.elastic.logstash.filters.elasticintegration.resolver.Resolver;
 import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.action.support.RefCountingRunnable;
 import org.elasticsearch.core.IOUtils;
+import org.elasticsearch.ingest.IngestDocument;
+import org.elasticsearch.ingest.LogstashInternalBridge;
 import org.elasticsearch.ingest.common.FailProcessorException;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Consumer;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static co.elastic.logstash.filters.elasticintegration.util.EventUtil.eventAsMap;
 import static co.elastic.logstash.filters.elasticintegration.util.EventUtil.serializeEventForLog;
+import static org.elasticsearch.core.Strings.format;
 
 /**
  * An {@link EventProcessor} processes {@link Event}s by:
@@ -44,6 +49,9 @@ public class EventProcessor implements Closeable {
     private final IngestPipelineResolver internalPipelineProvider;
 
     private final EventToPipelineNameResolver eventToPipelineNameResolver;
+
+    private final EventToIndexNameResolver eventToIndexNameResolver;
+    private final IndexNameToPipelineNameResolver indexNameToPipelineNameResolver;
     private final IngestDuplexMarshaller eventMarshaller;
 
     private final List<Closeable> resourcesToClose;
@@ -57,10 +65,14 @@ public class EventProcessor implements Closeable {
     EventProcessor(final FilterMatchListener filterMatchListener,
                    final IngestPipelineResolver internalPipelineProvider,
                    final EventToPipelineNameResolver eventToPipelineNameResolver,
+                   final EventToIndexNameResolver eventToIndexNameResolver,
+                   final IndexNameToPipelineNameResolver indexNameToPipelineNameResolver,
                    final Collection<Closeable> resourcesToClose) {
         this.filterMatchListener = filterMatchListener;
         this.internalPipelineProvider = internalPipelineProvider;
+        this.eventToIndexNameResolver = eventToIndexNameResolver;
         this.eventToPipelineNameResolver = eventToPipelineNameResolver;
+        this.indexNameToPipelineNameResolver = indexNameToPipelineNameResolver;
         this.resourcesToClose = List.copyOf(resourcesToClose);
         this.eventMarshaller = IngestDuplexMarshaller.defaultInstance();
     }
@@ -78,84 +90,158 @@ public class EventProcessor implements Closeable {
      * @param incomingEvents the incoming batch
      * @return the outgoing batch, which <em>may</em> contain cancelled events
      */
-    public Collection<Event> processEvents(final Collection<Event> incomingEvents) {
-        final List<Event> outgoingEvents = new ArrayList<>(incomingEvents.size());
+    public Collection<Event> processEvents(final Collection<Event> incomingEvents) throws InterruptedException, TimeoutException {
+        final CountDownLatch latch = new CountDownLatch(1);
+        final IntegrationBatch batch = new IntegrationBatch(incomingEvents);
 
-        for (Event incomingEvent : incomingEvents) {
-            processEvent(incomingEvent, outgoingEvents::add);
+        try (RefCountingRunnable ref = new RefCountingRunnable(latch::countDown)) {
+            batch.eachRequest(ref::acquire, this::processRequest);
         }
 
-        return outgoingEvents;
+        // await on work that has gone async
+        if (!latch.await(300, TimeUnit.SECONDS)) {
+            // because the work is async and we have no way of identifying or recovering
+            // stuck resources, a failure to complete a batch is catastrophic and SHOULD
+            // result in a crash of the pipeline.
+            throw new TimeoutException("breaker: catastrophic batch limit reached");
+        };
+
+        return batch.events;
     }
 
     /**
-     * Processes a singular incoming event, passing one or more results to the provided {@code eventConsumer}.
+     * Processes a singular incoming integration request, resulting in {@code IntegrationRequest#complete}.
      */
-    private void processEvent(final Event incomingEvent, final Consumer<Event> eventConsumer) {
+    void processRequest(final IntegrationRequest request) {
         try {
-            final Optional<String> resolvedPipelineName = eventToPipelineNameResolver.resolve(incomingEvent, EventProcessor::throwingHandler);
+            final Optional<String> resolvedIndexName = eventToIndexNameResolver.resolve(request.event(), EventProcessor::throwingHandler);
+
+            final Optional<String> resolvedPipelineName;
+            if (Objects.nonNull(eventToPipelineNameResolver)) {
+                // when configured wth an event-to-pipeline-name resolver, it OVERRIDES index-based pipeline resolving
+                resolvedPipelineName = resolve(request.event(), eventToPipelineNameResolver);
+            } else if (resolvedIndexName.isPresent()) {
+                // when have a resolved index name, we use it to resolve the pipeline name
+                resolvedPipelineName = resolve(resolvedIndexName.get(), indexNameToPipelineNameResolver);
+            } else {
+                resolvedPipelineName = Optional.empty();
+            }
+
             if (resolvedPipelineName.isEmpty()) {
-                LOGGER.debug(() -> String.format("No pipeline resolved for event %s", serializeEventForLog(LOGGER, incomingEvent)));
-                eventConsumer.accept(incomingEvent);
+                LOGGER.debug(() -> String.format("No pipeline resolved for event %s", serializeEventForLog(LOGGER, request.event())));
+                request.complete();
                 return;
             }
 
             final String pipelineName = resolvedPipelineName.get();
             if (pipelineName.equals(PIPELINE_MAGIC_NONE)) {
-                LOGGER.debug(() -> String.format("Ingest Pipeline bypassed with pipeline `%s` for event `%s`", pipelineName, serializeEventForLog(LOGGER, incomingEvent)));
-                eventConsumer.accept(incomingEvent);
+                LOGGER.debug(() -> String.format("Ingest Pipeline bypassed with pipeline `%s` for event `%s`", pipelineName, serializeEventForLog(LOGGER, request.event())));
+                request.complete();
                 return;
             }
 
-            final Optional<IngestPipeline> loadedPipeline = internalPipelineProvider.resolve(pipelineName, EventProcessor::throwingHandler);
+            final Optional<IngestPipeline> loadedPipeline = resolve(pipelineName, internalPipelineProvider);
             if (loadedPipeline.isEmpty()) {
                 LOGGER.warn(() -> String.format("Pipeline `%s` could not be loaded", pipelineName));
-                annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message", "pipeline not loaded"));
-                eventConsumer.accept(incomingEvent);
+                request.complete(incomingEvent -> {
+                    annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message", "pipeline not loaded"));
+                });
                 return;
             }
 
             final IngestPipeline ingestPipeline = loadedPipeline.get();
             LOGGER.trace(() -> String.format("Using loaded pipeline `%s` (%s)", pipelineName, System.identityHashCode(ingestPipeline)));
-            ingestPipeline.execute(eventMarshaller.toIngestDocument(incomingEvent), (resultIngestDocument, ingestPipelineException) -> {
-                if (Objects.nonNull(ingestPipelineException)) {
-                    // If we had an exception in the IngestPipeline, tag and emit the original Event
-                    final Throwable unwrappedException = unwrapException(ingestPipelineException);
-                    LOGGER.warn(() -> String.format("ingest pipeline `%s` failed", pipelineName), unwrappedException);
+            final IngestDocument ingestDocument = eventMarshaller.toIngestDocument(request.event());
+
+            resolvedIndexName.ifPresent(indexName -> {
+                ingestDocument.getMetadata().setIndex(indexName);
+                ingestDocument.updateIndexHistory(indexName);
+            });
+
+            executePipeline(ingestDocument, ingestPipeline, request);
+        } catch (Exception e) {
+            LOGGER.error(() -> String.format("exception processing event: %s", e.getMessage()));
+            request.complete(incomingEvent -> {
+                annotateIngestPipelineFailure(incomingEvent, "UNKNOWN", Map.of(
+                        "message", e.getMessage(),
+                        "exception", e.getClass().getName()
+                ));
+            });
+        }
+    }
+
+    private void executePipeline(final IngestDocument ingestDocument, final IngestPipeline ingestPipeline, final IntegrationRequest request) {
+        final String pipelineName = ingestPipeline.getId();
+        final String originalIndex = ingestDocument.getMetadata().getIndex();
+        ingestPipeline.execute(ingestDocument, (resultIngestDocument, ingestPipelineException) -> {
+            // If no exception, then the original event is to be _replaced_ by the result
+            if (Objects.nonNull(ingestPipelineException)) {
+                // If we had an exception in the IngestPipeline, tag and emit the original Event
+                final Throwable unwrappedException = unwrapException(ingestPipelineException);
+                LOGGER.warn(() -> String.format("ingest pipeline `%s` failed", pipelineName), unwrappedException);
+                request.complete(incomingEvent -> {
                     annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of(
                             "message", unwrappedException.getMessage(),
                             "exception", unwrappedException.getClass().getName()
                     ));
-                    eventConsumer.accept(incomingEvent);
-                } else {
-                    // If no exception, then the original event is to be _replaced_ by the result
-                    if (Objects.isNull(resultIngestDocument)) {
-                        LOGGER.trace(() -> String.format("event cancelled by ingest pipeline `%s`: %s", pipelineName, serializeEventForLog(LOGGER, incomingEvent)));
-                        incomingEvent.cancel();
-                        eventConsumer.accept(incomingEvent);
-                    } else {
-                        final Event resultEvent = eventMarshaller.toLogstashEvent(resultIngestDocument);
-                        // provide downstream ES output with hint to avoid re-running the same pipelines
-                        resultEvent.setField(TARGET_PIPELINE_FIELD, PIPELINE_MAGIC_NONE);
-                        filterMatchListener.filterMatched(resultEvent);
+                });
+            } else if (Objects.isNull(resultIngestDocument)) {
+                request.complete(incomingEvent -> {
+                    LOGGER.trace(() -> String.format("event cancelled by ingest pipeline `%s`: %s", pipelineName, serializeEventForLog(LOGGER, incomingEvent)));
+                    incomingEvent.cancel();
+                });
+            } else {
 
-                        LOGGER.trace(() -> String.format("event transformed by ingest pipeline `%s`%s", pipelineName, diff(incomingEvent, resultEvent)));
+                final String newIndex = resultIngestDocument.getMetadata().getIndex();
+                if (!Objects.equals(originalIndex, newIndex) && LogstashInternalBridge.isReroute(resultIngestDocument)) {
+                    LogstashInternalBridge.resetReroute(resultIngestDocument);
+                    boolean cycle = !resultIngestDocument.updateIndexHistory(newIndex);
+                    if (cycle) {
+                        request.complete(incomingEvent -> {
+                            annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message", format(
+                                    "index cycle detected while processing pipeline [%s]: %s + %s",
+                                    pipelineName,
+                                    resultIngestDocument.getIndexHistory(),
+                                    newIndex
+                            )));
+                        });
+                        return;
+                    }
 
-                        incomingEvent.cancel();
-                        eventConsumer.accept(resultEvent);
+
+                    final Optional<String> reroutePipelineName = resolve(newIndex, indexNameToPipelineNameResolver);
+                    if (reroutePipelineName.isPresent() && !reroutePipelineName.get().equals(PIPELINE_MAGIC_NONE)) {
+                        final Optional<IngestPipeline> reroutePipeline = resolve(reroutePipelineName.get(), internalPipelineProvider);
+                        if (reroutePipeline.isEmpty()) {
+                            request.complete(incomingEvent -> {
+                                annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message", format(
+                                        "reroute failed to load next pipeline [%s]: %s -> %s",
+                                        pipelineName,
+                                        resultIngestDocument.getIndexHistory(),
+                                        reroutePipelineName.get()
+                                )));
+                            });
+                        } else {
+                            executePipeline(resultIngestDocument, reroutePipeline.get(), request);
+                        }
+                        return;
                     }
                 }
-            });
-        } catch (Exception e) {
-            LOGGER.error(() -> String.format("exception processing event: %s", e.getMessage()));
 
-            annotateIngestPipelineFailure(incomingEvent, "UNKNOWN", Map.of(
-                    "message", e.getMessage(),
-                    "exception", e.getClass().getName()
-            ));
 
-            eventConsumer.accept(incomingEvent);
-        }
+                request.complete(incomingEvent -> {
+                    final Event resultEvent = eventMarshaller.toLogstashEvent(resultIngestDocument);
+                    // provide downstream ES output with hint to avoid re-running the same pipelines
+                    resultEvent.setField(TARGET_PIPELINE_FIELD, PIPELINE_MAGIC_NONE);
+                    filterMatchListener.filterMatched(resultEvent);
+
+                    LOGGER.trace(() -> String.format("event transformed by ingest pipeline `%s`%s", pipelineName, diff(incomingEvent, resultEvent)));
+
+                    incomingEvent.cancel();
+                    return resultEvent;
+                });
+            }
+        });
     }
 
     static private void annotateIngestPipelineFailure(final Event event, final String pipelineName, Map<String,String> meta) {
@@ -183,6 +269,10 @@ public class EventProcessor implements Closeable {
         } else {
             return ""; // TODO
         }
+    }
+
+    static private <T,R> Optional<R> resolve(T resolvable, Resolver<T,R> resolver) {
+        return resolver.resolve(resolvable, EventProcessor::throwingHandler);
     }
 
     @Override

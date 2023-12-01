@@ -1,0 +1,12 @@
+{
+  "description": "An inner pipeline that caches event metadata",
+  "processors": [
+    {
+      "script": {
+        "description": "Cache Metadata",
+        "lang": "painless",
+        "source": "ctx['cached_metadata._index'] = ctx['_index']"
+      }
+    }
+  ]
+}
