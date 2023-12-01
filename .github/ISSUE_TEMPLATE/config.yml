@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Logstash Forum
+    url: https://discuss.elastic.co/c/logstash
+    about: If you have general troubleshooting issues, ask in the forum
+  - name: Logstash Core
+    url: https://github.com/elastic/logstash
+    about: Please report issues with Logstash itself here
