@@ -249,7 +249,7 @@ Additionally, the following Elasticsearch IngestDocument Metadata fields are mad
 :cache-reload-frequency: 1 minute
 
 This plugin uses {es} to resolve pipeline names into their pipeline definitions.
-When configured _without_ an explicit <<plugins-{type}s-{plugin}-pipeline_name>>, it also uses {es} to establish mappings of data stream names to their respective default pipeline names.
+When configured _without_ an explicit <<plugins-{type}s-{plugin}-pipeline_name>>, or when a pipeline uses the Reroute Processor, it also uses {es} to establish mappings of data stream names to their respective default pipeline names.
 
 It uses hit/miss caches to avoid querying Elasticsearch for every single event.
 It also works to update these cached mappings _before_ they expire.
@@ -301,7 +301,7 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 * Value type is <<password,password>>
 * There is no default value for this setting.
 
-The encoded form of an API key that is used to authenticate this plugin to {es}
+The encoded form of an API key that is used to authenticate this plugin to {es}.
 
 [id="plugins-{type}s-{plugin}-cloud_auth"]
 ===== `cloud_auth`
@@ -361,11 +361,11 @@ A non-empty list of {es} hosts to connect.
 
 Examples:
 
-    `"127.0.0.1"`
-    `["127.0.0.1:9200","127.0.0.2:9200"]`
-    `["http://127.0.0.1"]`
-    `["https://127.0.0.1:9200"]`
-    `["https://127.0.0.1:9200/subpath"]` (If using a proxy on a subpath)
+- `"127.0.0.1"`
+- `["127.0.0.1:9200","127.0.0.2:9200"]`
+- `["http://127.0.0.1"]`
+- `["https://127.0.0.1:9200"]`
+- `["https://127.0.0.1:9200/subpath"]` (If using a proxy on a subpath)
 
 When connecting with a list of hosts, communication to {es} is secured with SSL unless configured otherwise.
 
@@ -395,7 +395,7 @@ A password when using HTTP Basic Authentication to connect to {es}.
 
 * Value type is <<string,string>>
 * There is no default value for this setting.
-* When present, the pipeline name will _not_ be auto-detected from the event's data stream fields.
+* When present, the event's initial pipeline will _not_ be auto-detected from the event's data stream fields.
 * Value may be a {logstash-ref}/event-dependent-configuration.html#sprintf[sprintf-style] template; if any referenced fields cannot be resolved the event will not be routed to an ingest pipeline.
 
 [id="plugins-{type}s-{plugin}-ssl_certificate"]
@@ -451,7 +451,7 @@ A path to a PKCS8-formatted SSL certificate key.
 * Required when connection identity is configured with <<plugins-{type}s-{plugin}-ssl_keystore_path>>
 * {prohibit-ssl-disabled-effective}
 
-Password for the <<plugins-{type}s-{plugin}-ssl_keystore_path>>
+Password for the <<plugins-{type}s-{plugin}-ssl_keystore_path>>.
 
 [id="plugins-{type}s-{plugin}-ssl_keystore_path"]
 ===== `ssl_keystore_path`
