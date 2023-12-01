@@ -1,0 +1,39 @@
+name: Feature Request
+description: Ask for a new feature
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to help us make this plugin better.
+  - type: textarea
+    id: feature-who
+    attributes:
+      label: "What is your role?"
+      description: |-
+        With regard to the feature you are requesting, what is your role?
+         - I write and maintain Logstash pipelines
+         - I manage Logstash instance(s)
+         - I use Elastic integrations to enrich events
+         - I write Elastic integrations that OTHERS use to enrich events
+         - I maintain this plugin
+  - type: textarea
+    id: feature-what
+    attributes:
+      label: "What do you want this plugin to do?"
+      description: "Please describe the feature, and be specific :)"
+    validations:
+      required: true
+  - type: textarea
+    id: feature-why
+    attributes:
+      label: "What is your end goal?"
+      description: "Please describe WHY this feature will be beneficial to your use-case"
+    validations:
+      required: true
+  - type: textarea
+    id: feature-how
+    attributes:
+      label: "Do you have thoughts on HOW this could be done?"
+      description: "If you've thought about possible solutions, please share them"
