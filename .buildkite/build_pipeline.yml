@@ -10,7 +10,7 @@ steps:
   # 8.x + (SNAPSHOT=FALSE) -> treeish: v8.11.1  artifact: 8.11.1
   - label: ":hammer: Build plugin with released Elasticsearch version :elasticsearch:"
     command:
-      - .buildkite/scripts/resolve_es_branch.sh && .buildkite/scripts/run_tests.sh
+      - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.x"
       SNAPSHOT: false
