@@ -53,6 +53,7 @@ spec:
       name: logstash-filter-elastic_integration-pull-request
     spec:
       pipeline_file: .buildkite/pull-request-pipeline.yml
+      maximum_timeout_in_minutes: 120
       repository: elastic/logstash-filter-elastic_integration
       provider_settings:
         build_pull_requests: true
@@ -62,13 +63,19 @@ spec:
         filter_enabled: true
         filter_condition: >-
           build.creator.name == 'elasticmachine' && build.pull_request.id != null
+        cancel_intermediate_builds: true
+        skip_intermediate_builds: true
       env:
         ELASTIC_PR_COMMENTS_ENABLED: 'true'
         ELASTIC_SLACK_NOTIFICATIONS_ENABLED: 'true'
         SLACK_NOTIFICATIONS_CHANNEL: '#logstash-build'
         SLACK_NOTIFICATIONS_ON_SUCCESS: 'false'
       teams:
+        logstash:
+          access_level: MANAGE_BUILD_AND_READ
         ingest-fp:
+          access_level: MANAGE_BUILD_AND_READ
+        ingest-eng-prod:
           access_level: MANAGE_BUILD_AND_READ
         everyone:
           access_level: READ_ONLY
@@ -100,6 +107,7 @@ spec:
       name: logstash-filter-elastic_integration-build
     spec:
       pipeline_file: .buildkite/build-pipeline.yml
+      maximum_timeout_in_minutes: 120
       repository: elastic/logstash-filter-elastic_integration
       env:
         ELASTIC_PR_COMMENTS_ENABLED: 'true'
@@ -112,7 +120,11 @@ spec:
           cronline: "@daily"
           message: "Run plugin build every day."
       teams:
+        logstash:
+          access_level: MANAGE_BUILD_AND_READ
         ingest-fp:
+          access_level: MANAGE_BUILD_AND_READ
+        ingest-eng-prod:
           access_level: MANAGE_BUILD_AND_READ
         everyone:
           access_level: READ_ONLY
