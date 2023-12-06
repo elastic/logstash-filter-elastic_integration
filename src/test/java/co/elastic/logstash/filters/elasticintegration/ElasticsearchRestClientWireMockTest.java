@@ -10,6 +10,7 @@ import co.elastic.logstash.api.Password;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
+import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestClient;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,7 +21,9 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import javax.net.ssl.SSLHandshakeException;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
+import java.util.Base64;
 import java.util.Collections;
 
 import static co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil.*;
@@ -32,7 +35,9 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @DisplayName("ElasticsearchRestClientBuilder WireMock tests")
 public class ElasticsearchRestClientWireMockTest {
+
     static class BareHttp {
+
         @RegisterExtension
         static WireMockExtension wireMock = WireMockExtension.newInstance()
                 .options(wireMockConfig().dynamicPort())
@@ -66,10 +71,12 @@ public class ElasticsearchRestClientWireMockTest {
         @RegisterExtension
         static WireMockExtension wireMock = WireMockExtension.newInstance()
                 .options(wireMockConfig()
-                        .dynamicHttpsPort().httpDisabled(true)
+                        .dynamicHttpsPort()
+                        .httpDisabled(true)
                         .keystorePath(generatedCertificateMaterial("server_from_root.p12").toString())
                         .keystorePassword("12345678")
-                        .keystoreType("PKCS12").keyManagerPassword("12345678"))
+                        .keystoreType("PKCS12")
+                        .keyManagerPassword("12345678"))
                 .build();
 
         @BeforeEach
@@ -212,6 +219,80 @@ public class ElasticsearchRestClientWireMockTest {
         }
 
     }
+
+    static class RestClientWithApiKey {
+
+        @RegisterExtension
+        static WireMockExtension wireMock = WireMockExtension.newInstance()
+                .options(wireMockConfig().dynamicPort())
+                .build();
+
+        void stubMock(String apiKey) {
+            wireMock.stubFor(get("/")
+                    .withHeader("Authorization", containing(apiKey))
+                    .willReturn(okJson(getMockResponseBody("get-root.json"))));
+        }
+
+        @Test void testWithEncodedApiKey() throws Exception {
+            final String encodedApiKey = "validApiKeySecret=="; // will be applied directly in rest client header
+
+            stubMock(encodedApiKey);
+
+            final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
+            try (RestClient restClient = ElasticsearchRestClientBuilder
+                    .forURLs(Collections.singleton(wiremockElasticsearch))
+                    .configureRequestAuth(c -> c.setApiKey(new Password(encodedApiKey)))
+                    .build()) {
+                final Response response = restClient.performRequest(new Request("GET", "/"));
+                assertThat(response.getStatusLine().getStatusCode(), is(Matchers.equalTo(200)));
+            }
+        }
+
+        @Test void testWithBase64ApiKey() throws Exception {
+            final String apiKey = "validApiKey:secret";
+            final String base64ApiKey = Base64.getEncoder().encodeToString(apiKey.getBytes(StandardCharsets.UTF_8)); //
+
+            stubMock(base64ApiKey);
+
+            final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
+            try (RestClient restClient = ElasticsearchRestClientBuilder
+                    .forURLs(Collections.singleton(wiremockElasticsearch))
+                    .configureRequestAuth(c -> c.setApiKey(new Password(apiKey)))
+                    .build()) {
+                final Response response = restClient.performRequest(new Request("GET", "/"));
+                assertThat(response.getStatusLine().getStatusCode(), is(Matchers.equalTo(200)));
+            }
+        }
+
+        @Test void testWithNoApiKeyInRequest() throws Exception {
+            final String apiKey = "validApiKey:secret";
+            stubMock(apiKey);
+
+            final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
+            try (RestClient restClient = ElasticsearchRestClientBuilder
+                    .forURLs(Collections.singleton(wiremockElasticsearch))
+                    // we are not setting the API key, request will not match with mock
+                    .build()) {
+                final ResponseException ex = assertThrows(ResponseException.class, () -> restClient.performRequest(new Request("GET", "/")));
+                assertThat(ex.getMessage(), containsString("Header is not present"));
+            }
+        }
+
+        @Test void testWithMismatchKeyInRequest() throws Exception {
+            final String apiKey = "validApiKey:secret"; // this will be BASE64 encoded
+            stubMock(apiKey);
+
+            final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
+            try (RestClient restClient = ElasticsearchRestClientBuilder
+                    .forURLs(Collections.singleton(wiremockElasticsearch))
+                    .configureRequestAuth(c -> c.setApiKey(new Password(apiKey)))
+                    .build()) {
+                final ResponseException ex = assertThrows(ResponseException.class, () -> restClient.performRequest(new Request("GET", "/")));
+                assertThat(ex.getMessage(), containsString("Header does not match"));
+            }
+        }
+    }
+
 
     static String getMockResponseBody(final String name) {
         return readResource(ElasticsearchRestClientWireMockTest.class, Path.of("elasticsearch-mock-responses",name).toString());

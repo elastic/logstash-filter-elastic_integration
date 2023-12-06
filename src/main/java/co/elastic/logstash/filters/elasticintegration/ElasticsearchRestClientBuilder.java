@@ -403,7 +403,7 @@ public class ElasticsearchRestClientBuilder {
 
             final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", encodedApiKey));
             final HttpRequestInterceptor interceptor = new ApiKeyHttpRequestInterceptor(authorizationHeader);
-            return this.setHttpClientConfigurator(HttpClientConfigurator. forAddInterceptorFirst(interceptor));
+            return this.setHttpClientConfigurator(HttpClientConfigurator.forAddInterceptorFirst(interceptor));
         }
 
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
@@ -451,7 +451,7 @@ public class ElasticsearchRestClientBuilder {
             if (Objects.nonNull(apiVersion)) {
                 final BasicHeader elasticApiVersionHeader = new BasicHeader("Elastic-Api-Version", apiVersion);
                 final HttpRequestInterceptor interceptor = new EAVHttpRequestInterceptor(elasticApiVersionHeader);
-                HttpClientConfigurator. forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
+                HttpClientConfigurator.forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
             }
         }
     }
