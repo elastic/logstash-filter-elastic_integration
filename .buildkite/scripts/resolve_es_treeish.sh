@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
 VERSION_URL="https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
 
