@@ -58,6 +58,8 @@ class ElasticsearchRestClientBuilderTest {
         final HttpHost[] expectedTransformation = {
                 new HttpHost("169.0.0.254", 9201, "https"),
         };
+
+        validateTranslationToClientBuilderFactory(inputUrls, expectedTransformation);
     }
 
     @Test

@@ -26,8 +26,10 @@ import org.elasticsearch.client.RestClientBuilder;
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.security.KeyStore;
+import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
@@ -391,9 +393,17 @@ public class ElasticsearchRestClientBuilder {
         public RequestAuthConfig setApiKey(final Password apiKey) {
             Objects.requireNonNull(apiKey, "apiKey");
 
-            final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", apiKey.getPassword()));
+            final String encodedApiKey;
+            // intercept non-encoded form, which contains a single colon separating two non-empty components
+            if (apiKey.getPassword().matches("[^:]+:[^:]+")) {
+                encodedApiKey = Base64.getEncoder().encodeToString(apiKey.getPassword().getBytes(StandardCharsets.UTF_8));
+            } else {
+                encodedApiKey = apiKey.getPassword();
+            }
+
+            final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", encodedApiKey));
             final HttpRequestInterceptor interceptor = new ApiKeyHttpRequestInterceptor(authorizationHeader);
-            return this.setHttpClientConfigurator(HttpClientConfigurator. forAddInterceptorFirst(interceptor));
+            return this.setHttpClientConfigurator(HttpClientConfigurator.forAddInterceptorFirst(interceptor));
         }
 
         public RequestAuthConfig setCloudAuth(final Password cloudAuth) {
@@ -441,7 +451,7 @@ public class ElasticsearchRestClientBuilder {
             if (Objects.nonNull(apiVersion)) {
                 final BasicHeader elasticApiVersionHeader = new BasicHeader("Elastic-Api-Version", apiVersion);
                 final HttpRequestInterceptor interceptor = new EAVHttpRequestInterceptor(elasticApiVersionHeader);
-                HttpClientConfigurator. forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
+                HttpClientConfigurator.forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
             }
         }
     }

@@ -1,3 +1,6 @@
+## 0.1.1
+  - Support non-encoded API Key [#101](https://github.com/elastic/logstash-filter-elastic_integration/pull/101)
+
 ## 0.1.0
   - Re-syncs with Elasticsearch 8.11 [#91](https://github.com/elastic/logstash-filter-elastic_integration/pull/91)
   - Adds support for `reroute` processor [#100](https://github.com/elastic/logstash-filter-elastic_integration/pull/100)

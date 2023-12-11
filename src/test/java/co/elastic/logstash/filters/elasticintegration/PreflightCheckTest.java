@@ -237,12 +237,12 @@ class PreflightCheckTest {
     }
 
     public static final String ELASTIC_API_VERSION = "2023-10-31";
-    public static final String API_KEY = "iamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiama==";
+    public static final String ENCODED_API_KEY = "iamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiama==";
     @Test
     void checkServerlessRequestContainsHeaders() throws Exception {
         wireMock.stubFor(get("/")
                         .withHeader("Elastic-Api-Version", containing(ELASTIC_API_VERSION))
-                        .withHeader("Authorization", containing(API_KEY))
+                        .withHeader("Authorization", containing(ENCODED_API_KEY))
                 .willReturn(okJson(getBodyFixture("is_serverless.true.json"))
                         .withTransformers("response-template")));
         withWiremockServerlessElasticsearch((restClient -> {
@@ -263,7 +263,7 @@ class PreflightCheckTest {
         try (RestClient restClient = ElasticsearchRestClientBuilder
                 .forURLs(Collections.singletonList(wiremockElasticsearch))
                 .configureElasticApi(c -> c.setApiVersion(ELASTIC_API_VERSION))
-                .configureRequestAuth(c -> c.setApiKey(new Password(API_KEY)))
+                .configureRequestAuth(c -> c.setApiKey(new Password(ENCODED_API_KEY)))
                 .build()) {
             handler.accept(restClient);
         }
