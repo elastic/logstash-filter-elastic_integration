@@ -181,12 +181,12 @@ task downloadElasticsearchSourceZip(type: Download) {
         """)
     }
 
-
     src githubArchivePath("elastic", "elasticsearch", esTreeish, "zip")
     dest "${buildDir}/elasticsearch-source.zip"
     onlyIfModified true
     useETag "all"
 }
+
 task unzipDownloadedElasticsearchSourceZip(dependsOn: downloadElasticsearchSourceZip, type: Copy) {
     description "extracts Elasticsearch source from a downloaded zip file"
 
@@ -275,6 +275,7 @@ task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plug
 
     exclude '**/module-info.class'
 }
+
 task shadeElasticsearchRedactPlugin(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades Elasticsearch Redact plugin to reference Grok's shaded dependencies"
     dependsOn buildElasticsearchLocalDistro
@@ -314,6 +315,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch")
                 include jarPackageNamed("elasticsearch-core")
                 include jarPackageNamed("elasticsearch-x-content")
+                include jarPackageNamed("elasticsearch-geo")
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
             }
