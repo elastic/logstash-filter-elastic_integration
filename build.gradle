@@ -428,8 +428,7 @@ task vendorShadowJar(dependsOn: shadowJar) {
     description "vendors jar dependencies"
 
     String vendorPathPrefix = "vendor/jar-dependencies"
-    String projectGroupPath = project.group.replaceAll('\\.', '/')
-    File projectJarFile = file("${vendorPathPrefix}/${projectGroupPath}/${project.name}/${project.version}/${project.name}-${project.version}.jar")
+    File projectJarFile = file("${vendorPathPrefix}/${project.version}/${project.name}-${project.version}.jar")
     File shadowJar = project.file("${buildDir}/libs/${project.name}-${project.version}-all.jar")
 
     inputs.file shadowJar
