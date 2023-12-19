@@ -463,7 +463,7 @@ task generateGemJarRequiresFile() {
                  '########################################################################\n'
             w << '\n'
             w << "require \'jar_dependencies\'\n"
-            w << "require_jar(\'${project.group}\', \'${project.name}\', \'${project.version}\')\n"
+            w << "require_jar(\'${project.name}\', \'${project.version}\')\n"
         }
     }
 }
