@@ -22,7 +22,7 @@ include::{include_path}/plugin_header.asciidoc[]
 
 .Elastic Enterprise License
 ****
-Use of this plugin requires an active Enterprise Elastic License.
+Use of this plugin requires an active Elastic Enterprise https://www.elastic.co/subscriptions[subscription].
 ****
 
 ==== Description
@@ -54,7 +54,7 @@ Before upgrading this plugin or Logstash itself, please pay special attention to
 
 You will need to configure this plugin to connect to {es}, and may need to also need to provide local GeoIp databases.
 
-[source]
+[source,ruby]
 --------------------------------------------------
 filter {
   elastic_integration {
@@ -292,8 +292,8 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 
 // Variables for re-use in per-option docs
 :prohibit-ssl-disabled-effective: Cannot be combined with configurations that disable SSL
-:prohibit-ssl-disabled-explicit: Cannot be combined with <<plugins-{type}s-{plugin}-ssl_enabled, `ssl_enabled \=> false`>>.
-:prohibit-ssl-verify-none: Cannot be combined with <<plugins-{type}s-{plugin}-ssl_verification_mode, `ssl_verification_mode \=> none`>>.
+:prohibit-ssl-disabled-explicit: Cannot be combined with `<<plugins-{type}s-{plugin}-ssl_enabled>>=>false`.
+:prohibit-ssl-verify-none: Cannot be combined with `<<plugins-{type}s-{plugin}-ssl_verification_mode>>=>none`.
 
 [id="plugins-{type}s-{plugin}-api_key"]
 ===== `api_key`
