@@ -22,7 +22,7 @@ include::{include_path}/plugin_header.asciidoc[]
 
 .Elastic Enterprise License
 ****
-Use of this plugin requires an active Enterprise Elastic License.
+Use of this plugin requires an active Elastic Enterprise https://www.elastic.co/subscriptions[subscription].
 ****
 
 ==== Description
@@ -33,12 +33,12 @@ Once configured to point to an {es} cluster, this filter will detect which inges
 using an explicitly-defined <<plugins-{type}s-{plugin}-pipeline_name>> or auto-detecting the event's data-stream and its default pipeline.
 
 It will then load that pipeline's definition from {es} and run that pipeline inside Logstash without transmitting the event to {es}.
-Events that are successfully handled by their ingest pipeline will have `[@metadata][target_ingest_pipeline]` set to `+_none+` so that any downstream {es} output in the Logstash pipeline will avoid running the event's default pipeline _again_ in {es}.
+Events that are successfully handled by their ingest pipeline will have `[@metadata][target_ingest_pipeline]` set to `_none` so that any downstream {es} output in the Logstash pipeline will avoid running the event's default pipeline _again_ in {es}.
 
 NOTE: Some multi-pipeline configurations such as logstash-to-logstash over http(s) do not maintain the state of `[@metadata]` fields.
-      In these setups, you may need to explicitly configure your downstream pipeline's {es} output with `+pipeline => "_none"+` to avoid re-running the default pipeline.
+      In these setups, you may need to explicitly configure your downstream pipeline's {es} output with `pipeline => "_none"` to avoid re-running the default pipeline.
 
-Events that _fail_ ingest pipeline processing will be tagged with `+_ingest_pipeline_failure+`, and their `[@metadata][_ingest_pipeline_failure]` will be populated with details as a key/value map.
+Events that _fail_ ingest pipeline processing will be tagged with `_ingest_pipeline_failure`, and their `[@metadata][_ingest_pipeline_failure]` will be populated with details as a key/value map.
 
 IMPORTANT: This plugin requires minimum Java 17 and Logstash 8.7.0 versions.
 
@@ -54,7 +54,7 @@ Before upgrading this plugin or Logstash itself, please pay special attention to
 
 You will need to configure this plugin to connect to {es}, and may need to also need to provide local GeoIp databases.
 
-[source]
+[source,ruby]
 --------------------------------------------------
 filter {
   elastic_integration {
@@ -198,7 +198,7 @@ This view contains all of the as-structured fields from the event with minimal t
 
 It also contains additional metadata fields as required by ingest pipeline processors:
 
-* `+_version+`: a `long`-value integer equivalent to the event's `@version`, or a sensible default value of `1`.
+* `_version`: a `long`-value integer equivalent to the event's `@version`, or a sensible default value of `1`.
 * `_ingest.timestamp`: a `ZonedDateTime` equivalent to the event's `@timestamp` field
 
 After execution completes the event is sanitized to ensure that Logstash-reserved fields have the expected shape, providing sensible defaults for any missing required fields.
@@ -209,20 +209,20 @@ When an ingest pipeline has set a reserved field to a value that cannot be coerc
 | {ls} field | type | value
 
 | `@timestamp` | `Timestamp` |
-First coercible value of the ingest document's `@timestamp`, `event.created`, `+_ingest.timestamp+`, or `+_now+` fields; or the current timestamp.
-When the ingest document has a value for `@timestamp` that cannot be coerced, it will be available in the event's `+_@timestamp+` field.
+First coercible value of the ingest document's `@timestamp`, `event.created`, `_ingest.timestamp`, or `_now` fields; or the current timestamp.
+When the ingest document has a value for `@timestamp` that cannot be coerced, it will be available in the event's `_@timestamp` field.
 
 | `@version`   | String-encoded integer |
-First coercible value of the ingest document's `@version`, or `+_version+` fields; or the current timestamp.
-When the ingest document has a value for `@version` that cannot be coerced, it will be available in the event's `+_@version+` field.
+First coercible value of the ingest document's `@version`, or `_version` fields; or the current timestamp.
+When the ingest document has a value for `@version` that cannot be coerced, it will be available in the event's `_@version` field.
 
 | `@metadata`  | key/value map |
 The ingest document's `@metadata`; or an empty map.
-When the ingest document has a value for `@metadata` that cannot be coerced, it will be available in the event's `+_@metadata+` field.
+When the ingest document has a value for `@metadata` that cannot be coerced, it will be available in the event's `_@metadata` field.
 
 | `tags`  | a String or a list of Strings |
 The ingest document's `tags`.
-When the ingest document has a value for `tags` that cannot be coerced, it will be available in the event's `+_tags+` field.
+When the ingest document has a value for `tags` that cannot be coerced, it will be available in the event's `_tags` field.
 |=======================================================================
 
 Additionally, the following Elasticsearch IngestDocument Metadata fields are made available on the resulting event _if-and-only-if_ they were set during pipeline execution:
@@ -233,12 +233,12 @@ Additionally, the following Elasticsearch IngestDocument Metadata fields are mad
 |=======================================================================
 | {es} document metadata | {ls} field
 
-| `+_id+`                | `{mcc-prefix}[id]`
-| `+_index+`             | `{mcc-prefix}[index]`
-| `+_routing+`           | `{mcc-prefix}[routing]`
-| `+_version+`           | `{mcc-prefix}[version]`
-| `+_version_type+`      | `{mcc-prefix}[version_type]`
-| `+_ingest.timestamp+`  | `{mcc-prefix}[timestamp]`
+| `_id`                | `{mcc-prefix}[id]`
+| `_index`             | `{mcc-prefix}[index]`
+| `_routing`           | `{mcc-prefix}[routing]`
+| `_version`           | `{mcc-prefix}[version]`
+| `_version_type`      | `{mcc-prefix}[version_type]`
+| `_ingest.timestamp`  | `{mcc-prefix}[timestamp]`
 |=======================================================================
 
 
@@ -292,8 +292,8 @@ This plugin supports the following configuration options plus the <<plugins-{typ
 
 // Variables for re-use in per-option docs
 :prohibit-ssl-disabled-effective: Cannot be combined with configurations that disable SSL
-:prohibit-ssl-disabled-explicit: Cannot be combined with <<plugins-{type}s-{plugin}-ssl_enabled, `ssl_enabled \=> false`>>.
-:prohibit-ssl-verify-none: Cannot be combined with <<plugins-{type}s-{plugin}-ssl_verification_mode, `ssl_verification_mode \=> none`>>.
+:prohibit-ssl-disabled-explicit: Cannot be combined with `<<plugins-{type}s-{plugin}-ssl_enabled>>=>false`.
+:prohibit-ssl-verify-none: Cannot be combined with `<<plugins-{type}s-{plugin}-ssl_verification_mode>>=>none`.
 
 [id="plugins-{type}s-{plugin}-api_key"]
 ===== `api_key`
@@ -352,8 +352,8 @@ This plugin will discover any regular file with the `.mmdb` suffix in the provid
 * There is no default value for this setting.
 * Constraints:
 ** When any URL contains a protocol component, all URLs must have the same protocol as each other.
-** `https`-protocol hosts use HTTPS and cannot be combined with <<plugins-{type}s-{plugin}-ssl_enabled, `+ssl_enabled => false+`>>.
-** `http`-protocol hosts use unsecured HTTP and cannot be combined with <<plugins-{type}s-{plugin}-ssl_enabled, `+ssl_enabled => true+`>>.
+** `https`-protocol hosts use HTTPS and cannot be combined with <<plugins-{type}s-{plugin}-ssl_enabled, `ssl_enabled => false`>>.
+** `http`-protocol hosts use unsecured HTTP and cannot be combined with <<plugins-{type}s-{plugin}-ssl_enabled, `ssl_enabled => true`>>.
 ** When any URL omits a port component, the default `9200` is used.
 ** When any URL contains a path component, all URLs must have the same path as each other.
 
@@ -377,7 +377,7 @@ The security of this plugin relies on SSL to avoid leaking credentials and to av
 There are two ways to disable SSL:
 
 * Provide a list of `http`-protocol hosts
-* Set <<plugins-{type}s-{plugin}-ssl_enabled, `+ssl_enabled => false+`>>
+* Set `<<plugins-{type}s-{plugin}-ssl_enabled>>=>false`
 
 ============
 
@@ -428,10 +428,10 @@ This setting can be used to _override_ the system trust store for verifying the 
 
 Secure SSL communication to {es} is enabled unless:
 
-* it is explicitly disabled with `+ssl_enabled => false+`; OR
+* it is explicitly disabled with `ssl_enabled => false`; OR
 * it is implicitly disabled by providing `http`-protocol <<plugins-{type}s-{plugin}-hosts>>.
 
-Specifying `+ssl_enabled => true+` can be a helpful redundant safeguard to ensure this plugin cannot be configured to use non-ssl communication.
+Specifying `ssl_enabled => true` can be a helpful redundant safeguard to ensure this plugin cannot be configured to use non-ssl communication.
 
 [id="plugins-{type}s-{plugin}-ssl_key"]
 ===== `ssl_key`
