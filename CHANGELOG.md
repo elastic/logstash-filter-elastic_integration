@@ -1,3 +1,6 @@
+## 0.1.3
+  - [DOC] Additional links and formatting fixes to docs [#115](https://github.com/elastic/logstash-filter-elastic_integration/pull/115)
+
 ## 0.1.2
   - Synchronize with Elasticsearch 8.12 and include elasticsearch-geo jar to include a missed class [#113](https://github.com/elastic/logstash-filter-elastic_integration/pull/113)
 
