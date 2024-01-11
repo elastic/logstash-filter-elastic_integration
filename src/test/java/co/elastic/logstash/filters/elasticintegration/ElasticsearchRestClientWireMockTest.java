@@ -220,6 +220,22 @@ public class ElasticsearchRestClientWireMockTest {
 
     }
 
+    static class UserAgent {
+        @RegisterExtension
+        static WireMockExtension wireMock = WireMockExtension.newInstance()
+                .options(wireMockConfig().dynamicPort()).build();
+
+        @Test void testUserAgentHeader() throws Exception {
+            final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(), "/");
+            final String userAgentHeader = "This/That (another v1.2.3)";
+            try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(Collections.singletonList(wiremockElasticsearch)).setUserAgentHeaderValue(userAgentHeader).build()) {
+                wireMock.stubFor(get(urlPathEqualTo("/")).withHeader("User-Agent", equalTo(userAgentHeader)));
+                final Response response = restClient.performRequest(new Request("GET", "/"));
+                assertThat(response.getStatusLine().getStatusCode(), is(Matchers.equalTo(200)));
+            }
+        }
+    }
+
     static class RestClientWithApiKey {
 
         @RegisterExtension
