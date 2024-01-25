@@ -1,3 +1,6 @@
+## 0.1.4
+  - Non-user facing work to shorten JAR path when packaging [#114](https://github.com/elastic/logstash-filter-elastic_integration/pull/114)
+
 ## 0.1.3
   - [DOC] Additional links and formatting fixes to docs [#115](https://github.com/elastic/logstash-filter-elastic_integration/pull/115)
 
