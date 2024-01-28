@@ -6,7 +6,6 @@ E2E bootstrapping with Python script
     - When E2E finishes, teardown the stack
 """
 import os
-import requests
 import subprocess
 import tarfile
 from util import Util
@@ -39,7 +38,7 @@ class Bootstrap:
         self.distro = "darwin_amd64.tar.gz" if platform == "macos" else "linux_amd64.tar.gz"
 
     def __download_elastic_package__(self):
-        response = requests.get(self.ELASTIC_PACKAGE_DISTRO_URL)
+        response = Util.call_url_with_retry(self.ELASTIC_PACKAGE_DISTRO_URL)
         release_info = response.json()
 
         download_urls = [asset["browser_download_url"] for asset in release_info["assets"]]
@@ -56,7 +55,7 @@ class Bootstrap:
 
     def __make_global__(self):
         result = subprocess.run(['sudo', 'mv', 'elastic-package', '/usr/local/bin'])
-        if result != 0:
+        if result.returncode != 0:
             raise Exception("Could not make `elastic-package` global.")
 
     def __clone_integrations_repo__(self):
@@ -76,7 +75,7 @@ class Bootstrap:
                 outfile.write(line)
 
     def __setup_elastic_package_profile__(self):
-        result = subprocess.run(['./elastic-package', 'profiles', 'create', 'e2e'])
+        result = subprocess.run(['elastic-package', 'profiles', 'create', 'e2e'])
         if result.returncode != 0:
             raise Exception(f"Error occurred while creating a profile. Check logs for details.")
 
@@ -86,17 +85,17 @@ class Bootstrap:
         config_example_file = os.path.join(self.__get_profile_path__(), 'config.yml.example')
         config_file = os.path.join(self.__get_profile_path__(), 'config.yml')
         self.__create_config_file__(config_example_file, config_file)
-        subprocess.run(['./elastic-package', 'profiles', 'use', 'e2e'])
+        subprocess.run(['elastic-package', 'profiles', 'use', 'e2e'])
 
     def __spin_stack__(self):
-        # ./elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
-        result = subprocess.run(['./elastic-package', 'stack', 'up', '-d', '--version', self.stack_version, '-v'])
+        # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
+        result = subprocess.run(['elastic-package', 'stack', 'up', '-d', '--version', self.stack_version, '-v'])
         if result.returncode != 0:
             self.__teardown_stack__()  # some containers left running, make sure to stop them
             raise Exception(f"Error occurred while running stacks with elastic-package. Check logs for details.")
 
     def __teardown_stack__(self):
-        result = subprocess.run(['./elastic-package', 'stack', 'down'])
+        result = subprocess.run(['elastic-package', 'stack', 'down'])
         if result.returncode != 0:
             raise Exception(f"Error occurred while stopping stacks with elastic-package. Check logs for details.")
 
@@ -104,11 +103,11 @@ class Bootstrap:
         """
         Downloads elastic-package, creates a profile and runs ELK, Fleet, ERP and elastic-agent
         """
-        # self.__download_elastic_package__()
-        # self.__make_global__()
-        # self.__clone_integrations_repo__()
-        # self.__setup_elastic_package_profile__()
-        # self.__spin_stack__()
+        self.__download_elastic_package__()
+        self.__make_global__()
+        self.__clone_integrations_repo__()
+        self.__setup_elastic_package_profile__()
+        self.__spin_stack__()
 
     def stop_elastic_stack(self):
         self.__teardown_stack__()
