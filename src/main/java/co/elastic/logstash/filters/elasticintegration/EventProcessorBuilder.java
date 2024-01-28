@@ -39,6 +39,7 @@ import org.elasticsearch.script.ScriptEngine;
 import org.elasticsearch.script.ScriptModule;
 import org.elasticsearch.script.ScriptService;
 import org.elasticsearch.script.mustache.MustacheScriptEngine;
+import org.elasticsearch.telemetry.metric.MeterRegistry;
 import org.elasticsearch.threadpool.ThreadPool;
 
 import java.io.Closeable;
@@ -237,7 +238,7 @@ public class EventProcessorBuilder {
         try {
             final ArrayList<Service> services = new ArrayList<>();
 
-            final ThreadPool threadPool = new ThreadPool(settings);
+            final ThreadPool threadPool = new ThreadPool(settings, MeterRegistry.NOOP);
             resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
 
             final ScriptService scriptService = initScriptService(settings, threadPool);

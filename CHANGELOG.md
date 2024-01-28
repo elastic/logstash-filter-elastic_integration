@@ -1,3 +1,6 @@
+## 0.1.5
+  - Non-user facing change to build with Elasticsearch main branch [#121](https://github.com/elastic/logstash-filter-elastic_integration/pull/121)
+
 ## 0.1.4
   - Non-user facing work to shorten JAR path when packaging [#114](https://github.com/elastic/logstash-filter-elastic_integration/pull/114)
 
