@@ -65,6 +65,7 @@ public class ElasticsearchRestClientBuilder {
     private final IdentityConfig identityConfig = new IdentityConfig();
     private final RequestAuthConfig requestAuthConfig = new RequestAuthConfig();
     private final ElasticApiConfig elasticApiConfig = new ElasticApiConfig();
+    private String userAgentHeaderValue;
 
     public static ElasticsearchRestClientBuilder forCloudId(final String cloudId) {
         return ElasticsearchRestClientBuilder.forCloudId(cloudId, CloudIdRestClientBuilderFactory.DEFAULT);
@@ -157,6 +158,11 @@ public class ElasticsearchRestClientBuilder {
         return this;
     }
 
+    public synchronized ElasticsearchRestClientBuilder setUserAgentHeaderValue(final String userAgentHeaderValue) {
+        this.userAgentHeaderValue = userAgentHeaderValue;
+        return this;
+    }
+
     public RestClient build() {
         return build(restClientBuilderSupplier.get());
     }
@@ -172,6 +178,10 @@ public class ElasticsearchRestClientBuilder {
             }));
 
             this.elasticApiConfig.configureHttpClient(httpClientBuilder);
+
+            if (Objects.nonNull(this.userAgentHeaderValue)) {
+                httpClientBuilder.setUserAgent(this.userAgentHeaderValue);
+            }
         }).build();
     }
 

@@ -20,6 +20,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   HTTPS_PROTOCOL = "https".freeze
   ELASTIC_API_VERSION = "2023-10-31".freeze
 
+  require_relative "elastic_integration/version"
+  USER_AGENT_HEADER_VALUE = "Logstash/v#{LOGSTASH_VERSION} (ElasticIntegration/v#{VERSION})"
+
   # Sets the host(s) of the remote instance. If given an array it will load balance
   # requests across the hosts specified in the `hosts` parameter. Hosts can be any of
   # the forms:
@@ -337,22 +340,25 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def initialize_elasticsearch_rest_client!
-    java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
-    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
-
     config = extract_immutable_config
-    @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
-                                                               .map(&:build)
-                                                               .orElseThrow() # todo: ruby/java bridge better exception
+    @elasticsearch_rest_client = _elasticsearch_rest_client(config)
 
     if serverless?
-      @elasticsearch_rest_client = ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
-                                                                 .map do |builder|
-                                                                    builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
-                                                                  end
-                                                                 .map(&:build)
-                                                                 .orElseThrow()
+      @elasticsearch_rest_client = _elasticsearch_rest_client(config) do |builder|
+                                    builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
+                                  end
     end
+  end
+
+  def _elasticsearch_rest_client(config, &builder_interceptor)
+    java_import('co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder')
+    java_import('java.util.function.Function')
+
+    ElasticsearchRestClientBuilder.fromPluginConfiguration(config)
+                                  .map { |builder| builder.setUserAgentHeaderValue(USER_AGENT_HEADER_VALUE) }
+                                  .map(&(builder_interceptor || Function::identity.method(:apply)))
+                                  .map(&:build)
+                                  .orElseThrow() # todo: ruby/java bridge better exception
   end
 
   def initialize_event_processor!
@@ -368,13 +374,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
-    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
-
     check_user_privileges!
     check_es_cluster_license!
   end
 
   def check_user_privileges!
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
     PreflightCheck.new(@elasticsearch_rest_client).checkUserPrivileges
   rescue => e
     security_error_message = "no handler found for uri [/_security/user/_has_privileges]"
@@ -398,12 +403,14 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def check_es_cluster_license!
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
     PreflightCheck.new(@elasticsearch_rest_client).checkLicense
   rescue => e
     raise_config_error!(e.message)
   end
 
   def serverless?
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
     PreflightCheck.new(@elasticsearch_rest_client).isServerless
   rescue => e
     raise_config_error!(e.message)

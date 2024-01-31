@@ -1,3 +1,6 @@
+## 0.1.5
+  - Adds relevant information to Elasticsearch client's User-Agent header [#117](https://github.com/elastic/logstash-filter-elastic_integration/pull/117)
+
 ## 0.1.4
   - Non-user facing work to shorten JAR path when packaging [#114](https://github.com/elastic/logstash-filter-elastic_integration/pull/114)
 

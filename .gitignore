@@ -8,3 +8,4 @@ build
 .gradle
 local_libs
 lib/logstash/filters/elastic_integration/jar_dependencies.rb
+lib/logstash/filters/elastic_integration/version.rb
