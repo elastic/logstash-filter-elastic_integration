@@ -112,6 +112,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     require_relative "elastic_integration/geoip_database_provider_bridge"
 
     extend EventApiBridge
+
     extend GeoipDatabaseProviderBridge
 
     super
