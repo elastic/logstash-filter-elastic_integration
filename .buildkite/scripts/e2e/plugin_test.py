@@ -29,13 +29,13 @@ class PluginTest:
                 raise Exception(f"events not processed, events, in: {in_events}, out: {out_events}")
             else:
                 print("WARN: `elastic_integration` plugin didn't output events. This may happen when ingest pipeline "
-                      "cancel the events.")
+                      "cancel the events or `elasticsearch-output` failed, check Logstash docker logs.")
         if in_events != out_events:
             if elastic_package_result.returncode != 0:
                 raise Exception(f"processed events are not equal, events, in: {in_events}, out: {out_events}")
             else:
                 print("WARN: in and out event count in `elastic_integration` differ. This may happen when ingest "
-                      "pipeline cancel some events.")
+                      "pipeline cancel some events or `elasticsearch-output` failed, check Logstash docker logs.")
 
         print(f"Test succeeded with: {package}")
         self.LAST_PROCESSED_EVENTS = processed_events
