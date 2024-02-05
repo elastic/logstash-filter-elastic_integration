@@ -36,11 +36,11 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: logstash-filter-elastic-integration-pull-request-pipeline
+  name: logstash-filter-elastic-integration-pull-request
   description: 'A pipeline for Logstash filter for Elastic integration Pull Requests'
   links:
     - title: 'Logstash filter for Elastic integration Pull Request pipeline'
-      url: https://buildkite.com/elastic/logstash-filter-elastic-integration-pull-request-pipeline
+      url: https://buildkite.com/elastic/logstash-filter-elastic-integration-pull-request
 spec:
   owner: group:ingest-fp
   type: buildkite-pipeline
@@ -87,11 +87,11 @@ spec:
 apiVersion: backstage.io/v1alpha1
 kind: Resource
 metadata:
-  name: logstash-filter-elastic-integration-build-pipeline
+  name: logstash-filter-elastic-integration-build
   description: 'A pipeline for Logstash filter for Elastic integration build against Elasticsearch versions'
   links:
     - title: 'Logstash filter for Elastic integration build against Elasticsearch versions pipeline'
-      url: https://buildkite.com/elastic/logstash-filter-elastic-integration-build-pipeline
+      url: https://buildkite.com/elastic/logstash-filter-elastic-integration-build
 spec:
   owner: group:ingest-fp
   type: buildkite-pipeline
