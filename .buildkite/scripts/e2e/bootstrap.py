@@ -5,14 +5,21 @@ E2E bootstrapping with Python script
     - Clone integrations repo and prepare packages
     - When E2E finishes, teardown the stack
 """
+import io
 import os
 import subprocess
 import tarfile
+import time
+from logstash_stats import LogstashStats
 from util import Util
 
 
 class Bootstrap:
     ELASTIC_PACKAGE_DISTRO_URL = "https://api.github.com/repos/elastic/elastic-package/releases/latest"
+    LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
+    PLUGIN_NAME = "logstash-filter-elastic_integration"
+
+    logstash_stats_api = LogstashStats()
 
     def __init__(self, stack_version, platform):
         f"""
@@ -88,9 +95,60 @@ class Bootstrap:
         self.__create_config_file(config_example_file, config_file)
         subprocess.run(["elastic-package", "profiles", "use", "e2e"])
 
+    def __install_plugin(self):
+        with open("VERSION", "r") as f:
+            version = f.read()
+
+        plugin_name = f"logstash-filter-elastic_integration-{version.strip()}-java.gem"
+        container = Util.get_logstash_container()
+
+        tar_data = io.BytesIO()
+        with tarfile.open(fileobj=tar_data, mode='w') as tar:
+            tar.add(plugin_name, arcname=f"/usr/share/logstash/{plugin_name}")
+
+        tar_data.seek(0)
+        container.put_archive('/', tar_data.getvalue())
+
+        print("Installing logstash-filter-elastic_integration plugin...")
+        command = f"bin/logstash-plugin install {plugin_name}"
+        exec_result = container.exec_run(command)
+        if exec_result.exit_code != 0:
+            raise Exception("Error occurred installing plugin in Logstash container, "
+                            f"output: {exec_result.output.decode('utf-8')}.")
+        print("Plugin installed successfully.")
+
+    def __reload_container(self):
+        result = subprocess.run(["docker", "restart", f"{self.LOGSTASH_CONTAINER_NAME}"])
+        print(f"Logstash container restart result: {result}")
+        if result.returncode != 0:
+            raise Exception(f"Error occurred while reloading Logstash container, see logs for details.")
+
+    def __update_pipeline_config(self):
+        local_config_file = ".buildkite/scripts/e2e/config/pipeline.conf"
+        container_config_file_path = "/usr/share/logstash/pipeline/logstash.conf"
+        # python docker client (internally uses subprocess) requires special TAR header with tar operations
+        result = subprocess.run(["docker", "cp", f"{local_config_file}",
+                                 f"{self.LOGSTASH_CONTAINER_NAME}:{container_config_file_path}"])
+        print(f"Copy result: {result}")
+        if result.returncode != 0:
+            raise Exception(f"Error occurred while replacing pipeline config, see logs for details.")
+
+    def __wait_for_pipeline_reload(self):
+        pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
+        while True:
+            if pipeline_stats["reloads"]["failures"] > 0 or pipeline_stats["reloads"]["successes"] > 0:
+                break
+            time.sleep(3)
+            pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
+
+        if pipeline_stats["reloads"]["failures"] > 0:
+            raise Exception("Reloading Logstash pipeline failed, check logs for details.")
+
+        print("Reloading pipeline succeeded.")
+
     def __spin_stack(self):
         # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
-        result = subprocess.run(["elastic-package", "stack", "up", "-d", "--version", self.stack_version, "-v"])
+        result = subprocess.run(["elastic-package", "stack", "up", "-d", "--version", self.stack_version])
         if result.returncode != 0:
             self.__teardown_stack()  # some containers left running, make sure to stop them
             raise Exception(f"Error occurred while running stacks with elastic-package. Check logs for details.")
@@ -109,6 +167,11 @@ class Bootstrap:
         self.__clone_integrations_repo()
         self.__setup_elastic_package_profile()
         self.__spin_stack()
+        self.__install_plugin()
+        self.__reload_container()
+        self.__update_pipeline_config()
+        self.__wait_for_pipeline_reload()
 
     def stop_elastic_stack(self):
+        print(f"Stopping elastic-package stack...")
         self.__teardown_stack()

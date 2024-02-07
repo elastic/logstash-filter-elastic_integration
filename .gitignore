@@ -9,3 +9,4 @@ build
 local_libs
 lib/logstash/filters/elastic_integration/jar_dependencies.rb
 lib/logstash/filters/elastic_integration/version.rb
+.buildkite/scripts/e2e/__pycache__

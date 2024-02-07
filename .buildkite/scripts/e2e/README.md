@@ -12,7 +12,7 @@ export E2E_PLATFORM = "macos"
 Otherwise, it assumes test are being run on Linux platform.
 
 #### Stack version
-E2E also requires `ELASTIC_STACK_VERSION` (ex: "8.12.0") environment variable in order to test against.
+E2E also requires `STACK_VERSION` (ex: "8.12.0") environment variable in order to test against.
 Make sure to export it before running. In the Buildkite pipeline, this var will be resolved and exported. 
 
 #### Installing dependencies

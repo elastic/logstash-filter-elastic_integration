@@ -6,14 +6,14 @@ from logstash_stats import LogstashStats
 
 
 class PluginTest:
-    LOGSTASH_STATS = LogstashStats()
+    logstash_stats_api = LogstashStats()
     LAST_PROCESSED_EVENTS = {"in": 0, "out": 0}
 
     def __init__(self):
         pass
 
     def __analyze_logstash_throughput(self, package, elastic_package_result):
-        pipeline_stats = self.LOGSTASH_STATS.get()["pipelines"]["main"]
+        pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
         integration_stats = [item for item in pipeline_stats.get("plugins", {}).get("filters", []) if
                              item.get("name") == "elastic_integration"]
         if len(integration_stats) <= 0:

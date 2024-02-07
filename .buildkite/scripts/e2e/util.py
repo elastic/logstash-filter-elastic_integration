@@ -1,3 +1,4 @@
+import docker
 import os
 import requests
 from requests.adapters import HTTPAdapter, Retry
@@ -17,3 +18,8 @@ class Util:
         retries = Retry(total=5, backoff_factor=1, status_forcelist=[408, 502, 503, 504])
         session.mount(schema, HTTPAdapter(max_retries=retries))
         return session.get(url)
+
+    @staticmethod
+    def get_logstash_container():
+        client = docker.from_env()
+        return client.containers.get("elastic-package-stack-e2e-logstash-1")

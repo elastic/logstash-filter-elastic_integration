@@ -2,10 +2,10 @@
  Main entry point of the E2E test suites
 """
 
-import docker
 import os
 from bootstrap import Bootstrap
 from plugin_test import PluginTest
+from util import Util
 
 INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
 
@@ -13,9 +13,9 @@ INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
 class BootstrapContextManager:
     def __enter__(self):
         platform = os.environ.get("E2E_PLATFORM", "linux")
-        stack_version = os.environ.get("ELASTIC_STACK_VERSION")
+        stack_version = os.environ.get("STACK_VERSION")
         if stack_version is None:
-            raise Exception("ELASTIC_STACK_VERSION environment variable is missing, please export and try again.")
+            raise Exception("STACK_VERSION environment variable is missing, please export and try again.")
 
         print(f"Starting E2E test of Logstash running Elastic Integrations against {stack_version} version.")
         self.bootstrap = Bootstrap(stack_version, platform)
@@ -44,8 +44,8 @@ def main():
                 print(f"Test failed for {package} with {e}.")
                 failed_packages.append(package)
 
-        client = docker.from_env()
-        container = client.containers.get('elastic-package-stack-e2e-logstash-1')
+        container = Util.get_logstash_container()
+
         # pretty printing
         print(f"Logstash docker container logs..")
         ls_container_logs = container.logs().decode('utf-8')
