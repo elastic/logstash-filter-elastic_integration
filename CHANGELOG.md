@@ -1,5 +1,5 @@
 ## 0.1.6
-  - Fixes issue where configured `username`/`password` credentials was not sent to Elasticsearch instances that had anonymous access enabled
+  - Fixes issue where configured `username`/`password` credentials was not sent to Elasticsearch instances that had anonymous access enabled [#127](https://github.com/elastic/logstash-filter-elastic_integration/pull/127)
 
 ## 0.1.5
   - Adds relevant information to Elasticsearch client's User-Agent header [#117](https://github.com/elastic/logstash-filter-elastic_integration/pull/117)
