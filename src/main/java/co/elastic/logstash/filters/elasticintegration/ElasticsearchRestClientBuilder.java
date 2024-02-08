@@ -9,13 +9,13 @@ package co.elastic.logstash.filters.elasticintegration;
 import co.elastic.logstash.api.Password;
 import co.elastic.logstash.filters.elasticintegration.util.Exceptions;
 import co.elastic.logstash.filters.elasticintegration.util.KeyStoreUtil;
-import org.apache.http.*;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
+import org.apache.http.Header;
+import org.apache.http.HttpException;
+import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.TrustAllStrategy;
-import org.apache.http.impl.client.BasicCredentialsProvider;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HttpContext;
@@ -251,9 +251,9 @@ public class ElasticsearchRestClientBuilder {
         }
     }
 
-    static class ApiKeyHttpRequestInterceptor extends HeaderInterceptor {
-        ApiKeyHttpRequestInterceptor(Header h) {
-            super(h);
+    static class AuthorizationHeaderHttpRequestInterceptor extends HeaderInterceptor {
+        AuthorizationHeaderHttpRequestInterceptor(final String headerValue) {
+            super(new BasicHeader("Authorization", headerValue));
         }
     }
 
@@ -391,13 +391,12 @@ public class ElasticsearchRestClientBuilder {
             Objects.requireNonNull(username, "username");
             Objects.requireNonNull(password, "password");
 
-            final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-            credentialsProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(username, password.getPassword()));
+            assert username.indexOf(58) == -1 : "username cannot contain colon (`:`)";
 
-            return this.setHttpClientConfigurator((httpAsyncClientBuilder -> {
-                httpAsyncClientBuilder.disableAuthCaching();
-                httpAsyncClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-            }));
+            final String encodedCredentials = Base64.getEncoder().encodeToString(String.format("%s:%s", username, password.getPassword()).getBytes(StandardCharsets.UTF_8));
+
+            final HttpRequestInterceptor interceptor = new AuthorizationHeaderHttpRequestInterceptor(String.format("Basic %s", encodedCredentials));
+            return this.setHttpClientConfigurator(HttpClientConfigurator.forAddInterceptorFirst(interceptor));
         }
 
         public RequestAuthConfig setApiKey(final Password apiKey) {
@@ -411,8 +410,7 @@ public class ElasticsearchRestClientBuilder {
                 encodedApiKey = apiKey.getPassword();
             }
 
-            final Header authorizationHeader = new BasicHeader("Authorization", String.format("ApiKey %s", encodedApiKey));
-            final HttpRequestInterceptor interceptor = new ApiKeyHttpRequestInterceptor(authorizationHeader);
+            final HttpRequestInterceptor interceptor = new AuthorizationHeaderHttpRequestInterceptor(String.format("ApiKey %s", encodedApiKey));
             return this.setHttpClientConfigurator(HttpClientConfigurator.forAddInterceptorFirst(interceptor));
         }
 

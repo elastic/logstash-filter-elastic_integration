@@ -236,6 +236,32 @@ public class ElasticsearchRestClientWireMockTest {
         }
     }
 
+    static class RestClientWithBasicAuth {
+        @RegisterExtension
+        static WireMockExtension wireMock = WireMockExtension.newInstance()
+                .options(wireMockConfig().dynamicPort()).build();
+
+        @Test void testPreemtiveBasicAuth() throws Exception {
+            final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
+
+            final String username = "a_user";
+            final String password = "$3cUr3";
+            final String encodedBasic = "Basic YV91c2VyOiQzY1VyMw==";
+
+            wireMock.stubFor(get("/")
+                    .withHeader("Authorization", equalTo(encodedBasic))
+                    .willReturn(okJson(getMockResponseBody("get-root.json"))));
+
+            try (RestClient restClient = ElasticsearchRestClientBuilder
+                    .forURLs(Collections.singleton(wiremockElasticsearch))
+                    .configureRequestAuth(c -> c.setBasicAuth(username, new Password(password)))
+                    .build()) {
+                final Response response = restClient.performRequest(new Request("GET", "/"));
+                assertThat(response.getStatusLine().getStatusCode(), is(Matchers.equalTo(200)));
+            }
+        }
+    }
+
     static class RestClientWithApiKey {
 
         @RegisterExtension
