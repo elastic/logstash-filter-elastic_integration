@@ -12,7 +12,7 @@ class PluginTest:
     def __init__(self):
         pass
 
-    def __analyze_logstash_throughput(self, package, elastic_package_result):
+    def __analyze_logstash_throughput(self, package: str, elastic_package_result: subprocess.CompletedProcess) -> None:
         pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
         integration_stats = [item for item in pipeline_stats.get("plugins", {}).get("filters", []) if
                              item.get("name") == "elastic_integration"]
@@ -40,7 +40,7 @@ class PluginTest:
         print(f"Test succeeded with: {package}")
         self.LAST_PROCESSED_EVENTS = processed_events
 
-    def on(self, package):
+    def on(self, package: str) -> None:
         print(f"Testing the package: {package}")
 
         # `elastic-package test system` deploys current package

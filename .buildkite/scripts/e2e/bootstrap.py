@@ -7,7 +7,6 @@ E2E bootstrapping with Python script
 """
 import io
 import os
-import subprocess
 import tarfile
 import time
 from logstash_stats import LogstashStats
@@ -21,60 +20,65 @@ class Bootstrap:
 
     logstash_stats_api = LogstashStats()
 
-    def __init__(self, stack_version, platform):
+    def __init__(self, stack_version: str, platform: str) -> None:
         f"""
         A constructor of the {Bootstrap}.
 
         Args:
-            stack_version (str): An Elastic stack version where {Bootstrap} spins up with
-            platform (str): pass macos if you are on your dev Mac, otherwise linux 
+            stack_version: An Elastic stack version where {Bootstrap} spins up with
+            platform: pass macos if you are on your dev Mac, otherwise linux 
 
         Returns:
-            void: validates platform, sets stack version and platform
+            Validates platform, sets stack version and platform
         """
         self.stack_version = stack_version
         self.__validate_platform(platform)
         self.__set_distro(platform)
 
-    def __validate_platform(self, platform):
+    def __validate_platform(self, platform: str) -> None:
         platforms = ["macos", "linux"]
         if platform not in platforms:
-            raise ValueError(f"platform accepts {platforms}")
+            raise ValueError(f"platform accepts {platforms} only")
         self.platform = platform
 
-    def __set_distro(self, platform):
+    def __set_distro(self, platform) -> None:
         self.distro = "darwin_amd64.tar.gz" if platform == "macos" else "linux_amd64.tar.gz"
 
-    def __download_elastic_package(self):
+    def __download_elastic_package(self) -> None:
         response = Util.call_url_with_retry(self.ELASTIC_PACKAGE_DISTRO_URL)
         release_info = response.json()
 
         download_urls = [asset["browser_download_url"] for asset in release_info["assets"]]
         download_url = [url for url in download_urls if self.distro in url][0]
         if download_url.strip() == '':
-            raise Exception("Could not resolve elastic-package distro download URL.")
+            raise Exception(f"Could not resolve elastic-package distro download URL, release info: {release_info}.")
 
-        os.system(f"wget {download_url}")
+        file_name = "downloaded_elastic_package_" + self.distro
+        # downloading with `urllib3` gives a different size file which causes a corrupted file issue
+        commands = ["curl", "-o", file_name, "--retry", "5", "--retry-delay", "5", "-fSL", download_url]
+        error_message = "Failed to download elastic-package"
+        Util.run_subprocess(commands, error_message)
         print("elastic-package is successfully downloaded.")
 
         # Extract the downloaded tar.gz file
-        with tarfile.open(download_url.split("/")[-1], "r:gz") as tar:
-            tar.extractall()
+        commands = ["tar", "zxf", file_name]
+        error_message = f"Error occurred while unzipping {commands}"
+        Util.run_subprocess(commands, error_message)
 
-    def __make_elastic_package_global(self):
-        result = subprocess.run(["sudo", "mv", "elastic-package", "/usr/local/bin"])
-        if result.returncode != 0:
-            raise Exception("Could not make `elastic-package` global.")
+    def __make_elastic_package_global(self) -> None:
+        commands = ["sudo", "mv", "elastic-package", "/usr/local/bin"]
+        error_message = "Could not make `elastic-package` global"
+        Util.run_subprocess(commands, error_message)
 
-    def __clone_integrations_repo(self):
-        result = subprocess.run(["git", "clone", "https://github.com/elastic/integrations.git"])
-        if result.returncode != 0:
-            raise Exception(f"Error occurred while cloning an integrations repo. Check logs for details.")
+    def __clone_integrations_repo(self) -> None:
+        commands = ["git", "clone", "https://github.com/elastic/integrations.git"]
+        error_message = "Error occurred while cloning an integrations repo. Check logs for details."
+        Util.run_subprocess(commands, error_message)
 
-    def __get_profile_path(self):
+    def __get_profile_path(self) -> str:
         return os.path.join(Util.get_home_path(), ".elastic-package/profiles/e2e")
 
-    def __create_config_file(self, sample_config_file, config_file):
+    def __create_config_file(self, sample_config_file: str, config_file: str) -> None:
         with open(sample_config_file, "r") as infile, open(config_file, "w") as outfile:
             for line in infile:
                 if "stack.logstash_enabled: true" in line:
@@ -82,10 +86,10 @@ class Bootstrap:
                     line = line.lstrip('#').lstrip()
                 outfile.write(line)
 
-    def __setup_elastic_package_profile(self):
-        result = subprocess.run(["elastic-package", "profiles", "create", "e2e"])
-        if result.returncode != 0:
-            raise Exception(f"Error occurred while creating a profile. Check logs for details.")
+    def __setup_elastic_package_profile(self) -> None:
+        commands = ["elastic-package", "profiles", "create", "e2e"]
+        error_message = "Error occurred while creating a profile. Check logs for details."
+        Util.run_subprocess(commands, error_message)
 
         print("`elastic-package` e2e profile created.")
 
@@ -93,9 +97,10 @@ class Bootstrap:
         config_example_file = os.path.join(self.__get_profile_path(), "config.yml.example")
         config_file = os.path.join(self.__get_profile_path(), "config.yml")
         self.__create_config_file(config_example_file, config_file)
-        subprocess.run(["elastic-package", "profiles", "use", "e2e"])
+        commands = ["elastic-package", "profiles", "use", "e2e"]
+        Util.run_subprocess(commands, error_message)
 
-    def __install_plugin(self):
+    def __install_plugin(self) -> None:
         with open("VERSION", "r") as f:
             version = f.read()
 
@@ -117,23 +122,21 @@ class Bootstrap:
                             f"output: {exec_result.output.decode('utf-8')}.")
         print("Plugin installed successfully.")
 
-    def __reload_container(self):
-        result = subprocess.run(["docker", "restart", f"{self.LOGSTASH_CONTAINER_NAME}"])
-        print(f"Logstash container restart result: {result}")
-        if result.returncode != 0:
-            raise Exception(f"Error occurred while reloading Logstash container, see logs for details.")
+    def __reload_container(self) -> None:
+        commands = ["docker", "restart", f"{self.LOGSTASH_CONTAINER_NAME}"]
+        error_message = "Error occurred while reloading Logstash container, see logs for details."
+        Util.run_subprocess(commands, error_message)
 
-    def __update_pipeline_config(self):
+    def __update_pipeline_config(self) -> None:
         local_config_file = ".buildkite/scripts/e2e/config/pipeline.conf"
         container_config_file_path = "/usr/share/logstash/pipeline/logstash.conf"
         # python docker client (internally uses subprocess) requires special TAR header with tar operations
-        result = subprocess.run(["docker", "cp", f"{local_config_file}",
-                                 f"{self.LOGSTASH_CONTAINER_NAME}:{container_config_file_path}"])
-        print(f"Copy result: {result}")
-        if result.returncode != 0:
-            raise Exception(f"Error occurred while replacing pipeline config, see logs for details.")
+        commands = ["docker", "cp", f"{local_config_file}",
+                    f"{self.LOGSTASH_CONTAINER_NAME}:{container_config_file_path}"]
+        error_message = "Error occurred while replacing pipeline config, see logs for details."
+        Util.run_subprocess(commands, error_message)
 
-    def __wait_for_pipeline_reload(self):
+    def __wait_for_pipeline_reload(self) -> None:
         pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
         while True:
             if pipeline_stats["reloads"]["failures"] > 0 or pipeline_stats["reloads"]["successes"] > 0:
@@ -146,19 +149,21 @@ class Bootstrap:
 
         print("Reloading pipeline succeeded.")
 
-    def __spin_stack(self):
+    def __spin_stack(self) -> None:
         # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
-        result = subprocess.run(["elastic-package", "stack", "up", "-d", "--version", self.stack_version])
-        if result.returncode != 0:
+        commands = ["elastic-package", "stack", "up", "-d", "--version", self.stack_version]
+        error_message = "Error occurred while running stacks with elastic-package. Check logs for details."
+        try:
+            Util.run_subprocess(commands, error_message)
+        except Exception as ex:
             self.__teardown_stack()  # some containers left running, make sure to stop them
-            raise Exception(f"Error occurred while running stacks with elastic-package. Check logs for details.")
 
-    def __teardown_stack(self):
-        result = subprocess.run(["elastic-package", "stack", "down"])
-        if result.returncode != 0:
-            raise Exception(f"Error occurred while stopping stacks with elastic-package. Check logs for details.")
+    def __teardown_stack(self) -> None:
+        commands = ["elastic-package", "stack", "down"]
+        error_message = "Error occurred while stopping stacks with elastic-package. Check logs for details."
+        Util.run_subprocess(commands, error_message)
 
-    def run_elastic_stack(self):
+    def run_elastic_stack(self) -> None:
         """
         Downloads elastic-package, creates a profile and runs ELK, Fleet, ERP and elastic-agent
         """
@@ -172,6 +177,6 @@ class Bootstrap:
         self.__update_pipeline_config()
         self.__wait_for_pipeline_reload()
 
-    def stop_elastic_stack(self):
+    def stop_elastic_stack(self) -> None:
         print(f"Stopping elastic-package stack...")
         self.__teardown_stack()
