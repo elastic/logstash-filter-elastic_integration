@@ -8,8 +8,6 @@ E2E bootstrapping with Python script
 import io
 import os
 import tarfile
-import time
-from logstash_stats import LogstashStats
 from util import Util
 
 
@@ -17,8 +15,6 @@ class Bootstrap:
     ELASTIC_PACKAGE_DISTRO_URL = "https://api.github.com/repos/elastic/elastic-package/releases/latest"
     LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
     PLUGIN_NAME = "logstash-filter-elastic_integration"
-
-    logstash_stats_api = LogstashStats()
 
     def __init__(self, stack_version: str, platform: str) -> None:
         f"""
@@ -123,6 +119,7 @@ class Bootstrap:
         print("Plugin installed successfully.")
 
     def __reload_container(self) -> None:
+        print("Restarting Logstash container after installing the plugin and updating pipeline config...")
         commands = ["docker", "restart", f"{self.LOGSTASH_CONTAINER_NAME}"]
         error_message = "Error occurred while reloading Logstash container, see logs for details."
         Util.run_subprocess(commands, error_message)
@@ -135,19 +132,6 @@ class Bootstrap:
                     f"{self.LOGSTASH_CONTAINER_NAME}:{container_config_file_path}"]
         error_message = "Error occurred while replacing pipeline config, see logs for details."
         Util.run_subprocess(commands, error_message)
-
-    def __wait_for_pipeline_reload(self) -> None:
-        pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
-        while True:
-            if pipeline_stats["reloads"]["failures"] > 0 or pipeline_stats["reloads"]["successes"] > 0:
-                break
-            time.sleep(3)
-            pipeline_stats = self.logstash_stats_api.get()["pipelines"]["main"]
-
-        if pipeline_stats["reloads"]["failures"] > 0:
-            raise Exception("Reloading Logstash pipeline failed, check logs for details.")
-
-        print("Reloading pipeline succeeded.")
 
     def __spin_stack(self) -> None:
         # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
@@ -173,9 +157,8 @@ class Bootstrap:
         self.__setup_elastic_package_profile()
         self.__spin_stack()
         self.__install_plugin()
-        self.__reload_container()
         self.__update_pipeline_config()
-        self.__wait_for_pipeline_reload()
+        self.__reload_container()
 
     def stop_elastic_stack(self) -> None:
         print(f"Stopping elastic-package stack...")
