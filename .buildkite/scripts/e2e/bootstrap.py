@@ -13,7 +13,7 @@ from util import Util
 
 class Bootstrap:
     ELASTIC_PACKAGE_DISTRO_URL = "https://api.github.com/repos/elastic/elastic-package/releases/latest"
-    LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
+    LOGSTASH_CONTAINER_NAME = "elastic-package-stack-logstash-1"
     PLUGIN_NAME = "logstash-filter-elastic_integration"
 
     def __init__(self, stack_version: str, platform: str) -> None:

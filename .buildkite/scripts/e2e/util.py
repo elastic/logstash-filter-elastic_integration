@@ -24,7 +24,7 @@ class Util:
     @staticmethod
     def get_logstash_container() -> Container:
         client = docker.from_env()
-        return client.containers.get("elastic-package-stack-e2e-logstash-1")
+        return client.containers.get("elastic-package-stack-logstash-1")
 
     @staticmethod
     def run_subprocess(commands: list, error_message: str):
