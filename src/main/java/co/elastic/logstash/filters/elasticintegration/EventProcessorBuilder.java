@@ -25,6 +25,7 @@ import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.core.TimeValue;
 import org.elasticsearch.env.Environment;
 import org.elasticsearch.ingest.IngestService;
+import org.elasticsearch.ingest.LogstashInternalBridge;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.common.IngestCommonPlugin;
 import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
@@ -237,7 +238,7 @@ public class EventProcessorBuilder {
         try {
             final ArrayList<Service> services = new ArrayList<>();
 
-            final ThreadPool threadPool = new ThreadPool(settings);
+            final ThreadPool threadPool = LogstashInternalBridge.createThreadPool(settings);
             resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
 
             final ScriptService scriptService = initScriptService(settings, threadPool);
