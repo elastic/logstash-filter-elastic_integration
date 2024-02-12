@@ -21,7 +21,12 @@ resolve_current_stack_version
 ###
 # Build the plugin, to do so we need Logstash source
 build_logstash() {
-  retry -t 5 -- git clone https://github.com/elastic/logstash.git
+  if [[ -d /usr/local/git-references/git-github-com-elastic-logstash-git ]]; then
+      retry -t 5 -- git clone -v --reference /usr/local/git-references/git-github-com-elastic-logstash-git -- https://github.com/elastic/logstash.git .
+  else
+      retry -t 5 -- git clone --single-branch https://github.com/elastic/logstash.git
+  fi
+
   cd logstash && ./gradlew clean bootstrap assemble installDefaultGems && cd ..
   LOGSTASH_PATH=$(pwd)/logstash
   export LOGSTASH_PATH

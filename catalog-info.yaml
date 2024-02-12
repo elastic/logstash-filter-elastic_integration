@@ -148,7 +148,7 @@ spec:
     kind: Pipeline
     metadata:
       description: ':logstash: `elastic_integration` E2E tests. :pipeline:'
-      name: logstash-filter-elastic_integration-e2e
+      name: logstash-filter-elastic-integration-e2e
     spec:
       pipeline_file: .buildkite/e2e-pipeline.yml
       maximum_timeout_in_minutes: 120
