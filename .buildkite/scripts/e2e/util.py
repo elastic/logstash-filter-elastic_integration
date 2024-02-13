@@ -24,12 +24,12 @@ class Util:
     @staticmethod
     def get_logstash_container() -> Container:
         client = docker.from_env()
-        return client.containers.get("elastic-package-stack-logstash-1")
+        return client.containers.get("elastic-package-stack-e2e-logstash-1")
 
     @staticmethod
-    def run_subprocess(commands: list, error_message: str):
+    def run_or_raise_error(commands: list, error_message):
         result = subprocess.run(commands, universal_newlines=True, stdout=subprocess.PIPE)
         if result.returncode != 0:
             full_error_message = (error_message + ", output: " + result.stdout.decode('utf-8')) \
-                if result.stdout is not None else error_message
+                if result.stdout else error_message
             raise Exception(f"{full_error_message}")
