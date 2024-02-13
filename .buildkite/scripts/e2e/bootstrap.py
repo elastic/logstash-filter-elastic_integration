@@ -15,28 +15,37 @@ class Bootstrap:
     LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
     PLUGIN_NAME = "logstash-filter-elastic_integration"
 
-    def __init__(self, stack_version: str, platform: str) -> None:
+    def __init__(self, stack_version: str, platform: str, project_type: str) -> None:
         f"""
         A constructor of the {Bootstrap}.
 
         Args:
             stack_version: An Elastic stack version where {Bootstrap} spins up with
-            platform: pass macos if you are on your dev Mac, otherwise linux 
+            platform: pass macos if you are on your dev Mac, otherwise linux
+            project_type: type of the project running with, example serverless or on-prems
 
         Returns:
-            Validates platform, sets stack version and platform
+            Validates and sets stack version, project type and platform
         """
         self.stack_version = stack_version
-        self.__validate_platform(platform)
-        self.__set_distro(platform)
+        self.__validate_and_set_project_type(project_type)
+        self.__validate_and_set_platform(platform)
+        self.__validate_and_set_distro(platform)
 
-    def __validate_platform(self, platform: str) -> None:
+    def __validate_and_set_project_type(self, project_type: str):
+        project_types = ["on_prems", "serverless"]
+        if project_type not in project_types:
+            raise ValueError(f"project_type accepts {project_types} only")
+        self.project_type = project_type
+        print(f"Project type: {project_type}")
+
+    def __validate_and_set_platform(self, platform: str) -> None:
         platforms = ["macos", "linux"]
         if platform not in platforms:
             raise ValueError(f"platform accepts {platforms} only")
         self.platform = platform
 
-    def __set_distro(self, platform) -> None:
+    def __validate_and_set_distro(self, platform) -> None:
         self.distro = "darwin_amd64.tar.gz" if platform == "macos" else "linux_amd64.tar.gz"
 
     def __download_elastic_package(self) -> None:
@@ -109,21 +118,26 @@ class Bootstrap:
         print("Restarting Logstash container after installing the plugin.")
         Util.run_or_raise_error(["docker", "restart", f"{self.LOGSTASH_CONTAINER_NAME}"],
                                 "Error occurred while reloading Logstash container, see logs for details.")
-        time.sleep(15)  # give a time Logstash pipeline to fully start
+        time.sleep(20)  # give a time Logstash pipeline to fully start
 
     def __update_pipeline_config(self) -> None:
-        local_config_file = ".buildkite/scripts/e2e/config/pipeline.conf"
+        local_config_file_path = ".buildkite/scripts/e2e/config/"
+        config_file = "serverless_pipeline.conf" if self.project_type == "serverless" else "pipeline.conf"
+        local_config_file = local_config_file_path + config_file
         container_config_file_path = "/usr/share/logstash/pipeline/logstash.conf"
         # python docker client (internally uses subprocess) requires special TAR header with tar operations
         Util.run_or_raise_error(["docker", "cp", f"{local_config_file}",
                                  f"{self.LOGSTASH_CONTAINER_NAME}:{container_config_file_path}"],
                                 "Error occurred while replacing pipeline config, see logs for details")
-        time.sleep(15)  # give a time Logstash pipeline to fully start
+        time.sleep(20)  # give a time Logstash pipeline to fully start
 
     def __spin_stack(self) -> None:
         try:
             # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
-            Util.run_or_raise_error(["elastic-package", "stack", "up", "-d", "--version", self.stack_version],
+            commands = ["elastic-package", "stack", "up", "-d", "--version", self.stack_version]
+            if self.project_type == "serverless":
+                commands.extend(["--provider", "serverless"])
+            Util.run_or_raise_error(commands,
                                     "Error occurred while running stacks with elastic-package. Check logs for details.")
         except Exception as ex:
             self.__teardown_stack()  # some containers left running, make sure to stop them

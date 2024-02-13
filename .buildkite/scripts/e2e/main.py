@@ -14,11 +14,12 @@ class BootstrapContextManager:
     def __enter__(self):
         platform = os.environ.get("E2E_PLATFORM", "linux")
         stack_version = os.environ.get("STACK_VERSION")
+        project_type = os.environ.get("E2E_PROJECT_TYPE", "on_prems")
         if stack_version is None:
             raise Exception("STACK_VERSION environment variable is missing, please export and try again.")
 
         print(f"Starting E2E test of Logstash running Elastic Integrations against {stack_version} version.")
-        self.bootstrap = Bootstrap(stack_version, platform)
+        self.bootstrap = Bootstrap(stack_version, platform, project_type)
         self.bootstrap.run_elastic_stack()
         return self.bootstrap
 
