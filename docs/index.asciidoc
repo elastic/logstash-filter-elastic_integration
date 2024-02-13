@@ -176,7 +176,7 @@ It has access to the Painless and Mustache scripting engines where applicable:
 | `split` | _none_
 | `trim` | _none_
 | `uppercase` | _none_
-| `uriparts` | _none_
+| `uri_parts` | _none_
 | `urldecode` | _none_
 | `user_agent` | side-loading a custom regex file is not supported; the processor will use the default user agent definitions as specified in https://www.elastic.co/guide/en/elasticsearch/reference/current/user-agent-processor.html[Elasticsearch processor definition]
 
