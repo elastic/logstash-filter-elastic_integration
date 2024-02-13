@@ -47,8 +47,9 @@ pip install -r requirements.txt
 ```
 
 ### Run
+Run the following command from the repo dir:
 ```bash
-python3 main.py
+python3 .buildkite/scripts/e2e/main.py
 ```
 
 ## Troubleshooting
