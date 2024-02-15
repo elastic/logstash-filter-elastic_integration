@@ -6,6 +6,7 @@ E2E bootstrapping with Python script
     - When E2E finishes, teardown the stack
 """
 import os
+import sys
 import time
 from util import Util
 
@@ -15,22 +16,20 @@ class Bootstrap:
     LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
     PLUGIN_NAME = "logstash-filter-elastic_integration"
 
-    def __init__(self, stack_version: str, platform: str, project_type: str) -> None:
+    def __init__(self, stack_version: str, project_type: str) -> None:
         f"""
         A constructor of the {Bootstrap}.
 
         Args:
             stack_version: An Elastic stack version where {Bootstrap} spins up with
-            platform: pass macos if you are on your dev Mac, otherwise linux
             project_type: type of the project running with, example serverless or on-prems
 
         Returns:
-            Validates and sets stack version, project type and platform
+            Validates and sets stack version, project type and resolves elastic package distro based on running OS (sys.platform)
         """
         self.stack_version = stack_version
         self.__validate_and_set_project_type(project_type)
-        self.__validate_and_set_platform(platform)
-        self.__validate_and_set_distro(platform)
+        self.__resolve_distro()
 
     def __validate_and_set_project_type(self, project_type: str):
         project_types = ["on_prems", "serverless"]
@@ -39,14 +38,12 @@ class Bootstrap:
         self.project_type = project_type
         print(f"Project type: {project_type}")
 
-    def __validate_and_set_platform(self, platform: str) -> None:
-        platforms = ["macos", "linux"]
-        if platform not in platforms:
-            raise ValueError(f"platform accepts {platforms} only")
-        self.platform = platform
-
-    def __validate_and_set_distro(self, platform) -> None:
-        self.distro = "darwin_amd64.tar.gz" if platform == "macos" else "linux_amd64.tar.gz"
+    def __resolve_distro(self) -> None:
+        print(f"Platform: {sys.platform}")
+        platforms = ["darwin", "linux"]
+        if sys.platform not in platforms:
+            raise ValueError(f"Unsupported {sys.platform}, E2E can on {platforms} only")
+        self.distro = "darwin_amd64.tar.gz" if sys.platform == "darwin" else "linux_amd64.tar.gz"
 
     def __download_elastic_package(self) -> None:
         response = Util.call_url_with_retry(self.ELASTIC_PACKAGE_DISTRO_URL)
