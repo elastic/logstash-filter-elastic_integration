@@ -49,8 +49,8 @@ spec:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
     metadata:
-      description: ':logstash: The logstash-filter-elastic_integration-pull-request :pipeline:'
-      name: logstash-filter-elastic_integration-pull-request
+      description: ':logstash: Build and test `elastic_integration` pull request :pipeline:'
+      name: logstash-filter-elastic-integration-pull-request
     spec:
       pipeline_file: .buildkite/pull-request-pipeline.yml
       maximum_timeout_in_minutes: 120
@@ -100,8 +100,8 @@ spec:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
     metadata:
-      description: ':logstash: The logstash-filter-elastic_integration-build :pipeline:'
-      name: logstash-filter-elastic_integration-build
+      description: ':logstash: Build `elastic_integration` with Elasticsearch :pipeline:'
+      name: logstash-filter-elastic-integration-build
     spec:
       pipeline_file: .buildkite/build-pipeline.yml
       maximum_timeout_in_minutes: 120
