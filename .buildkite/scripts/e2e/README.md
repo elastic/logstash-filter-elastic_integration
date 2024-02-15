@@ -23,7 +23,7 @@ export LOGSTASH_PATH
 If you want to run tests with serverless, this will be for you.
 Defaults to `on_prems` where local stack containers will be spun up and tested.
 ```bash
-export E2E_PROJECT_TYPE = "serverless"
+export E2E_PROJECT_TYPE="serverless"
 ```
 
 In order to run tests with serverless, you also need to export `EC_API_KEY` which is an organization API key to create a project.
@@ -32,7 +32,7 @@ In the pipelines, this will be automatically retrieved from Vault services.
 #### Defining a platform
 If you have Mac, you need to let the E2E know with
 ```bash
-export E2E_PLATFORM = "macos"
+export E2E_PLATFORM="macos"
 ```
 Otherwise, it assumes test are being run on Linux platform.
 
@@ -43,7 +43,7 @@ Make sure to export it before running. In the Buildkite pipeline, this var will 
 #### Installing dependencies
 Make sure you have python installed on you local
 ```bash
-pip install -r requirements.txt
+pip install -r .buildkite/scripts/e2e/requirements.txt
 ```
 
 ### Run
