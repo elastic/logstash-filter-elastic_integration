@@ -49,8 +49,8 @@ spec:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
     metadata:
-      description: ':logstash: The logstash-filter-elastic_integration-pull-request :pipeline:'
-      name: logstash-filter-elastic_integration-pull-request
+      description: ':logstash: Build and test `elastic_integration` pull request :pipeline:'
+      name: logstash-filter-elastic-integration-pull-request
     spec:
       pipeline_file: .buildkite/pull-request-pipeline.yml
       maximum_timeout_in_minutes: 120
@@ -100,8 +100,8 @@ spec:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
     metadata:
-      description: ':logstash: The logstash-filter-elastic_integration-build :pipeline:'
-      name: logstash-filter-elastic_integration-build
+      description: ':logstash: Build `elastic_integration` with Elasticsearch :pipeline:'
+      name: logstash-filter-elastic-integration-build
     spec:
       pipeline_file: .buildkite/build-pipeline.yml
       maximum_timeout_in_minutes: 120
@@ -116,6 +116,53 @@ spec:
           branch: main
           cronline: "@daily"
           message: "Run plugin build every day."
+      teams:
+        logstash:
+          access_level: MANAGE_BUILD_AND_READ
+        ingest-fp:
+          access_level: MANAGE_BUILD_AND_READ
+        ingest-eng-prod:
+          access_level: MANAGE_BUILD_AND_READ
+        everyone:
+          access_level: READ_ONLY
+
+# ***********************************
+# SECTION START: E2E tests pipeline
+# ***********************************
+---
+# yaml-language-server: $schema=https://gist.githubusercontent.com/elasticmachine/988b80dae436cafea07d9a4a460a011d/raw/rre.schema.json
+apiVersion: backstage.io/v1alpha1
+kind: Resource
+metadata:
+  name: logstash-filter-elastic-integration-e2e
+  description: 'A pipeline for `elastic_integration` E2E tests.'
+  links:
+    - title: 'A pipeline for `elastic_integration` E2E tests.'
+      url: https://buildkite.com/elastic/logstash-filter-elastic-integration-e2e
+spec:
+  owner: group:ingest-fp
+  type: buildkite-pipeline
+  system: buildkite
+  implementation:
+    apiVersion: buildkite.elastic.dev/v1
+    kind: Pipeline
+    metadata:
+      description: ':logstash: `elastic_integration` E2E tests. :pipeline:'
+      name: logstash-filter-elastic-integration-e2e
+    spec:
+      pipeline_file: .buildkite/e2e-pipeline.yml
+      maximum_timeout_in_minutes: 120
+      repository: elastic/logstash-filter-elastic_integration
+      env:
+        ELASTIC_PR_COMMENTS_ENABLED: 'true'
+        ELASTIC_SLACK_NOTIFICATIONS_ENABLED: 'true'
+        SLACK_NOTIFICATIONS_CHANNEL: '#logstash-build'
+        SLACK_NOTIFICATIONS_ON_SUCCESS: 'false'
+      schedules:
+        Weekly E2E Run:
+          branch: main
+          cronline: "@weekly"
+          message: "Run plugin E2E tests weekly."
       teams:
         logstash:
           access_level: MANAGE_BUILD_AND_READ

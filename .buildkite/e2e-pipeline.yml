@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
+
+agents:
+  provider: gcp
+  imageProject: elastic-images-prod
+  image: family/platform-ingest-logstash-ubuntu-2204
+  machineType: "n2-standard-4"
+  diskSizeGb: 120
+
+steps:
+  # ------------- Run E2E tests ---------------------
+  - label: ":test_tube: Build plugin and run E2E tests :rocket:"
+    command:
+      - .buildkite/scripts/run_e2e_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
