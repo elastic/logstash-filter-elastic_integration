@@ -2,7 +2,7 @@
 A class to provide information about Logstash node stats.
 """
 
-from util import Util
+import util
 
 
 class LogstashStats:
@@ -12,5 +12,5 @@ class LogstashStats:
         pass
 
     def get(self):
-        response = Util.call_url_with_retry(self.LOGSTASH_STATS_URL)
+        response = util.call_url_with_retry(self.LOGSTASH_STATS_URL)
         return response.json()

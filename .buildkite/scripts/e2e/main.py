@@ -5,7 +5,7 @@
 import os
 from bootstrap import Bootstrap
 from plugin_test import PluginTest
-from util import Util
+import util
 
 INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
 
@@ -44,7 +44,7 @@ def main():
                 print(f"Test failed for {package} with {e}.")
                 failed_packages.append(package)
 
-        container = Util.get_logstash_container()
+        container = util.get_logstash_container()
 
         # pretty printing
         print(f"Logstash docker container logs..")

@@ -44,8 +44,6 @@ build_logstash
 build_plugin
 
 ###
-# TODO: disable ls command and enable with Python E2E scripts
-ls -a
 # Install prerequisites and run E2E tests
-#pip install -r .buildkite/scripts/e2e/requirements.txt
-#python3 .buildkite/scripts/e2e/main.py
+pip install -r .buildkite/scripts/e2e/requirements.txt
+python3 .buildkite/scripts/e2e/main.py
