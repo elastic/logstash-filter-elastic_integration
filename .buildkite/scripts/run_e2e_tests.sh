@@ -45,7 +45,6 @@ build_plugin
 
 ###
 # Install pip and E2E prerequisites, then run E2E tests
-sudo apt update
 sudo apt install -y python3-pip
 pip --version
 
