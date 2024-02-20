@@ -44,6 +44,10 @@ build_logstash
 build_plugin
 
 ###
-# Install prerequisites and run E2E tests
+# Install pip and E2E prerequisites, then run E2E tests
+sudo apt update
+sudo apt install -y python3-pip
+pip --version
+
 pip install -r .buildkite/scripts/e2e/requirements.txt
 python3 .buildkite/scripts/e2e/main.py
