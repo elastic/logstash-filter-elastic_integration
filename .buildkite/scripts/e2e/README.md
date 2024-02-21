@@ -15,9 +15,8 @@ E2E tries to install the plugin on Logstash container from the gem file. To gene
     cd logstash && ./gradlew clean bootstrap assemble installDefaultGems && cd ..
     LOGSTASH_PATH=$(pwd)/logstash
     export LOGSTASH_PATH
-    ```
-
-2.Run the following command:
+   ```
+2. Run the following command:
 ```shell
 ./gradlew clean vendor localGem
 ```
@@ -49,3 +48,9 @@ python3 .buildkite/scripts/e2e/main.py
 ```
 
 ## Troubleshooting
+- The project retries on some operations to overcome timeout issues, uses [`retry` tool](https://formulae.brew.sh/formula/retry). If you get `retry` undefined error, make sure to install it.
+```
+brew install retry
+```
+
+- If you run multiple times, currently cloning `integrations` repo will fail, so make sure to remove the repo folder or comment out the `bootstrap.py#__clone_integrations_repo()` method
