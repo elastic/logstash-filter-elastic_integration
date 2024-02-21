@@ -5,6 +5,7 @@ set -euo pipefail
 export PATH="/opt/buildkite-agent/.rbenv/bin:/opt/buildkite-agent/.pyenv/bin:/opt/buildkite-agent/.java/bin:$PATH"
 export JAVA_HOME="/opt/buildkite-agent/.java"
 eval "$(rbenv init -)"
+eval "$(pyenv init -)"
 
 VERSION_URL="https://storage.googleapis.com/artifacts-api/releases/current"
 
@@ -44,8 +45,6 @@ build_logstash
 build_plugin
 
 ###
-# TODO: disable ls command and enable with Python E2E scripts
-ls -a
-# Install prerequisites and run E2E tests
-#pip install -r .buildkite/scripts/e2e/requirements.txt
-#python3 .buildkite/scripts/e2e/main.py
+# Install E2E prerequisites and run E2E tests
+python3 -mpip install -r .buildkite/scripts/e2e/requirements.txt
+python3 .buildkite/scripts/e2e/main.py
