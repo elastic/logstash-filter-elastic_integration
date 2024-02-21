@@ -153,7 +153,7 @@ class Bootstrap:
         """
         self.__download_elastic_package()
         self.__make_elastic_package_global()
-        #self.__clone_integrations_repo()
+        self.__clone_integrations_repo()
         self.__setup_elastic_package_profile()
         self.__spin_stack()
         self.__install_plugin()
