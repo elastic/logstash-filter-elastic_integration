@@ -96,7 +96,7 @@ public class GeoIpDatabaseProvider implements org.elasticsearch.ingest.geoip.Geo
             return basicFileAttributes.isRegularFile() && path.getFileName().toString().endsWith(".mmdb");
         }
 
-        final GeoIpDatabaseProvider build() {
+        public final GeoIpDatabaseProvider build() {
             return new GeoIpDatabaseProvider(this.databaseMap);
         }
     }
