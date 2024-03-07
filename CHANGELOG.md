@@ -1,5 +1,8 @@
+## 0.1.8
+  - Fixes `EventProcessorBuilder#build` to work with JRuby 9.4.6.0 [#133](https://github.com/elastic/logstash-filter-elastic_integration/pull/133)
+
 ## 0.1.7
-  - Fixes GeoIpDatabaseProvider.build to work with JRuby 9.4.6.0 [#132](https://github.com/elastic/logstash-filter-elastic_integration/pull/132)
+  - Fixes `GeoIpDatabaseProvider.Builder#build` to work with JRuby 9.4.6.0 [#132](https://github.com/elastic/logstash-filter-elastic_integration/pull/132)
 
 ## 0.1.6
   - Fixes issue where configured `username`/`password` credentials was not sent to Elasticsearch instances that had anonymous access enabled [#127](https://github.com/elastic/logstash-filter-elastic_integration/pull/127)

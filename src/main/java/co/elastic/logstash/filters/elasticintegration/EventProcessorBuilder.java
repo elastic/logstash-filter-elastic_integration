@@ -221,7 +221,7 @@ public class EventProcessorBuilder {
         return this;
     }
 
-    synchronized EventProcessor build(final PluginContext pluginContext) {
+    public synchronized EventProcessor build(final PluginContext pluginContext) {
         Objects.requireNonNull(this.pipelineConfigurationResolver, "pipeline configuration resolver is REQUIRED");
         Objects.requireNonNull(this.eventToIndexNameResolver, "event index name resolver is REQUIRED");
         Objects.requireNonNull(this.indexNameToPipelineNameResolver, "pipeline name resolver is REQUIRED");
