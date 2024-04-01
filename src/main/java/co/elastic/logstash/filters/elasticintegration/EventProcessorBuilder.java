@@ -309,8 +309,8 @@ public class EventProcessorBuilder {
 
     private static ScriptService initScriptService(final Settings settings, final ThreadPool threadPool) {
         final Map<ScriptContext<?>, List<Whitelist>> scriptContexts = Map.of(
-                IngestScript.CONTEXT, PainlessPlugin.BASE_WHITELISTS,
-                IngestConditionalScript.CONTEXT, PainlessPlugin.BASE_WHITELISTS);
+                IngestScript.CONTEXT, PainlessPlugin.baseWhiteList(),
+                IngestConditionalScript.CONTEXT, PainlessPlugin.baseWhiteList());
 
         Map<String, ScriptEngine> engines = new HashMap<>();
         engines.put(PainlessScriptEngine.NAME, new PainlessScriptEngine(settings, scriptContexts));
