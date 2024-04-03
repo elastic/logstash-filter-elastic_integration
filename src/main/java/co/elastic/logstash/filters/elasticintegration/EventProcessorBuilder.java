@@ -308,13 +308,36 @@ public class EventProcessorBuilder {
     }
 
     private static ScriptService initScriptService(final Settings settings, final ThreadPool threadPool) {
+        final List<Whitelist> painlessBaseWhitelist = getPainlessBaseWhiteList();
         final Map<ScriptContext<?>, List<Whitelist>> scriptContexts = Map.of(
-                IngestScript.CONTEXT, PainlessPlugin.BASE_WHITELISTS,
-                IngestConditionalScript.CONTEXT, PainlessPlugin.BASE_WHITELISTS);
+                IngestScript.CONTEXT, painlessBaseWhitelist,
+                IngestConditionalScript.CONTEXT, painlessBaseWhitelist);
 
         Map<String, ScriptEngine> engines = new HashMap<>();
         engines.put(PainlessScriptEngine.NAME, new PainlessScriptEngine(settings, scriptContexts));
         engines.put(MustacheScriptEngine.NAME, new MustacheScriptEngine());
         return new ScriptService(settings, engines, ScriptModule.CORE_CONTEXTS, threadPool::absoluteTimeInMillis);
+    }
+
+    /**
+     * @implNote handles breaking changes introduced in Elasticsearch 8.14 series; once 8.14 is
+     *           released and all builds of this plugin depend on Elasticsearch 8.14+, this can
+     *           be simplified to call {@code PainlessPlugin.baseWhiteList()} directly.
+     * @return the PainlessPlugin's default base whitelists
+     */
+    @SuppressWarnings({"JavaReflectionMemberAccess", "unchecked"})
+    static List<Whitelist> getPainlessBaseWhiteList() {
+        Class<PainlessPlugin> cls = PainlessPlugin.class;
+        try {
+            try {
+                // In 8.14+: PainlessPlugin.baseWhiteList()
+                return (List<Whitelist>) cls.getMethod("baseWhiteList").invoke(null);
+            } catch (NoSuchMethodException e) {
+                // in 8.x->8.13.x: PainlessPlugin.BASE_WHITELISTS
+                return (List<Whitelist>) cls.getField("BASE_WHITELISTS").get(null);
+            }
+        } catch (java.lang.reflect.InvocationTargetException | IllegalAccessException | NoSuchFieldException e) {
+            throw new RuntimeException("Unsupported PainlessPlugin does not provide access to its base whitelists", e);
+        }
     }
 }
