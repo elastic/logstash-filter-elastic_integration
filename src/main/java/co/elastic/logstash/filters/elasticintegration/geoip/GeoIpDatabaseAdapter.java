@@ -11,9 +11,11 @@ import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.DatabaseReader;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AbstractResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AnonymousIpResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AsnResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CityResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CountryResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.EnterpriseResponse;
 
 import java.io.Closeable;
 import java.io.File;
@@ -50,6 +52,16 @@ public class GeoIpDatabaseAdapter implements GeoIpDatabase, Closeable {
     @Override
     public AsnResponse getAsn(InetAddress inetAddress) {
         return getResponse(inetAddress, this.databaseReader::tryAsn);
+    }
+
+    /* @Override // neither available nor reachable until Elasticsearch 8.14 */
+    public AnonymousIpResponse getAnonymousIp(InetAddress ipAddress) {
+        return getResponse(ipAddress, this.databaseReader::tryAnonymousIp);
+    }
+
+    /* @Override // neither available nor reachable until Elasticsearch 8.14 */
+    public EnterpriseResponse getEnterprise(InetAddress ipAddress) {
+        return getResponse(ipAddress, this.databaseReader::tryEnterprise);
     }
 
     private <T extends AbstractResponse> T getResponse(final InetAddress inetAddress, MaxmindTryLookup<T> resolver) {
