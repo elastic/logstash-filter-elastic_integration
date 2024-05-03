@@ -139,7 +139,7 @@ class Bootstrap:
                 commands.extend(["--provider", "serverless"])
             util.run_or_raise_error(commands,
                                     "Error occurred while running stacks with elastic-package. Check logs for details.")
-            time.sleep(10)  # give a time Logstash container fully starts
+            time.sleep(30)  # give a time Logstash container fully starts
         except Exception as ex:
             self.__teardown_stack()  # some containers left running, make sure to stop them
 
