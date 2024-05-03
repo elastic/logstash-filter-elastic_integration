@@ -21,7 +21,11 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
 
 def get_logstash_container() -> Container:
     client = docker.from_env()
-    return client.containers.get("elastic-package-stack-e2e-logstash-1")
+    containers = client.containers.list(all=True)  # we need to use all to collect logs if container stops
+    for container in containers:
+        if "logstash-" in container.name:  # using only "logstash" may catch logstash ready one
+            return container
+    raise Exception("Logstash container not found")
 
 
 def run_or_raise_error(commands: list, error_message):

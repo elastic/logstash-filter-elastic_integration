@@ -13,7 +13,6 @@ import util
 
 class Bootstrap:
     ELASTIC_PACKAGE_DISTRO_URL = "https://api.github.com/repos/elastic/elastic-package/releases/latest"
-    LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
     PLUGIN_NAME = "logstash-filter-elastic_integration"
 
     def __init__(self, stack_version: str, project_type: str) -> None:
@@ -101,34 +100,34 @@ class Bootstrap:
         util.run_or_raise_error(["elastic-package", "profiles", "use", "e2e"],
                                 "Error occurred while creating a profile. Check logs for details.")
 
-    def __install_plugin(self) -> None:
+    def __install_plugin(self, container) -> None:
         with open("VERSION", "r") as f:
             version = f.read()
 
         plugin_name = f"logstash-filter-elastic_integration-{version.strip()}-java.gem"
-        util.run_or_raise_error(["docker", "cp", plugin_name, f"{self.LOGSTASH_CONTAINER_NAME}:/usr/share/logstash"],
+        util.run_or_raise_error(["docker", "cp", plugin_name, f"{container.name}:/usr/share/logstash"],
                                 "Error occurred while copying plugin to container, see logs for details.")
 
         print("Installing logstash-filter-elastic_integration plugin...")
         util.run_or_raise_error(
-            ["docker", "exec", self.LOGSTASH_CONTAINER_NAME, "bin/logstash-plugin", "install", plugin_name],
+            ["docker", "exec", container.name, "bin/logstash-plugin", "install", plugin_name],
             "Error occurred installing plugin in Logstash container")
         print("Plugin installed successfully.")
 
-    def __reload_container(self) -> None:
+    def __reload_container(self, container) -> None:
         print("Restarting Logstash container after installing the plugin.")
-        util.run_or_raise_error(["docker", "restart", f"{self.LOGSTASH_CONTAINER_NAME}"],
+        util.run_or_raise_error(["docker", "restart", f"{container.id}"],
                                 "Error occurred while reloading Logstash container, see logs for details.")
         time.sleep(20)  # give a time Logstash pipeline to fully start
 
-    def __update_pipeline_config(self) -> None:
+    def __update_pipeline_config(self, container) -> None:
         local_config_file_path = ".buildkite/scripts/e2e/config/"
         config_file = "serverless_pipeline.conf" if self.project_type == "serverless" else "pipeline.conf"
         local_config_file = local_config_file_path + config_file
         container_config_file_path = "/usr/share/logstash/pipeline/logstash.conf"
         # python docker client (internally uses subprocess) requires special TAR header with tar operations
         util.run_or_raise_error(["docker", "cp", f"{local_config_file}",
-                                 f"{self.LOGSTASH_CONTAINER_NAME}:{container_config_file_path}"],
+                                 f"{container.name}:{container_config_file_path}"],
                                 "Error occurred while replacing pipeline config, see logs for details")
         time.sleep(20)  # give a time Logstash pipeline to fully start
 
@@ -156,9 +155,10 @@ class Bootstrap:
         self.__clone_integrations_repo()
         self.__setup_elastic_package_profile()
         self.__spin_stack()
-        self.__install_plugin()
-        self.__reload_container()
-        self.__update_pipeline_config()
+        container = util.get_logstash_container()
+        self.__install_plugin(container)
+        self.__reload_container(container)
+        self.__update_pipeline_config(container)
 
     def stop_elastic_stack(self) -> None:
         print(f"Stopping elastic-package stack...")
