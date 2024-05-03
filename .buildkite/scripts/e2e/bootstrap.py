@@ -134,7 +134,7 @@ class Bootstrap:
     def __spin_stack(self) -> None:
         try:
             # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
-            commands = ["elastic-package", "stack", "up", "-d", "--version", self.stack_version]
+            commands = ["elastic-package", "stack", "up", "-d", "--version", self.stack_version, "-v"]
             if self.project_type == "serverless":
                 commands.extend(["--provider", "serverless"])
             util.run_or_raise_error(commands,
