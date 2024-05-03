@@ -23,6 +23,7 @@ def get_logstash_container() -> Container:
     client = docker.from_env()
     containers = client.containers.list(all=True)  # we need to use all to collect logs if container stops
     for container in containers:
+        print(f"Container name: %s" % container.name)
         if "logstash-" in container.name:  # using only "logstash" may catch logstash ready one
             return container
     raise Exception("Logstash container not found")
