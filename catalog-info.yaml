@@ -23,7 +23,7 @@ metadata:
       url: https://github.com/elastic/logstash-filter-elastic_integration
 spec:
   type: tool
-  owner: group:ingest-fp
+  owner: group:logstash
   system: platform-ingest
   lifecycle: production
 
@@ -42,9 +42,9 @@ metadata:
     - title: 'Logstash filter for Elastic integration Pull Request pipeline'
       url: https://buildkite.com/elastic/logstash-filter-elastic-integration-pull-request
 spec:
-  owner: group:ingest-fp
+  owner: group:logstash
   type: buildkite-pipeline
-  system: buildkite
+  system: platform-ingest
   implementation:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
@@ -93,9 +93,9 @@ metadata:
     - title: 'Logstash filter for Elastic integration build against Elasticsearch versions pipeline'
       url: https://buildkite.com/elastic/logstash-filter-elastic-integration-build
 spec:
-  owner: group:ingest-fp
+  owner: group:logstash
   type: buildkite-pipeline
-  system: buildkite
+  system: platform-ingest
   implementation:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
@@ -140,9 +140,9 @@ metadata:
     - title: 'A pipeline for `elastic_integration` E2E tests.'
       url: https://buildkite.com/elastic/logstash-filter-elastic-integration-e2e
 spec:
-  owner: group:ingest-fp
+  owner: group:logstash
   type: buildkite-pipeline
-  system: buildkite
+  system: platform-ingest
   implementation:
     apiVersion: buildkite.elastic.dev/v1
     kind: Pipeline
