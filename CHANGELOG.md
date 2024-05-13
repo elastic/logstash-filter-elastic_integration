@@ -1,3 +1,6 @@
+## 0.1.9
+  - [DOC] Removes Tech Preview label and adds link to extending integrations topic in LSR [#142](https://github.com/elastic/logstash-filter-elastic_integration/pull/142)
+
 ## 0.1.8
   - Fixes `EventProcessorBuilder#build` to work with JRuby 9.4.6.0 [#133](https://github.com/elastic/logstash-filter-elastic_integration/pull/133)
 
