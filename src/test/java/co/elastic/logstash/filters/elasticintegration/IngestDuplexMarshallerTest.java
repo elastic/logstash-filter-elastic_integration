@@ -365,6 +365,18 @@ class IngestDuplexMarshallerTest {
         });
     }
 
+    @Test void ingestDocToEventIncludingArrayType() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
+        final IngestDocument intermediate = idm.toIngestDocument(input);
+
+        final String[] arrayValueInSource = new String[]{"this", "that"};
+        intermediate.setFieldValue("deeply.nested", arrayValueInSource);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField("[deeply][nested]").withValue(equalTo(List.of("this", "that"))));
+        });
+    }
+
 
     @Test
     void eventToIngestDocFieldWithNestedZonedDateTimeValue() {
