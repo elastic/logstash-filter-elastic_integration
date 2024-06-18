@@ -1,3 +1,7 @@
+## 0.1.10
+  - Fixes handling of array-type event fields by treating them as lists [#146](https://github.com/elastic/logstash-filter-elastic_integration/pull/146)
+  - Syncs with Elasticsearch 8.14, including support for new user-provided GeoIP database types `ConnectionType`, `Domain` and `Isp` [#147](https://github.com/elastic/logstash-filter-elastic_integration/pull/147)
+
 ## 0.1.9
   - [DOC] Removes Tech Preview label and adds link to extending integrations topic in LSR [#142](https://github.com/elastic/logstash-filter-elastic_integration/pull/142)
 

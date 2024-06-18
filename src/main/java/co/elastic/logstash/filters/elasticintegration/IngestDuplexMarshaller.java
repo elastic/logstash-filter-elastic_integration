@@ -22,6 +22,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -278,6 +279,8 @@ public class IngestDuplexMarshaller {
             return internalize(externalSet);
         } else if (externalObject instanceof ZonedDateTime zonedDateTime) {
             return new Timestamp(zonedDateTime.toInstant());
+        } else if (externalObject.getClass().isArray()) {
+            return internalize(Arrays.asList((Object[]) externalObject));
         } else {
             // Naively fall through to Logstash's Javafier,
             // which has identity converters for known-safe types
