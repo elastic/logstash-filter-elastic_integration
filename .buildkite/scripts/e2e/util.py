@@ -21,7 +21,8 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
 
 def get_logstash_container() -> Container:
     client = docker.from_env()
-    containers = client.containers.list(all=True)  # we need to use all to collect logs if container stops
+    # `all=True` catches stopped ones as well, we need all to collect logs if container stops abnormally
+    containers = client.containers.list(all=True)
     for container in containers:
         print(f"Container name: {container.name}")
         if "logstash-" in container.name:  # using only "logstash" may catch logstash ready one
