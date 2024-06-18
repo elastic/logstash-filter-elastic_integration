@@ -14,8 +14,11 @@ import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AbstractRe
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AnonymousIpResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AsnResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CityResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.ConnectionTypeResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CountryResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.DomainResponse;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.EnterpriseResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.IspResponse;
 
 import java.io.Closeable;
 import java.io.File;
@@ -54,14 +57,29 @@ public class GeoIpDatabaseAdapter implements GeoIpDatabase, Closeable {
         return getResponse(inetAddress, this.databaseReader::tryAsn);
     }
 
-    /* @Override // neither available nor reachable until Elasticsearch 8.14 */
+    @Override
     public AnonymousIpResponse getAnonymousIp(InetAddress ipAddress) {
         return getResponse(ipAddress, this.databaseReader::tryAnonymousIp);
     }
 
-    /* @Override // neither available nor reachable until Elasticsearch 8.14 */
+    @Override
     public EnterpriseResponse getEnterprise(InetAddress ipAddress) {
         return getResponse(ipAddress, this.databaseReader::tryEnterprise);
+    }
+
+    /* @Override // neither available nor reachable until Elasticsearch 8.15 */
+    public ConnectionTypeResponse getConnectionType(InetAddress inetAddress) {
+        return getResponse(inetAddress, this.databaseReader::tryConnectionType);
+    }
+
+    /* @Override // neither available nor reachable until Elasticsearch 8.15 */
+    public DomainResponse getDomain(InetAddress ipAddress) {
+        return getResponse(ipAddress, this.databaseReader::tryDomain);
+    }
+
+    /* @Override // neither available nor reachable until Elasticsearch 8.15 */
+    public IspResponse getIsp(InetAddress ipAddress) {
+        return getResponse(ipAddress, this.databaseReader::tryIsp);
     }
 
     private <T extends AbstractResponse> T getResponse(final InetAddress inetAddress, MaxmindTryLookup<T> resolver) {
