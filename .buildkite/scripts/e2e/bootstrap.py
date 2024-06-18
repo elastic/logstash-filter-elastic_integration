@@ -134,8 +134,7 @@ class Bootstrap:
     def __spin_stack(self) -> None:
         try:
             # elastic-package stack up -d --version "${ELASTIC_STACK_VERSION}"
-            # TODO: remove -v (verbose) option
-            commands = ["elastic-package", "stack", "up", "-d", "--version", self.stack_version, "-v"]
+            commands = ["elastic-package", "stack", "up", "-d", "--version", self.stack_version]
             if self.project_type == "serverless":
                 commands.extend(["--provider", "serverless"])
             util.run_or_raise_error(commands,
@@ -157,10 +156,10 @@ class Bootstrap:
         self.__clone_integrations_repo()
         self.__setup_elastic_package_profile()
         self.__spin_stack()
-        #container = util.get_logstash_container()
-        #self.__install_plugin(container)
-        #self.__reload_container(container)
-        #self.__update_pipeline_config(container)
+        container = util.get_logstash_container()
+        self.__install_plugin(container)
+        self.__reload_container(container)
+        self.__update_pipeline_config(container)
 
     def stop_elastic_stack(self) -> None:
         print(f"Stopping elastic-package stack...")
