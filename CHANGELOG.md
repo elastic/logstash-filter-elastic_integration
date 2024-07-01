@@ -1,3 +1,6 @@
+## 0.1.11
+  - [DOC] Documents that integrations are designed to work best with data streams and ECS enabled [#153](https://github.com/elastic/logstash-filter-elastic_integration/pull/153)
+
 ## 0.1.10
   - Fixes handling of array-type event fields by treating them as lists [#146](https://github.com/elastic/logstash-filter-elastic_integration/pull/146)
   - Syncs with Elasticsearch 8.14, including support for new user-provided GeoIP database types `ConnectionType`, `Domain` and `Isp` [#147](https://github.com/elastic/logstash-filter-elastic_integration/pull/147)
