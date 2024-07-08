@@ -67,7 +67,12 @@ shadowJar {
 }
 
 dependencies {
-    elasticsearchClient 'co.elastic.clients:elasticsearch-java:8.11.1'
+    elasticsearchClient('co.elastic.clients:elasticsearch-java') {
+        // brings latest version available for 8.x branch
+        version {
+            strictly('[8.0, 9.0[')
+        }
+    }
     elasticsearchMinimalCore fileTree(dir: { importMinimalElasticsearch.jars }, include: ["*.jar"])
 
     // Logstash core and its known-provided and required dependencies
