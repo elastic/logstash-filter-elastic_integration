@@ -1,3 +1,6 @@
+## 0.1.12
+  - Updates Elasticsearch Java client used[#155](https://github.com/elastic/logstash-filter-elastic_integration/pull/155)
+
 ## 0.1.11
   - [DOC] Documents that integrations are designed to work best with data streams and ECS enabled [#153](https://github.com/elastic/logstash-filter-elastic_integration/pull/153)
 
