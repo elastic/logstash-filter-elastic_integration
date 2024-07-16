@@ -1,3 +1,6 @@
+## 0.1.13
+  - Update default elasticsearch tree branch to 8.15 [#156](https://github.com/elastic/logstash-filter-elastic_integration/pull/156)
+
 ## 0.1.12
   - Updates Elasticsearch Java client used[#155](https://github.com/elastic/logstash-filter-elastic_integration/pull/155)
 
