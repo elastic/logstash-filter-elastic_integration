@@ -237,6 +237,33 @@ public class SmokeTest {
         }));
     }
 
+    @Test void testPainlessAccessToIngestCommonProcessors() {
+        final List<Event> matchedEvents = new ArrayList<>();
+        final EventProcessorBuilder eventProcessorBuilder = EventProcessor.builder()
+                .setEventPipelineNameResolver((event, exceptionConsumer) -> Optional.of("pipeline"))
+                .setEventIndexNameResolver((event, handler) -> Optional.empty()) // no index name
+                .setIndexNamePipelineNameResolver(((indexName, handler) -> Optional.empty())) // no default pipeline
+                .setPipelineConfigurationResolver(new LocalDirectoryPipelineConfigurationResolver(getPreparedPipelinesResourcePath("script-processor-pipelines")))
+                .setFilterMatchListener(matchedEvents::add);
+
+        final List<Event> inputEvents = List.of(
+                newEvent(Map.of("id", "baseline", "lower", "lower","mixed", "MiXeD"), Map.of())
+        );
+
+        withEventProcessor(eventProcessorBuilder, (eventProcessor) -> {
+            final Collection<Event> outputEvents = eventProcessor.processEvents(inputEvents);
+            assertThat("event count is unchanged", outputEvents, hasSize(inputEvents.size()));
+
+            validateEvent(outputEvents, eventWithId("baseline"), (event) -> {
+                assertAll(String.format("EVENT(data: %s; meta: %s)", event.getData(), event.getMetadata()), () -> {
+                    assertThat(event, not(isTagged("_ingest_pipeline_failure")));
+                    assertThat(event, includesField("[lower]").withValue(equalTo("mixed")));
+                    assertThat(event, includesField("[mixed]").withValue(equalTo("MiXeD")));
+                });
+            });
+        });
+    }
+
     @Test void testReroutePipelinesMutatingEvents() {
         final List<Event> matchedEvents = new ArrayList<>();
 

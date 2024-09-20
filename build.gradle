@@ -354,6 +354,16 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("spi/elasticsearch-scripting-painless-spi")
             }
 
+            from(buildElasticsearchLocalDistro.module("wildcard")) {
+                include jarPackageNamed("x-pack-wildcard")
+            }
+            from(buildElasticsearchLocalDistro.module("constant-keyword")) {
+                include jarPackageNamed("x-pack-constant-keyword")
+            }
+            from(buildElasticsearchLocalDistro.module("spatial")) {
+                include jarPackageNamed("spatial")
+            }
+
             into ext.jars
 
             includeEmptyDirs(false)

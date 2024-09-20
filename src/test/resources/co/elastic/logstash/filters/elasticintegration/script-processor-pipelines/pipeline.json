@@ -1,0 +1,11 @@
+{
+  "description": "An pipeline with a script processor referencing ingest common utils",
+  "processors": [
+    {
+      "script": {
+        "lang": "painless",
+        "source": "ctx.lower = Processors.lowercase(ctx.mixed)"
+      }
+    }
+  ]
+}

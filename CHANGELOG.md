@@ -1,3 +1,6 @@
+## 0.1.14
+  - Fix: register available PainlessExtensions, resolving an issue where the pipelines for some integrations would fail to compile [#161](https://github.com/elastic/logstash-filter-elastic_integration/pull/161)
+
 ## 0.1.13
   - Update default elasticsearch tree branch to 8.15 [#156](https://github.com/elastic/logstash-filter-elastic_integration/pull/156)
 
