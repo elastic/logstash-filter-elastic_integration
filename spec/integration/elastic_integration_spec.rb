@@ -745,32 +745,64 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
     end
 
-    describe 'with script processor' do
-      let(:pipeline_processor) {
-        '{
-          "script": {
-            "lang": "painless",
-            "source": "ctx[\'_index\'] = ctx[\'lang\'] + \'-\' + params[\'dataset\'];",
-            "params": {
-              "dataset": "catalog"
+    context "#painless script" do
+
+      describe 'with simple script' do
+        let(:pipeline_processor) {
+          '{
+            "script": {
+              "lang": "painless",
+              "source": "ctx[\'_index\'] = ctx[\'lang\'] + \'-\' + params[\'dataset\'];",
+              "params": {
+                "dataset": "catalog"
+              }
             }
-          }
-        }'
-      }
+          }'
+        }
 
-      it 'runs painless script on a given field' do
-        events = [LogStash::Event.new(
-          "message" => "Should extract prod tag from env field",
-          "lang" => "uz",
-          "data_stream" => data_stream)]
+        it 'runs painless script on a given field' do
+          events = [LogStash::Event.new(
+            "message" => "Should extract prod tag from env field",
+            "lang" => "uz",
+            "data_stream" => data_stream)]
 
-        subject.multi_filter(events).each do |event|
-          expect(event.get("[@metadata][_ingest_document][index]")).to eql "uz-catalog"
-          expect(event.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
+          subject.multi_filter(events).each do |event|
+            expect(event.get("[@metadata][_ingest_document][index]")).to eql "uz-catalog"
+            expect(event.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
+          end
         end
+
       end
 
+      # makes sure Ingest Processors can be loaded
+      describe 'with ingest Processors in the script' do
+        let(:pipeline_processor) {
+          '{
+            "script": {
+              "lang": "painless",
+              "source": "long bytes = Processors.bytes(params[\'size\']); ctx.size_in_bytes = bytes;",
+              "params": {
+                "size": "1kb"
+              }
+            }
+          }'
+        }
+
+        it 'calculates the bytes with Processors.bytes()' do
+          events = [LogStash::Event.new(
+            "message" => "Should run painless script which has an ingest Processor#bytes in it",
+            "data_stream" => data_stream)]
+
+          subject.multi_filter(events).each do |event|
+            # make sure AT LEAST we don't get pipeline load error
+            expect(event.get("[@metadata][_ingest_document][index]")).to eql pipeline_setting
+            expect(event.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
+          end
+        end
+      end
     end
+
+    # TODO: add more painless script integration tests
 
     describe 'with set processor' do
       let(:pipeline_processor) {
