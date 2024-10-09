@@ -11,7 +11,7 @@ pull_docker_snapshot() {
   project="${1?project name required}"
   local docker_image="docker.elastic.co/${project}/${project}:${ELASTIC_STACK_VERSION}"
   echo "Pulling $docker_image"
-  docker pull "$docker_image"
+  docker pull -q "$docker_image"
 }
 
 if [ "$ELASTIC_STACK_VERSION" ]; then
