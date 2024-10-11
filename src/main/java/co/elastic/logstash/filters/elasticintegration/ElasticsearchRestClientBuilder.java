@@ -340,7 +340,7 @@ public class ElasticsearchRestClientBuilder {
         }
 
         public void configureHttpClient(final HttpAsyncClientBuilder httpClientBuilder) {
-            if (sslVerificationMode == SSLVerificationMode.CERTIFICATE) {
+            if (sslVerificationMode == SSLVerificationMode.CERTIFICATE || sslVerificationMode == SSLVerificationMode.NONE ) {
                 httpClientBuilder.setSSLHostnameVerifier(new NoopHostnameVerifier());
             }
         }

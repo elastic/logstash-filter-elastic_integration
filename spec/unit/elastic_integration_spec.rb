@@ -412,6 +412,14 @@ describe LogStash::Filters::ElasticIntegration do
           end
         end
 
+        describe "with `ssl_enabled`" do
+          let(:config) { super().merge("ssl_enabled" => true) }
+
+          it "establishes a connection" do
+            expect{ registered_plugin }.not_to raise_error
+          end
+        end
+
       end
 
       describe "with `ssl_verification_mode` is not `none`" do

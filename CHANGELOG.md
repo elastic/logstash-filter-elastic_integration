@@ -1,3 +1,6 @@
+## 0.1.15
+  - Fixes the connection failure where SSL verification mode is disabled over SSL connection [#165](https://github.com/elastic/logstash-filter-elastic_integration/pull/165)
+
 ## 0.1.14
   - Fix: register available PainlessExtension-s, resolving an issue where the pipelines for some integrations would fail to compile [#162](https://github.com/elastic/logstash-filter-elastic_integration/pull/162)
 
