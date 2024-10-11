@@ -29,7 +29,6 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       "password" => integ_user_password,
       "ssl_enabled" => true,
       "ssl_verification_mode" => "certificate",
-      "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt",
       "ssl_certificate" => "spec/fixtures/test_certs/client_from_root.crt",
       "ssl_key" => "spec/fixtures/test_certs/client_from_root.key.pkcs8",
       "ssl_key_passphrase" => "12345678"
@@ -115,6 +114,11 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   end
 
   context '#pipeline execution' do
+    let(:settings) {
+      super().merge(
+        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+      )
+    }
 
     before(:each) do
       subject.register
@@ -1133,6 +1137,12 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   end
 
   context '#multi-pipeline execution' do
+    let(:settings) {
+      super().merge(
+        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+      )
+    }
+
     before(:each) do
       subject.register
     end
@@ -1168,6 +1178,11 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   end
 
   context '#failures' do
+    let(:settings) {
+      super().merge(
+        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+      )
+    }
 
     before(:each) do
       subject.register
@@ -1227,6 +1242,11 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   end
 
   context '#privileges' do
+    let(:settings) {
+      super().merge(
+        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+      )
+    }
     # a user who doesn't have pipeline privileges
     let(:integ_user_name) {
       "ls_integration_tests_user"
@@ -1323,6 +1343,11 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   end
 
   context '#emulating real scenario' do
+    let(:settings) {
+      super().merge(
+        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+      )
+    }
     let(:index_settings) {
       {
         "type" => "log",
@@ -1406,7 +1431,8 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       let(:settings) {
         super().merge(
           # certificate is signed with localhost/127.0.0.1, should complain
-          "ssl_verification_mode" => "full"
+          "ssl_verification_mode" => "full",
+          "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
         )
       }
 
@@ -1426,6 +1452,30 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
             expect(error).to be_a(LogStash::ConfigurationError)
             expect(error.message).to include("Host name 'elasticsearch' does not match the certificate subject provided by the peer")
           end)
+      end
+    end
+
+    describe 'when SSL enabled and verification is disabled' do
+
+      let(:settings) {
+        super().merge(
+          "ssl_enabled" => true,
+          "ssl_verification_mode" => "none"
+        )
+      }
+
+      # just need to fill the params, we don't/can't send any request to ES
+      let(:pipeline_processor) {
+        '{
+          "dissect": {
+            "field": "dissect_field",
+            "pattern" : "%{clientip} %{ident} %{auth} [%{@timestamp}] \"%{verb} %{request} HTTP/%{httpversion}\" %{status} %{size}"
+          }
+        }'
+      }
+
+      it 'establishes a connection' do
+        expect { subject.register }.not_to raise_error
       end
     end
   end
