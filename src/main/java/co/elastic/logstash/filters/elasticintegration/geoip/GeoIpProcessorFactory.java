@@ -12,10 +12,10 @@ import org.elasticsearch.ingest.geoip.GeoIpProcessor;
 import java.util.Map;
 
 public class GeoIpProcessorFactory implements Processor.Factory {
-    private final GeoIpDatabaseProvider geoIpDatabaseProvider;
+    private final IpDatabaseProvider ipDatabaseProvider;
 
-    public GeoIpProcessorFactory(final GeoIpDatabaseProvider geoIpDatabaseProvider) {
-        this.geoIpDatabaseProvider = geoIpDatabaseProvider;
+    public GeoIpProcessorFactory(final IpDatabaseProvider ipDatabaseProvider) {
+        this.ipDatabaseProvider = ipDatabaseProvider;
     }
 
     @Override
@@ -23,6 +23,6 @@ public class GeoIpProcessorFactory implements Processor.Factory {
                             String tag,
                             String description,
                             Map<String, Object> config) throws Exception {
-        return new GeoIpProcessor.Factory(this.geoIpDatabaseProvider).create(processorFactories, tag, description, config);
+        return new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider).create(processorFactories, tag, description, config);
     }
 }
