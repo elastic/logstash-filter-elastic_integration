@@ -2,8 +2,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.core.IOUtils;
-import org.elasticsearch.ingest.geoip.GeoIpDatabase;
+import org.elasticsearch.ingest.geoip.IpDatabase;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -15,11 +14,11 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Supplier;
 
-public class ManagedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeable {
+public class ManagedIpDatabaseHolder implements IpDatabaseHolder, Closeable {
 
     private static final Logger LOGGER = LogManager.getLogger();
 
-    private GeoIpDatabaseAdapter currentDatabase;
+    private IpDatabaseAdapter currentDatabase;
     private final String databaseTypeIdentifier;
 
     private final ReentrantReadWriteLock.ReadLock readLock;
@@ -30,7 +29,7 @@ public class ManagedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeabl
         writeLock = readWriteLock.writeLock();
     }
 
-    public ManagedGeoipDatabaseHolder(final String databaseTypeIdentifier) {
+    public ManagedIpDatabaseHolder(final String databaseTypeIdentifier) {
         this.databaseTypeIdentifier = databaseTypeIdentifier;
     }
 
@@ -40,7 +39,7 @@ public class ManagedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeabl
     }
 
     @Override
-    public GeoIpDatabase getDatabase() {
+    public IpDatabase getDatabase() {
         return withLock(readLock, () -> this.currentDatabase);
     }
 
@@ -51,7 +50,7 @@ public class ManagedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeabl
 
     @Override
     public String info() {
-        return withLock(readLock, () -> String.format("ManagedGeoipDatabase{type=%s, valid=%s}", getTypeIdentifier(), isValid()));
+        return withLock(readLock, () -> String.format("ManagedIpDatabase{type=%s, valid=%s}", getTypeIdentifier(), isValid()));
     }
 
     public void setDatabasePath(final String newDatabasePath) {
@@ -67,15 +66,20 @@ public class ManagedGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeabl
     public void close() throws IOException {
         withLock(writeLock, () -> {
             if (Objects.nonNull(this.currentDatabase)) {
-                IOUtils.closeWhileHandlingException(this.currentDatabase);
+                try {
+                    this.currentDatabase.closeReader();
+                } catch (IOException e) {
+                    this.currentDatabase = null;
+                    throw new RuntimeException(e);
+                }
                 this.currentDatabase = null;
             }
         });
     }
 
-    private GeoIpDatabaseAdapter loadDatabase(final Path databasePath) {
+    private IpDatabaseAdapter loadDatabase(final Path databasePath) {
         try {
-            final GeoIpDatabaseAdapter candidate = GeoIpDatabaseAdapter.defaultForPath(databasePath);
+            final IpDatabaseAdapter candidate = IpDatabaseAdapter.defaultForPath(databasePath);
             final String candidateType = candidate.getDatabaseType();
             if (!Objects.equals(candidateType, this.databaseTypeIdentifier)) {
                 throw new IllegalStateException(String.format("Incompatible database type `%s` (expected `%s`)", candidateType, this.databaseTypeIdentifier));
