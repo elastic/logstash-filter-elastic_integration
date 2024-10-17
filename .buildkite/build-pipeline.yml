@@ -16,7 +16,7 @@ steps:
       SNAPSHOT: false
       INTEGRATION: true
       SECURE_INTEGRATION: true
-    branches: "8.x"
+    branches: "mashhur-patch-1"
 
   # ------------- Build with ES snapshot versions and main branch ---------------------
   # main + (SNAPSHOT=TRUE) -> treeish: main     artifact:8.12.0-SNAPSHOT
