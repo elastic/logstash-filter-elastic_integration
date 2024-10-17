@@ -8,11 +8,12 @@ agents:
 steps:
   # ------------- Build with ES released versions ---------------------
   # 8.x + (SNAPSHOT=FALSE) -> treeish: v8.11.1  artifact: 8.11.1
-  - label: ":hammer: Build plugin with released Elasticsearch version :elasticsearch:"
+  - label: ":hammer: Build plugin with 8.x Elasticsearch version :elasticsearch:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.x"
+      ELASTICSEARCH_TREEISH: "8.x"
       SNAPSHOT: false
       INTEGRATION: true
       SECURE_INTEGRATION: true
@@ -20,7 +21,7 @@ steps:
 
   # ------------- Build with ES snapshot versions and main branch ---------------------
   # main + (SNAPSHOT=TRUE) -> treeish: main     artifact:8.12.0-SNAPSHOT
-  - label: ":hammer: Build plugin with Elasticsearch snapshot versions and `main` branch :elasticsearch:"
+  - label: ":hammer: Build plugin with Elasticsearch `main` branch :elasticsearch:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
