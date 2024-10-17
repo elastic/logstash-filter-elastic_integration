@@ -16,6 +16,7 @@ steps:
       SNAPSHOT: false
       INTEGRATION: true
       SECURE_INTEGRATION: true
+      ELASTICSEARCH_TREEISH: "8.x"
     branches: "mashhur-patch-1"
 
   # ------------- Build with ES snapshot versions and main branch ---------------------
