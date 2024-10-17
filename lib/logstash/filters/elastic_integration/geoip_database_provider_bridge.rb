@@ -20,8 +20,8 @@ module LogStash::Filters::ElasticIntegration::GeoipDatabaseProviderBridge
              "in a Logstash with Geoip Database Management enabled."
 
   def initialize_geoip_database_provider!
-    java_import('co.elastic.logstash.filters.elasticintegration.geoip.GeoIpDatabaseProvider')
-    @geoip_database_provider ||= GeoIpDatabaseProvider::Builder.new.tap do |builder|
+    java_import('co.elastic.logstash.filters.elasticintegration.geoip.IpDatabaseProvider')
+    @geoip_database_provider ||= IpDatabaseProvider::Builder.new.tap do |builder|
       if geoip_database_directory
         logger.debug("discovering geoip databases from #{geoip_database_directory}")
         builder.discoverDatabases(java.io.File.new(geoip_database_directory))
@@ -53,8 +53,8 @@ module LogStash::Filters::ElasticIntegration::GeoipDatabaseProviderBridge
     :UNAVAILABLE
   end
 
-  java_import('co.elastic.logstash.filters.elasticintegration.geoip.ManagedGeoipDatabaseHolder')
-  class ObservingDatabaseHolder < ManagedGeoipDatabaseHolder
+  java_import('co.elastic.logstash.filters.elasticintegration.geoip.ManagedIpDatabaseHolder')
+  class ObservingDatabaseHolder < ManagedIpDatabaseHolder
     def initialize(simple_database_type, eula_manager:, logger: nil)
       super("GeoLite2-#{simple_database_type}")
 

@@ -105,7 +105,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # is not encumbered by those dependencies.
   def initialize(*a, &b)
     ensure_complete_logstash!
-    ensure_java_major_version!(17)
+    ensure_java_major_version!(21)
 
     require_relative "elastic_integration/jar_dependencies"
     require_relative "elastic_integration/event_api_bridge"
