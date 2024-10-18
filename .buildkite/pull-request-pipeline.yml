@@ -6,16 +6,16 @@ agents:
 
 steps:
   # ------------- Unit tests ---------------------
-  - label: ":hammer: CI setup and unit tests run :docker:"
+  - label: ":hammer: Unit tests run with LS and ES 8.x-SNAPSHOT on :docker:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.x"
-      INTEGRATION: false
       SNAPSHOT: true
+      INTEGRATION: false
 
   # ------------- Integration tests ---------------------
-  - label: ":hammer: CI setup and integration tests with ES 8.x run on :docker:"
+  - label: ":hammer: Integration tests with LS and ES 8.latest run on :docker:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
@@ -23,12 +23,22 @@ steps:
       INTEGRATION: true
       SECURE_INTEGRATION: true
 
-  - label: ":hammer: CI setup and integration tests with ES 8.x-SNAPSHOT run on :docker:"
+  - label: ":hammer: CI setup and integration tests with LS and ES 8.x-SNAPSHOT run on :docker:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.x"
-      INTEGRATION: true
-      LOG_LEVEL: "info"
-      SECURE_INTEGRATION: true
       SNAPSHOT: true
+      LOG_LEVEL: "info"
+      INTEGRATION: true
+      SECURE_INTEGRATION: true
+  - label: ":hammer: Integration tests with LS 8.x-SNAPSHOT and ES `main` run on :docker:"
+    command:
+      - .buildkite/scripts/run_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      ELASTICSEARCH_TREEISH: "main"
+      SNAPSHOT: true
+      LOG_LEVEL: "info"
+      INTEGRATION: true
+      SECURE_INTEGRATION: true
