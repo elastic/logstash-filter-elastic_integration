@@ -21,7 +21,7 @@ plugins {
     id "idea"
     id "com.adarshr.test-logger" version "3.2.0"
     id "de.undercouch.download" version "5.3.1"
-    id "com.github.johnrengelman.shadow" version "8.1.1"
+    id "com.gradleup.shadow" version "8.3.2"
 }
 
 // ===========================================================================
@@ -95,10 +95,10 @@ dependencies {
 
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.1.1'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.1'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
     testImplementation "com.github.seregamorph:hamcrest-more-matchers:0.1"
-    testImplementation "com.github.tomakehurst:wiremock-jre8:2.35.0"
+    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.1'
     testRuntimeOnly requiredLogstashCoreJar("log4j-core")
 
     geolite2('org.elasticsearch:geolite2-databases:20191119') {
@@ -161,7 +161,7 @@ def _requiredLogstashJar(pathPrefix, jarSpec, flavorSpec = null) {
 }
 
 // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
-String githubArchivePath(org, repo, treeish="main", archiveFormat="zip") {
+String githubArchivePath(repo, treeish="main", archiveFormat="zip") {
     def pathFragment = {
         switch(treeish) {
             case ~'^refs/(?:heads|tags)/'       : return "${treeish}" // unambiguous ref
@@ -171,7 +171,7 @@ String githubArchivePath(org, repo, treeish="main", archiveFormat="zip") {
         }
     }()
 
-    "https://github.com/${org}/${repo}/archive/${pathFragment}.${archiveFormat}"
+    "https://github.com/${repo}/archive/${pathFragment}.${archiveFormat}"
 }
 
 task downloadElasticsearchSourceZip(type: Download) {
@@ -186,7 +186,10 @@ task downloadElasticsearchSourceZip(type: Download) {
         """)
     }
 
-    src githubArchivePath("elastic", "elasticsearch", esTreeish, "zip")
+    def esRepo = envOrPropertyValue("ELASTICSEARCH_REPO") ?: "elastic/elasticsearch"
+    inputs.property("ELASTICSEARCH_REPO", esRepo)
+
+    src githubArchivePath(esRepo, esTreeish, "zip")
     dest "${buildDir}/elasticsearch-source.zip"
     onlyIfModified true
     useETag "all"
@@ -383,6 +386,8 @@ test {
     useJUnitPlatform()
     testLogging {
         exceptionFormat "full"
+        outputs.upToDateWhen { false }
+        showStandardStreams = true
     }
 }
 
