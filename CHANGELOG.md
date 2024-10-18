@@ -1,3 +1,6 @@
+## 0.1.16
+  - Reflects the Elasticsearch GeoIP changes into the plugin and syncs with Elasticsearch 8.16 branch [#170](https://github.com/elastic/logstash-filter-elastic_integration/pull/170)
+
 ## 0.1.15
   - Fixes the connection failure where SSL verification mode is disabled over SSL connection [#165](https://github.com/elastic/logstash-filter-elastic_integration/pull/165)
 

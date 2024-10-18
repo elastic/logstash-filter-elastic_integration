@@ -31,7 +31,7 @@ describe LogStash::Filters::ElasticIntegration do
 
       it 'prevents initialization and presents helpful guidancee' do
         expect { described_class.new({}) }.to raise_error(LogStash::EnvironmentError)
-                                                .with_message(including("requires Java 17 or later", # reason +
+                                                .with_message(including("requires Java 21 or later", # reason +
                                                                         "current JVM version `11.0.16.1`",
                                                                         "remove the plugin", # guidance options
                                                                         "run Logstash with a supported JVM."))
