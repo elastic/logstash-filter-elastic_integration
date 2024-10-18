@@ -1,17 +1,16 @@
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.core.IOUtils;
-import org.elasticsearch.ingest.geoip.GeoIpDatabase;
+import org.elasticsearch.ingest.geoip.IpDatabase;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Objects;
 
-public class ConstantGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeable {
-    private final GeoIpDatabaseAdapter geoipDatabase;
+public class ConstantIpDatabaseHolder implements IpDatabaseHolder, Closeable {
+    private final IpDatabaseAdapter ipDatabase;
 
-    public ConstantGeoipDatabaseHolder(final GeoIpDatabaseAdapter geoipDatabase) {
-        this.geoipDatabase = Objects.requireNonNull(geoipDatabase);
+    public ConstantIpDatabaseHolder(final IpDatabaseAdapter ipDatabase) {
+        this.ipDatabase = Objects.requireNonNull(ipDatabase);
     }
 
     @Override
@@ -20,22 +19,22 @@ public class ConstantGeoipDatabaseHolder implements GeoipDatabaseHolder, Closeab
     }
 
     @Override
-    public GeoIpDatabase getDatabase() {
-        return this.geoipDatabase;
+    public IpDatabase getDatabase() {
+        return this.ipDatabase;
     }
 
     @Override
     public String getTypeIdentifier() {
-        return this.geoipDatabase.getDatabaseType();
+        return this.ipDatabase.getDatabaseType();
     }
 
     @Override
     public String info() {
-        return String.format("ConstantGeoipDatabase{type=%s}", getTypeIdentifier());
+        return String.format("ConstantIpDatabaseHolder{type=%s}", getTypeIdentifier());
     }
 
     @Override
     public void close() throws IOException {
-        IOUtils.closeWhileHandlingException(this.geoipDatabase);
+        this.ipDatabase.closeReader();
     }
 }

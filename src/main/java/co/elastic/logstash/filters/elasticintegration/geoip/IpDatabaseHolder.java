@@ -1,10 +1,13 @@
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.ingest.geoip.GeoIpDatabase;
+import org.elasticsearch.ingest.geoip.IpDatabase;
 
-interface GeoipDatabaseHolder {
+interface IpDatabaseHolder {
     boolean isValid();
-    GeoIpDatabase getDatabase();
+
+    IpDatabase getDatabase();
+
     String getTypeIdentifier();
+
     String info();
 }

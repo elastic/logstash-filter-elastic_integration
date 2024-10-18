@@ -6,8 +6,8 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.ingest.geoip.GeoIpDatabase;
+import org.elasticsearch.ingest.geoip.IpDatabase;
 
-public interface ValidatableGeoIpDatabase extends GeoIpDatabase {
+public interface ValidatableIpDatabase extends IpDatabase {
     boolean isValid();
 }

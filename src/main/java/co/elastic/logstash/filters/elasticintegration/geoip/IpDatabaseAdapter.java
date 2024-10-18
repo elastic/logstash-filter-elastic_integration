@@ -6,33 +6,28 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.ingest.geoip.GeoIpDatabase;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.elasticsearch.ExceptionsHelper;
+import org.elasticsearch.common.CheckedBiFunction;
+import org.elasticsearch.ingest.geoip.IpDatabase;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NoCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.DatabaseReader;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AbstractResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AnonymousIpResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.AsnResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CityResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.ConnectionTypeResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.CountryResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.DomainResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.EnterpriseResponse;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.geoip2.model.IspResponse;
+import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.Reader;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.nio.file.Path;
-import java.util.Objects;
 import java.util.Optional;
 
-public class GeoIpDatabaseAdapter implements GeoIpDatabase, Closeable {
-    private final DatabaseReader databaseReader;
+public class IpDatabaseAdapter implements IpDatabase {
+    private static final Logger LOGGER = LogManager.getLogger(IpDatabaseAdapter.class);
+
+    private final Reader databaseReader;
     private final String databaseType;
 
-    public GeoIpDatabaseAdapter(final DatabaseReader databaseReader) {
+    public IpDatabaseAdapter(final Reader databaseReader) {
         this.databaseReader = databaseReader;
         this.databaseType = databaseReader.getMetadata().getDatabaseType();
     }
@@ -43,71 +38,27 @@ public class GeoIpDatabaseAdapter implements GeoIpDatabase, Closeable {
     }
 
     @Override
-    public CityResponse getCity(InetAddress inetAddress) {
-        return getResponse(inetAddress, this.databaseReader::tryCity);
-    }
-
-    @Override
-    public CountryResponse getCountry(InetAddress inetAddress) {
-        return getResponse(inetAddress, this.databaseReader::tryCountry);
-    }
-
-    @Override
-    public AsnResponse getAsn(InetAddress inetAddress) {
-        return getResponse(inetAddress, this.databaseReader::tryAsn);
-    }
-
-    @Override
-    public AnonymousIpResponse getAnonymousIp(InetAddress ipAddress) {
-        return getResponse(ipAddress, this.databaseReader::tryAnonymousIp);
-    }
-
-    @Override
-    public EnterpriseResponse getEnterprise(InetAddress ipAddress) {
-        return getResponse(ipAddress, this.databaseReader::tryEnterprise);
-    }
-
-    /* @Override // neither available nor reachable until Elasticsearch 8.15 */
-    public ConnectionTypeResponse getConnectionType(InetAddress inetAddress) {
-        return getResponse(inetAddress, this.databaseReader::tryConnectionType);
-    }
-
-    /* @Override // neither available nor reachable until Elasticsearch 8.15 */
-    public DomainResponse getDomain(InetAddress ipAddress) {
-        return getResponse(ipAddress, this.databaseReader::tryDomain);
-    }
-
-    /* @Override // neither available nor reachable until Elasticsearch 8.15 */
-    public IspResponse getIsp(InetAddress ipAddress) {
-        return getResponse(ipAddress, this.databaseReader::tryIsp);
-    }
-
-    private <T extends AbstractResponse> T getResponse(final InetAddress inetAddress, MaxmindTryLookup<T> resolver) {
+    public <RESPONSE> RESPONSE getResponse(String ipAddress, CheckedBiFunction<Reader, String, RESPONSE, Exception> responseProvider) {
         try {
-            return resolver.lookup(inetAddress).orElse(null);
+            return responseProvider.apply(this.databaseReader, ipAddress);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw ExceptionsHelper.convertToRuntime(e);
         }
-    }
-
-    interface MaxmindTryLookup<T extends AbstractResponse> {
-        Optional<T> lookup(InetAddress inetAddress) throws Exception;
-    }
-
-    @Override
-    public void release() throws IOException {
-        // no-op: ES uses this internally to unload a database
-        // from memory whenever there are zero processors that
-        // hold a reference to it, but Logstash pipelines will
-        // keep the database open until the pipeline is closed
     }
 
     @Override
     public void close() throws IOException {
+        // no-op
+        // IpDatabase is an AutoCloseable class which is not our intention to close after try-with-resource operations.
+        // use closeReader() instead
+    }
+
+    public void closeReader() throws IOException {
+        LOGGER.debug("Closing the database adapter");
         this.databaseReader.close();
     }
 
-    public static GeoIpDatabaseAdapter defaultForPath(final Path database) throws IOException {
+    public static IpDatabaseAdapter defaultForPath(final Path database) throws IOException {
         return new Builder(database.toFile()).setCache(new CHMCache(10_000)).build();
     }
 
@@ -124,13 +75,10 @@ public class GeoIpDatabaseAdapter implements GeoIpDatabase, Closeable {
             return this;
         }
 
-        public GeoIpDatabaseAdapter build() throws IOException {
-            final DatabaseReader.Builder readerBuilder = new DatabaseReader.Builder(this.databasePath);
-            if (Objects.nonNull(this.nodeCache)) {
-                readerBuilder.withCache(this.nodeCache);
-            }
-            return new GeoIpDatabaseAdapter(readerBuilder.build());
+        public IpDatabaseAdapter build() throws IOException {
+            final NodeCache nodeCache = Optional.ofNullable(this.nodeCache).orElseGet(NoCache::getInstance);
+            final Reader databaseReader = new Reader(this.databasePath, nodeCache);
+            return new IpDatabaseAdapter(databaseReader);
         }
-
     }
 }
