@@ -316,7 +316,7 @@ public class EventProcessorBuilder {
     private static ScriptService initScriptService(final Settings settings, final ThreadPool threadPool) throws IOException {
         Map<String, ScriptEngine> engines = new HashMap<>();
         engines.put(PainlessScriptEngine.NAME, getPainlessScriptEngine(settings));
-        engines.put(MustacheScriptEngine.NAME, new MustacheScriptEngine());
+        engines.put(MustacheScriptEngine.NAME, new MustacheScriptEngine(settings));
         return new ScriptService(settings, engines, ScriptModule.CORE_CONTEXTS, threadPool::absoluteTimeInMillis);
     }
 
