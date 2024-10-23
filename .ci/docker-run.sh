@@ -5,6 +5,8 @@ set -ex
 
 cd .ci
 
+export BUILDKIT_PROGRESS=plain
+
 if [ "$INTEGRATION" == "true" ]; then
     docker-compose up --exit-code-from logstash
 else
