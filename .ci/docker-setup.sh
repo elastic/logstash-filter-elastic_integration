@@ -46,6 +46,8 @@ if [ "$ELASTIC_STACK_VERSION" ]; then
 
     cd .ci
 
+    export BUILDKIT_PROGRESS=plain
+
     if [ "$INTEGRATION" == "true" ]; then
         docker-compose down
         docker-compose build
