@@ -8,7 +8,7 @@ agents:
 steps:
   # ------------- Build with ES released versions ---------------------
   # 8.x + (SNAPSHOT=FALSE) -> treeish: v8.11.1  artifact: 8.11.1
-  - label: ":hammer: Build plugin with released Elasticsearch version :elasticsearch:"
+  - label: ":hammer: Build plugin with ES 8.x :elasticsearch:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
@@ -16,10 +16,14 @@ steps:
       SNAPSHOT: false
       INTEGRATION: true
       SECURE_INTEGRATION: true
+      TARGET_BRANCH: "8.x"
+      # temporary definition to cover PR-170
+      # TODO: remove once 8.16 released
+      ELASTICSEARCH_TREEISH: 8.16
 
   # ------------- Build with ES snapshot versions and main branch ---------------------
   # main + (SNAPSHOT=TRUE) -> treeish: main     artifact:8.12.0-SNAPSHOT
-  - label: ":hammer: Build plugin with Elasticsearch snapshot versions and `main` branch :elasticsearch:"
+  - label: ":hammer: Build plugin with ES `main` branch :elasticsearch:"
     command:
       - .buildkite/scripts/run_tests.sh
     env:
