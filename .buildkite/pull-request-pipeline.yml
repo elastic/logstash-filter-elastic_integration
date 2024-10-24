@@ -22,6 +22,9 @@ steps:
       ELASTIC_STACK_VERSION: "8.x"
       INTEGRATION: true
       SECURE_INTEGRATION: true
+      # temporary definition to cover PR-170
+      # TODO: remove once 8.16 released
+      ELASTICSEARCH_TREEISH: 8.16
 
   - label: ":hammer: CI setup and integration tests with ES 8.x-SNAPSHOT run on :docker:"
     command:
