@@ -14,6 +14,15 @@ steps:
       INTEGRATION: false
       SNAPSHOT: true
 
+  - label: ":hammer: Unit tests with LS 8.x-SNAPSHOT & ES main :docker:"
+    command:
+      - .buildkite/scripts/run_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: false
+      SNAPSHOT: true
+      ELASTICSEARCH_TREEISH: main
+
   # ------------- Integration tests ---------------------
   - label: ":hammer: Integration tests with LS & ES 8.x :docker:"
     command:
@@ -35,3 +44,14 @@ steps:
       LOG_LEVEL: "info"
       SECURE_INTEGRATION: true
       SNAPSHOT: true
+
+  - label: ":hammer: Integration tests with LS 8.x-SNAPSHOT & ES main :docker:"
+    command:
+      - .buildkite/scripts/run_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: "8.x"
+      INTEGRATION: true
+      LOG_LEVEL: "info"
+      SECURE_INTEGRATION: true
+      SNAPSHOT: true
+      ELASTICSEARCH_TREEISH: main
