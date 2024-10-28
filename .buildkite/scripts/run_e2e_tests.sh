@@ -12,6 +12,7 @@ VERSION_URL="https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash
 ###
 # Checkout the target branch if defined
 checkout_target_branch() {
+  set +o nounset
   if [ -z "$TARGET_BRANCH" ]; then
     echo "Target branch is not specified, using default branch: main or BK defined"
   else
@@ -23,15 +24,16 @@ checkout_target_branch() {
 ###
 # Resolve stack version and export
 resolve_current_stack_version() {
-   echo "Fetching versions from $VERSION_URL"
-   VERSIONS=$(curl --retry 5 --retry-delay 5 -fsSL $VERSION_URL)
+  set +o nounset
+  echo "Fetching versions from $VERSION_URL"
+  VERSIONS=$(curl --retry 5 --retry-delay 5 -fsSL $VERSION_URL)
 
-   if [[ "$SNAPSHOT" == "true" ]]; then
-     key=$(echo "$VERSIONS" | jq -r '.snapshots."'"$ELASTIC_STACK_VERSION"'"')
-     echo "resolved key: $key"
-   else
-     key=$(echo "$VERSIONS" | jq -r '.releases."'"$ELASTIC_STACK_VERSION"'"')
-   fi
+  if [[ "$SNAPSHOT" == "true" ]]; then
+    key=$(echo "$VERSIONS" | jq -r '.snapshots."'"$ELASTIC_STACK_VERSION"'"')
+    echo "resolved key: $key"
+  else
+    key=$(echo "$VERSIONS" | jq -r '.releases."'"$ELASTIC_STACK_VERSION"'"')
+  fi
 
   echo "Resolved version: $key"
   export STACK_VERSION="$key"
