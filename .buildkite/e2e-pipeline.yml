@@ -15,3 +15,11 @@ steps:
     env:
       ELASTIC_STACK_VERSION: "8.x"
       TARGET_BRANCH: "8.x"
+
+  - label: ":test_tube: Run E2E tests with LS 8.x-SNAPSHOT :rocket:"
+    command:
+      - .buildkite/scripts/run_e2e_tests.sh
+    env:
+      # uses the plugin main branch with JDK21 requirement
+      ELASTIC_STACK_VERSION: "8.x"
+      SNAPSHOT: true
