@@ -10,6 +10,17 @@ eval "$(pyenv init -)"
 VERSION_URL="https://storage.googleapis.com/artifacts-api/releases/current"
 
 ###
+# Checkout the target branch if defined
+checkout_target_branch() {
+  if [ -z "$TARGET_BRANCH" ]; then
+    echo "Target branch is not specified, using default branch: main or BK defined"
+  else
+    echo "Changing the branch for ${TARGET_BRANCH}"
+    git checkout "$TARGET_BRANCH"
+  fi
+}
+
+###
 # Resolve stack version and export
 resolve_current_stack_version() {
   set +o nounset
@@ -41,6 +52,7 @@ build_plugin() {
   ./gradlew clean vendor localGem
 }
 
+checkout_target_branch
 build_logstash
 build_plugin
 
