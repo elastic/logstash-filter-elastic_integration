@@ -10,6 +10,8 @@ agents:
 steps:
   # ------------- Run E2E tests ---------------------
   - label: ":test_tube: Run E2E tests with LS 8.x :rocket:"
+    # uses the LS main & plugin 8.x branch when building the plugin
+    # Runs integration tests against 8.x release version
     command:
       - .buildkite/scripts/run_e2e_tests.sh
     env:
@@ -17,9 +19,20 @@ steps:
       TARGET_BRANCH: "8.x"
 
   - label: ":test_tube: Run E2E tests with LS 8.x-SNAPSHOT :rocket:"
+    # uses the LS & plugin main branch when building the plugin
+    # Runs integration tests against 8.x-SNAPSHOT version
     command:
       - .buildkite/scripts/run_e2e_tests.sh
     env:
-      # uses the plugin main branch with JDK21 requirement
       ELASTIC_STACK_VERSION: "8.x"
       SNAPSHOT: true
+
+  - label: ":test_tube: Run E2E tests with LS `main` :rocket:"
+    # uses the LS & plugin main branch when building the plugin
+    # Runs integration tests against snapshot.main of https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json
+    command:
+      - .buildkite/scripts/run_e2e_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: main
+      SNAPSHOT: true
+      ELASTICSEARCH_TREEISH: main
