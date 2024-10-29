@@ -42,11 +42,13 @@ set_required_jdk() {
   set +o nounset
   java_version="$(cat .java-version)"
   echo "Required JDK version: $java_version"
-  if [[ "$java_version" == "21.0" ]]; then
-    echo "Setting JDK version to $java_version"
+  if [[ "$java_version" == "17.0" ]]; then
+    jdk_home="/opt/buildkite-agent/.java/adoptiumjdk_17"
+  elif [[ "$java_version" == "21.0" ]]; then
     jdk_home="/opt/buildkite-agent/.java/adoptiumjdk_21"
   else
-    jdk_home="/opt/buildkite-agent/.java"
+    echo "Unsupported JDK."
+    exit 1
   fi
 
   export JAVA_HOME=$jdk_home
