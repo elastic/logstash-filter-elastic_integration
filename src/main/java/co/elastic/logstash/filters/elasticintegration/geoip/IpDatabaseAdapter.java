@@ -27,6 +27,8 @@ public class IpDatabaseAdapter implements IpDatabase {
     private final Reader databaseReader;
     private final String databaseType;
 
+    private volatile boolean isReaderClosed = false;
+
     public IpDatabaseAdapter(final Reader databaseReader) {
         this.databaseReader = databaseReader;
         this.databaseType = databaseReader.getMetadata().getDatabaseType();
@@ -56,6 +58,12 @@ public class IpDatabaseAdapter implements IpDatabase {
     public void closeReader() throws IOException {
         LOGGER.debug("Closing the database adapter");
         this.databaseReader.close();
+        this.isReaderClosed = true;
+    }
+
+    // visible for test
+    boolean isReaderClosed() {
+        return this.isReaderClosed;
     }
 
     public static IpDatabaseAdapter defaultForPath(final Path database) throws IOException {

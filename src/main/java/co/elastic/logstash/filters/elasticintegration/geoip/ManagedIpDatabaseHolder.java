@@ -2,6 +2,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.ingest.geoip.IpDatabase;
 
 import java.io.Closeable;
@@ -30,7 +31,14 @@ public class ManagedIpDatabaseHolder implements IpDatabaseHolder, Closeable {
     }
 
     public ManagedIpDatabaseHolder(final String databaseTypeIdentifier) {
+        this(databaseTypeIdentifier, null);
+    }
+
+    ManagedIpDatabaseHolder(final String databaseTypeIdentifier, final Path databaseLocation) {
         this.databaseTypeIdentifier = databaseTypeIdentifier;
+        if (Objects.nonNull(databaseLocation)) {
+            setDatabasePath(databaseLocation.toAbsolutePath().toString());
+        }
     }
 
     @Override
@@ -39,7 +47,7 @@ public class ManagedIpDatabaseHolder implements IpDatabaseHolder, Closeable {
     }
 
     @Override
-    public IpDatabase getDatabase() {
+    public IpDatabaseAdapter getDatabase() {
         return withLock(readLock, () -> this.currentDatabase);
     }
 
@@ -54,12 +62,18 @@ public class ManagedIpDatabaseHolder implements IpDatabaseHolder, Closeable {
     }
 
     public void setDatabasePath(final String newDatabasePath) {
-        withLock(writeLock, () -> {
+        final IpDatabaseAdapter previousDatabase = withLock(writeLock, () -> {
+            final IpDatabaseAdapter localPreviousDatabase = this.currentDatabase;
             this.currentDatabase = Optional.ofNullable(newDatabasePath)
                     .map(Paths::get)
                     .map(this::loadDatabase)
                     .orElse(null);
+            return localPreviousDatabase;
         });
+
+        if (previousDatabase != null) {
+            IOUtils.closeWhileHandlingException(previousDatabase::closeReader);
+        }
     }
 
     @Override
