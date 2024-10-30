@@ -5,7 +5,7 @@ import org.elasticsearch.ingest.geoip.IpDatabase;
 interface IpDatabaseHolder {
     boolean isValid();
 
-    IpDatabase getDatabase();
+    IpDatabaseAdapter getDatabase();
 
     String getTypeIdentifier();
 
