@@ -34,18 +34,23 @@ public class IpDatabaseProvider implements org.elasticsearch.ingest.geoip.IpData
 
     @Override
     public Boolean isValid(String databaseIdentifierFileName) {
-        final IpDatabaseHolder holder = databaseMap.get(databaseIdentifierFileName);
+        final IpDatabaseHolder holder = getDatabaseHolder(databaseIdentifierFileName);
         return Objects.nonNull(holder) && holder.isValid();
     }
 
     @Override
     public IpDatabase getDatabase(String databaseIdentifierFileName) {
-        final IpDatabaseHolder holder = databaseMap.get(databaseIdentifierFileName);
+        final IpDatabaseHolder holder = getDatabaseHolder(databaseIdentifierFileName);
         if (Objects.isNull(holder)) {
             return null;
         } else {
             return holder.getDatabase();
         }
+    }
+
+    // visible for test
+    IpDatabaseHolder getDatabaseHolder(String databaseIdentifierFileName) {
+        return databaseMap.get(databaseIdentifierFileName);
     }
 
     @Override

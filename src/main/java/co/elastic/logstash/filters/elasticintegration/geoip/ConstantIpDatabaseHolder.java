@@ -19,7 +19,7 @@ public class ConstantIpDatabaseHolder implements IpDatabaseHolder, Closeable {
     }
 
     @Override
-    public IpDatabase getDatabase() {
+    public IpDatabaseAdapter getDatabase() {
         return this.ipDatabase;
     }
 
