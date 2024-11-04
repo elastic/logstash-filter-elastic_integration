@@ -6,9 +6,9 @@ agents:
   image: family/core-ubuntu-2204
 
 steps:
-  # ------------- Build with ES released versions ---------------------
-  # 8.x + (SNAPSHOT=FALSE) -> treeish: v8.11.1  artifact: 8.11.1
-  - label: ":hammer: Build plugin with released Elasticsearch version :elasticsearch:"
+  - label: ":hammer: Build plugin with LS & ES 8.x :elasticsearch:"
+    # Builds with LS and ES last 8.x released version
+    # Runs integration tests on 8.x released versions
     command:
       - .buildkite/scripts/run_tests.sh
     env:
@@ -16,14 +16,30 @@ steps:
       SNAPSHOT: false
       INTEGRATION: true
       SECURE_INTEGRATION: true
+      TARGET_BRANCH: "8.x"
+      # temporary definition to cover PR-170
+      # TODO: remove once 8.16 released
+      ELASTICSEARCH_TREEISH: 8.16
 
-  # ------------- Build with ES snapshot versions and main branch ---------------------
-  # main + (SNAPSHOT=TRUE) -> treeish: main     artifact:8.12.0-SNAPSHOT
-  - label: ":hammer: Build plugin with Elasticsearch snapshot versions and `main` branch :elasticsearch:"
+  - label: ":hammer: Build plugin with LS 8.x-SNAPSHOT & ES `main` branch :elasticsearch:"
+    # Builds with LS last 8.x released version and ES main
+    # Runs integration tests on 8.x released versions
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.x"
+      ELASTICSEARCH_TREEISH: "main"
+      SNAPSHOT: true
+      INTEGRATION: true
+      SECURE_INTEGRATION: true
+
+  - label: ":hammer: Build plugin with LS & ES `main` branch :elasticsearch:"
+    # Builds with LS last 8.x released version and ES main
+    # Runs integration tests on 8.x released versions
+    command:
+      - .buildkite/scripts/run_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: "main"
       ELASTICSEARCH_TREEISH: "main"
       SNAPSHOT: true
       INTEGRATION: true
