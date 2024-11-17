@@ -12,14 +12,11 @@ steps:
     command:
       - .buildkite/scripts/run_tests.sh
     env:
-      ELASTIC_STACK_VERSION: "8.x"
+      ELASTIC_STACK_VERSION: "8.current"
       SNAPSHOT: false
       INTEGRATION: true
       SECURE_INTEGRATION: true
       TARGET_BRANCH: "8.x"
-      # temporary definition to cover PR-170
-      # TODO: remove once 8.16 released
-      ELASTICSEARCH_TREEISH: 8.16
 
   - label: ":hammer: Build plugin with LS 8.x-SNAPSHOT & ES `main` branch :elasticsearch:"
     # Builds with LS last 8.x released version and ES main
@@ -27,7 +24,7 @@ steps:
     command:
       - .buildkite/scripts/run_tests.sh
     env:
-      ELASTIC_STACK_VERSION: "8.x"
+      ELASTIC_STACK_VERSION: "8.current"
       ELASTICSEARCH_TREEISH: "main"
       SNAPSHOT: true
       INTEGRATION: true
