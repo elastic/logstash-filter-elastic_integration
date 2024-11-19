@@ -29,7 +29,7 @@ if __name__ == "__main__":
     GITHUB_PR_TARGET_BRANCH = os.getenv("GITHUB_PR_TARGET_BRANCH")
     steps = eight_x_branch_steps() if GITHUB_PR_TARGET_BRANCH == '8.x' else main_branch_steps()
     group_desc = "8.x branch steps" if GITHUB_PR_TARGET_BRANCH == '8.x' else "main branch steps"
-    key_desc = "8.x-steps" if GITHUB_PR_TARGET_BRANCH == '8.x' else "main-steps"
+    key_desc = "eight-x-steps" if GITHUB_PR_TARGET_BRANCH == '8.x' else "main-steps"
 
     structure["steps"].append({
         "group": group_desc,
