@@ -49,11 +49,11 @@ if [ "$ELASTIC_STACK_VERSION" ]; then
     export BUILDKIT_PROGRESS=plain
 
     if [ "$INTEGRATION" == "true" ]; then
-        docker-compose down
-        docker-compose build
+        docker compose down
+        docker compose build
     else
-        docker-compose down
-        docker-compose build logstash
+        docker compose down
+        docker compose build logstash
     fi
 else
     echo "Please set the ELASTIC_STACK_VERSION environment variable"
