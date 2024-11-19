@@ -1,77 +1,28 @@
-# define a GCP VM agent to support container management (by default agent doesn't support)
-agents:
-  provider: "gcp"
-  machineType: "n1-standard-4"
-  image: family/core-ubuntu-2204
-
 steps:
-  # ------------- Unit tests ---------------------
-  - label: ":hammer: Unit tests with LS & ES 8.x-SNAPSHOT :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES version defined in gradle.properties
-    # Runs unit tests on LS & ES 8.x-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      SNAPSHOT: true
-      INTEGRATION: false
+  - label: "Pull request pipeline"
+    command: |
+      #!/usr/bin/env bash
+      set -eo pipefail
 
-  - label: ":hammer: Unit tests with LS 8.x-SNAPSHOT & ES main :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES main
-    # Runs unit tests on LS & ES 8.x-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      ELASTICSEARCH_TREEISH: main
-      INTEGRATION: false
-      SNAPSHOT: true
+      echo "--- Downloading prerequisites"
+      python3 -m pip install ruamel.yaml
+      curl -fsSL --retry-max-time 60 --retry 3 --retry-delay 5 -o /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+      chmod a+x /usr/bin/yq
 
-  # ------------- Integration tests ---------------------
-  - label: ":hammer: Integration tests with LS & ES 8.x :docker:"
-    # Builds the plugin (with current changes) against LS 8.x and ES version defined in gradle.properties
-    # Runs integration tests on LS & ES 8.x docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
+      echo "--- Generating dynamic steps"
+      set +e
+      python3 .buildkite/scripts/pull-request-pipeline/generate-steps.py >pipeline_steps.yml
+      if [[ $$? -ne 0 ]]; then
+        echo "^^^ +++"
+        echo "There was a problem rendering the pipeline steps."
+        cat pipeline_steps.yml
+        echo "Exiting now."
+        exit 1
+      else
+        set -eo pipefail
+        cat pipeline_steps.yml | yq .
+      fi
 
-  - label: ":hammer: Integration tests with LS & ES 8.x-SNAPSHOT :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES version defined in gradle.properties
-    # Runs integration tests on LS & ES 8.x-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
-
-  - label: ":hammer: Integration tests with LS 8.x-SNAPSHOT & ES main :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES main
-    # Runs integration tests on LS & ES 8.x-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      ELASTICSEARCH_TREEISH: "main"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
-
-  - label: ":hammer: Integration tests with LS & ES main :docker:"
-    # Builds the plugin (with current changes) against LS and ES main
-    # Runs integration tests on snapshot.main of https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: main
-      ELASTICSEARCH_TREEISH: main
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
+      set -eo pipefail
+      echo "--- Uploading steps to buildkite"
+      cat pipeline_steps.yml | buildkite-agent pipeline upload

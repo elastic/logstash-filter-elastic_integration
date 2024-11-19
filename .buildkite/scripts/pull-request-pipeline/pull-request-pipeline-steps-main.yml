@@ -1,0 +1,26 @@
+steps:
+  # ------------- Unit tests ---------------------
+  - label: ":hammer: Unit tests with LS & ES main :docker:"
+    # Builds the plugin (with current changes) against LS and ES main
+    # Runs unit tests on LS & ES main docker
+    command:
+      - .buildkite/scripts/run_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: main
+      ELASTICSEARCH_TREEISH: main
+      INTEGRATION: false
+      SNAPSHOT: true
+
+  # ------------- Integration tests ---------------------
+  - label: ":hammer: Integration tests with LS & ES main :docker:"
+    # Builds the plugin (with current changes) against LS and ES main
+    # Runs integration tests on snapshot.main of https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json
+    command:
+      - .buildkite/scripts/run_tests.sh
+    env:
+      ELASTIC_STACK_VERSION: main
+      ELASTICSEARCH_TREEISH: main
+      SNAPSHOT: true
+      INTEGRATION: true
+      SECURE_INTEGRATION: true
+      LOG_LEVEL: "info"
