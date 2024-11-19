@@ -15,7 +15,7 @@ steps:
     command:
       - .buildkite/scripts/run_e2e_tests.sh
     env:
-      ELASTIC_STACK_VERSION: "8.x"
+      ELASTIC_STACK_VERSION: "8.current"
       TARGET_BRANCH: "8.x"
 
   - label: ":test_tube: Run E2E tests with LS 8.x-SNAPSHOT :rocket:"
@@ -24,7 +24,7 @@ steps:
     command:
       - .buildkite/scripts/run_e2e_tests.sh
     env:
-      ELASTIC_STACK_VERSION: "8.x"
+      ELASTIC_STACK_VERSION: "8.current"
       SNAPSHOT: true
 
   - label: ":test_tube: Run E2E tests with LS `main` :rocket:"
