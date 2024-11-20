@@ -46,7 +46,7 @@ public class IngestPipelineFactory {
 
     public Optional<IngestPipeline> create(final PipelineConfiguration pipelineConfiguration) {
         try {
-            final Pipeline pipeline = Pipeline.create(pipelineConfiguration.getId(), pipelineConfiguration.getConfig(), processorFactories, scriptService);
+            final Pipeline pipeline = Pipeline.create(pipelineConfiguration.getId(), pipelineConfiguration.getConfig(false), processorFactories, scriptService);
             final IngestPipeline ingestPipeline = new IngestPipeline(pipelineConfiguration, pipeline);
             LOGGER.debug(() -> String.format("successfully created ingest pipeline `%s` from pipeline configuration", pipelineConfiguration.getId()));
             return Optional.of(ingestPipeline);
