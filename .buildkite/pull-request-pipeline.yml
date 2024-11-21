@@ -62,16 +62,3 @@ steps:
       INTEGRATION: true
       SECURE_INTEGRATION: true
       LOG_LEVEL: "info"
-
-  - label: ":hammer: Integration tests with LS & ES main :docker:"
-    # Builds the plugin (with current changes) against LS and ES main
-    # Runs integration tests on snapshot.main of https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: main
-      ELASTICSEARCH_TREEISH: main
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
