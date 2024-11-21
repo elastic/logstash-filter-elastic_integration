@@ -6,26 +6,6 @@ agents:
 
 steps:
   # ------------- Unit tests ---------------------
-  - label: ":hammer: Unit tests with LS & ES 8.previous :docker:"
-    # Builds the plugin (with current changes) against LS and ES 8.previous, plugin version defined in gradle.properties
-    # Runs unit tests on LS & ES 8.previous docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.previous"
-      INTEGRATION: false
-
-  - label: ":hammer: Unit tests with LS & ES 8.previous-SNAPSHOT :docker:"
-    # Builds the plugin (with current changes) with the version defined in gradle.properties
-    #   and against LS and ES 8.previous-SNAPSHOT
-    # Runs unit tests on LS & ES 8.previous-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.previous"
-      SNAPSHOT: true
-      INTEGRATION: false
-
   - label: ":hammer: Unit tests with LS & ES 8.current :docker:"
     # Builds the plugin (with current changes) with the version defined in gradle.properties
     #   and against LS and ES 8.current
@@ -48,30 +28,6 @@ steps:
       INTEGRATION: false
 
   # ------------- Integration tests ---------------------
-  - label: ":hammer: Integration tests with LS & ES 8.previous :docker:"
-    # Builds the plugin (with current changes) with the version defined in gradle.properties
-    #   and against LS and ES 8.previous
-    # Runs integration tests on LS & ES 8.previous docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.previous"
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-
-  - label: ":hammer: Integration tests with LS & ES 8.previous-SNAPSHOT :docker:"
-    # Builds the plugin (with current changes) with the version defined in gradle.properties
-    #   and against LS and ES 8.previous-SNAPSHOT
-    # Runs integration tests on LS & ES 8.previous-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.previous"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
-
   - label: ":hammer: Integration tests with LS & ES 8.current :docker:"
     # Builds the plugin (with current changes) with the version defined in gradle.properties
     #   and against LS and ES 8.current
