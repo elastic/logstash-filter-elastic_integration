@@ -44,7 +44,7 @@ class PipelineConfigurationFactoryTest {
         final PipelineConfiguration loaded = PipelineConfigurationFactory.getInstance().parseNamedObject(json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded.getId(), is(equalTo("pipeline-id-one")));
-        assertThat(loaded.getConfigAsMap(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
+        assertThat(loaded.getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
     }
 
     @Test
@@ -74,7 +74,7 @@ class PipelineConfigurationFactoryTest {
 
         assertThat(loaded.get(0), is(notNullValue()));
         assertThat(loaded.get(0).getId(), is(equalTo("pipeline-id-one")));
-        assertThat(loaded.get(0).getConfigAsMap(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
+        assertThat(loaded.get(0).getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
     }
 
     @Test
@@ -86,12 +86,12 @@ class PipelineConfigurationFactoryTest {
 
         assertThat(loaded.get(0), is(notNullValue()));
         assertThat(loaded.get(0).getId(), is(equalTo("pipeline-id-one")));
-        assertThat(loaded.get(0).getConfigAsMap(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
+        assertThat(loaded.get(0).getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
 
 
         assertThat(loaded.get(1), is(notNullValue()));
         assertThat(loaded.get(1).getId(), is(equalTo("pipeline-id-two")));
-        assertThat(loaded.get(1).getConfigAsMap(), is(equalTo(EXPECTED_PIPELINE_ID_TWO_CONFIG_MAP)));
+        assertThat(loaded.get(1).getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_TWO_CONFIG_MAP)));
     }
 
     @Test
@@ -109,7 +109,7 @@ class PipelineConfigurationFactoryTest {
         final PipelineConfiguration loaded = PipelineConfigurationFactory.getInstance().parseConfigOnly("bananas" , json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded.getId(), is(equalTo("bananas")));
-        assertThat(loaded.getConfigAsMap(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
+        assertThat(loaded.getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
     }
 
     String elasticsearchApiFormattedJson(final String name) throws IOException {
