@@ -6,31 +6,32 @@ agents:
 
 steps:
   # ------------- Unit tests ---------------------
-  - label: ":hammer: Unit tests with LS & ES 8.x-SNAPSHOT :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES version defined in gradle.properties
-    # Runs unit tests on LS & ES 8.x-SNAPSHOT docker
+  - label: ":hammer: Unit tests with LS & ES 8.current :docker:"
+    # Builds the plugin (with current changes) with the version defined in gradle.properties
+    #   and against LS and ES 8.current
+    # Runs unit tests on LS & ES 8.current docker
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.current"
-      SNAPSHOT: true
       INTEGRATION: false
 
-  - label: ":hammer: Unit tests with LS 8.x-SNAPSHOT & ES main :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES main
-    # Runs unit tests on LS & ES 8.x-SNAPSHOT docker
+  - label: ":hammer: Unit tests with LS & ES 8.current-SNAPSHOT :docker:"
+    # Builds the plugin (with current changes) with the version defined in gradle.properties
+    #   and against LS and ES 8.current-SNAPSHOT
+    # Runs unit tests on LS & ES 8.current-SNAPSHOT docker
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.current"
-      ELASTICSEARCH_TREEISH: main
-      INTEGRATION: false
       SNAPSHOT: true
+      INTEGRATION: false
 
   # ------------- Integration tests ---------------------
-  - label: ":hammer: Integration tests with LS & ES 8.x :docker:"
-    # Builds the plugin (with current changes) against LS 8.x and ES version defined in gradle.properties
-    # Runs integration tests on LS & ES 8.x docker
+  - label: ":hammer: Integration tests with LS & ES 8.current :docker:"
+    # Builds the plugin (with current changes) with the version defined in gradle.properties
+    #   and against LS and ES 8.current
+    # Runs integration tests on LS & ES 8.current docker
     command:
       - .buildkite/scripts/run_tests.sh
     env:
@@ -38,39 +39,14 @@ steps:
       INTEGRATION: true
       SECURE_INTEGRATION: true
 
-  - label: ":hammer: Integration tests with LS & ES 8.x-SNAPSHOT :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES version defined in gradle.properties
-    # Runs integration tests on LS & ES 8.x-SNAPSHOT docker
+  - label: ":hammer: Integration tests with LS & ES 8.current-SNAPSHOT :docker:"
+    # Builds the plugin (with current changes) with the version defined in gradle.properties
+    #   and against LS and ES 8.current-SNAPSHOT
+    # Runs integration tests on LS & ES 8.current-SNAPSHOT docker
     command:
       - .buildkite/scripts/run_tests.sh
     env:
       ELASTIC_STACK_VERSION: "8.current"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
-
-  - label: ":hammer: Integration tests with LS 8.x-SNAPSHOT & ES main :docker:"
-    # Builds the plugin (with current changes) against LS 8.x-SNAPSHOT and ES main
-    # Runs integration tests on LS & ES 8.x-SNAPSHOT docker
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      ELASTICSEARCH_TREEISH: "main"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      LOG_LEVEL: "info"
-
-  - label: ":hammer: Integration tests with LS & ES main :docker:"
-    # Builds the plugin (with current changes) against LS and ES main
-    # Runs integration tests on snapshot.main of https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: main
-      ELASTICSEARCH_TREEISH: main
       SNAPSHOT: true
       INTEGRATION: true
       SECURE_INTEGRATION: true
