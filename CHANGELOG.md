@@ -1,3 +1,6 @@
+## 1.0.0
+  - Stable release [#181](https://github.com/elastic/logstash-filter-elastic_integration/pull/181)
+
 ## 0.1.16
   - Reflects the Elasticsearch GeoIP changes into the plugin and syncs with Elasticsearch 8.16 branch [#170](https://github.com/elastic/logstash-filter-elastic_integration/pull/170)
 
