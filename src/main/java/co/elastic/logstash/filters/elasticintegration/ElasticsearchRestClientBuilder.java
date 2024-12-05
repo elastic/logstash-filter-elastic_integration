@@ -461,6 +461,10 @@ public class ElasticsearchRestClientBuilder {
                 final HttpRequestInterceptor interceptor = new EAVHttpRequestInterceptor(elasticApiVersionHeader);
                 HttpClientConfigurator.forAddInterceptorFirst(interceptor).configure(httpClientBuilder);
             }
+            // Set header indicating internal use
+            final BasicHeader productOriginHeader = new BasicHeader("x-elastic-product-origin", "logstash-filter-elastic_integration");
+            final HttpRequestInterceptor productOriginHeaderInterceptor = new EAVHttpRequestInterceptor(productOriginHeader);
+            HttpClientConfigurator.forAddInterceptorFirst(productOriginHeaderInterceptor).configure(httpClientBuilder);
         }
     }
 }
