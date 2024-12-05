@@ -111,6 +111,27 @@ class ElasticsearchRestClientBuilderTest {
         assertThat(illegalStateException.getMessage(), containsString("URLS must include port specification"));
     }
 
+    @Test
+    public void testProductOriginHeaderIsAdded() throws Exception {
+        ElasticApiConfig config = new ElasticApiConfig();
+        config.setApiVersion("1.0");
+
+        HttpAsyncClientBuilder httpClientBuilder = HttpAsyncClientBuilder.create();
+        config.configureHttpClient(httpClientBuilder);
+
+        HttpRequestInterceptor[] interceptors = httpClientBuilder.build().getRequestInterceptors();
+        boolean headerFound = false;
+        for (HttpRequestInterceptor interceptor : interceptors) {
+            HttpRequest request = new BasicHttpRequest("GET", "/");
+            interceptor.process(request, null);
+            if (request.containsHeader("x-elastic-product-origin")) {
+                headerFound = true;
+                assertEquals("logstash-filter-elastic_integration", request.getFirstHeader("x-elastic-product-origin").getValue());
+            }
+        }
+        assertTrue(headerFound);
+    }
+
     private <T> void validateTranslationToClientBuilderFactory(final Collection<URL> inputUrls, final HttpHost[] expectedInputReceivedByBuilderFactory) {
         final ElasticsearchRestClientBuilder.HostsArrayRestClientBuilderFactory hostsArrayRestClientBuilderFactory = spy(HOSTS_ARRAY_REST_CLIENT_BUILDER_FACTORY);
         try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(inputUrls, hostsArrayRestClientBuilderFactory).build()) {
