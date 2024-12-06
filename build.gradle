@@ -51,6 +51,8 @@ configurations {
 
     geolite2 { canBeConsumed = false }
 
+    mockitoAgent { canBeConsumed = false }
+
     implementation.extendsFrom(logstashCore, elasticsearchMinimalCore, elasticsearchClient)
 }
 
@@ -93,6 +95,9 @@ dependencies {
         from requiredLogstashCoreJar("guava", "jre")
     })
 
+    mockitoAgent('org.mockito:mockito-core:5.14.1') {
+        transitive = false
+    }
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
     testImplementation 'org.mockito:mockito-junit-jupiter:5.14.1'
@@ -440,7 +445,11 @@ tasks.withType(Test) {
             "--add-opens=java.base/sun.nio.ch=ALL-UNNAMED",
             "--add-opens=java.base/java.io=ALL-UNNAMED",
             "--add-opens=java.base/java.lang=ALL-UNNAMED",
-            "--add-opens=java.base/java.util=ALL-UNNAMED"
+            "--add-opens=java.base/java.util=ALL-UNNAMED",
+            "-Djdk.attach.allowAttachSelf=true",
+            "-Dmockito.mock.maker=inline",
+            "-javaagent:${configurations.mockitoAgent.asPath}",
+            "-XX:+EnableDynamicAgentLoading"
     ]
 }
 

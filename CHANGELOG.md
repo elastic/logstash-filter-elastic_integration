@@ -1,6 +1,9 @@
 ## UNRELEASED
   - Releases from `main` are not desired until we get closer to Stack 9.x, and beginning the changelog with something other than release notes matching the version will prevent the plugin release tooling from allowing publication.
 
+## 0.1.17
+    - Add `x-elastic-product-origin` header to Elasticsearch requests [#197](https://github.com/elastic/logstash-filter-elastic_integration/pull/197)
+
 ## 0.1.16
   - Reflects the Elasticsearch GeoIP changes into the plugin and syncs with Elasticsearch 8.16 branch [#170](https://github.com/elastic/logstash-filter-elastic_integration/pull/170)
 
