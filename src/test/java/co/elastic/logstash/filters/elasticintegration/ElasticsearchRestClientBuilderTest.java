@@ -6,7 +6,13 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
+import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
+import org.apache.http.HttpRequest;
+import org.apache.http.HttpRequestInterceptor;
+import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicHttpRequest;
+import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.hamcrest.Matchers;
@@ -18,11 +24,20 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
+
+import co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder.ElasticApiConfig;
+
+import org.mockito.MockedStatic;
+import org.mockito.ArgumentCaptor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentCaptor.forClass;
 import static org.mockito.Mockito.*;
 
 class ElasticsearchRestClientBuilderTest {
@@ -109,6 +124,41 @@ class ElasticsearchRestClientBuilderTest {
             ElasticsearchRestClientBuilder.forURLs(inputUrls);
         });
         assertThat(illegalStateException.getMessage(), containsString("URLS must include port specification"));
+    }
+
+    @Test
+    public void testElasticApiConfigAddsHeaders() throws HttpException, IOException {
+        ElasticApiConfig config = new ElasticApiConfig();
+        config.setApiVersion("2023-10-31");
+
+        ElasticsearchRestClientBuilder.HttpClientConfigurator mockConfigurator =
+            mock(ElasticsearchRestClientBuilder.HttpClientConfigurator.class);
+
+        try (MockedStatic<ElasticsearchRestClientBuilder.HttpClientConfigurator> mockedStatic =
+                mockStatic(ElasticsearchRestClientBuilder.HttpClientConfigurator.class)) {
+            mockedStatic.when(() ->
+                ElasticsearchRestClientBuilder.HttpClientConfigurator.forAddInterceptorFirst(
+                    any(HttpRequestInterceptor.class)))
+                .thenReturn(mockConfigurator);
+
+            HttpAsyncClientBuilder builder = HttpAsyncClientBuilder.create();
+            config.configureHttpClient(builder);
+
+            ArgumentCaptor<HttpRequestInterceptor> interceptorCaptor = forClass(HttpRequestInterceptor.class);
+            mockedStatic.verify(() ->
+                ElasticsearchRestClientBuilder.HttpClientConfigurator.forAddInterceptorFirst(
+                    interceptorCaptor.capture()), times(2));
+            verify(mockConfigurator, times(2)).configure(builder);
+
+            // Process interceptors and look for product origin header
+            List<HttpRequestInterceptor> interceptors = interceptorCaptor.getAllValues();
+            HttpRequest request = new BasicHttpRequest("GET", "/");
+            for (HttpRequestInterceptor interceptor : interceptors) {
+                interceptor.process(request, null);
+            }
+            assertThat(request.getFirstHeader("x-elastic-product-origin").getValue(),
+                    is("logstash-filter-elastic_integration"));
+        }
     }
 
     private <T> void validateTranslationToClientBuilderFactory(final Collection<URL> inputUrls, final HttpHost[] expectedInputReceivedByBuilderFactory) {
