@@ -26,18 +26,6 @@ resolve_current_stack_version() {
   export STACK_VERSION="$key"
 }
 
-###
-# Checkout the target branch if defined
-checkout_target_branch() {
-  set +o nounset
-  if [ -z "$TARGET_BRANCH" ]; then
-    echo "Target branch is not specified, using default branch: main or BK defined"
-  else
-    echo "Changing the branch for ${TARGET_BRANCH}"
-    git checkout "$TARGET_BRANCH"
-  fi
-}
-
 set_required_jdk() {
   set +o nounset
   java_version="$(cat .java-version)"
@@ -74,12 +62,10 @@ build_plugin() {
 }
 
 resolve_current_stack_version
-checkout_target_branch
 set_required_jdk
 build_logstash
 build_plugin
 
 ###
-# Install E2E prerequisites and run E2E tests
-python3 -mpip install -r .buildkite/scripts/e2e/requirements.txt
-python3 .buildkite/scripts/e2e/main.py
+# Run E2E tests
+python3 .buildkite/scripts/e2e-pipeline/main.py

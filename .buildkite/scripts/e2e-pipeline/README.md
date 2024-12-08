@@ -38,13 +38,13 @@ Make sure to export it before running. In the Buildkite pipeline, this var will 
 #### Installing dependencies
 Make sure you have python installed on you local
 ```bash
-pip install -r .buildkite/scripts/e2e/requirements.txt
+pip install -r .buildkite/scripts/e2e-pipeline/requirements.txt
 ```
 
 ### Run
 Run the following command from the repo dir:
 ```bash
-python3 .buildkite/scripts/e2e/main.py
+python3 .buildkite/scripts/e2e-pipeline/main.py
 ```
 
 ## Troubleshooting
