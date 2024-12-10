@@ -53,23 +53,23 @@ if __name__ == "__main__":
     target_branch: typing.final = manually_set_target_branch if manually_set_target_branch else os.getenv("TARGET_BRANCH")
     if target_branch == '8.x':
         full_stack_version: typing.final = versions_json["snapshots"]["8.future"]
-        steps += generate_test_step(full_stack_version, target_branch, "true")
+        steps.append(generate_test_step(full_stack_version, target_branch, "true"))
     elif target_branch == 'main':
         full_stack_version: typing.final = versions_json["snapshots"][target_branch]
-        steps += generate_test_step(full_stack_version, target_branch, "true")
+        steps.append(generate_test_step(full_stack_version, target_branch, "true"))
     else:
         # generate steps for the version if released
         releases = versions_json["releases"]
         for release_version in releases:
             if releases[release_version].startswith(target_branch):
-                steps += generate_test_step(releases[release_version], target_branch, "false")
+                steps.append(generate_test_step(releases[release_version], target_branch, "false"))
                 break
 
         # steps for snapshot version
         snapshots = versions_json["snapshots"]
         for snapshot_version in snapshots:
             if snapshots[snapshot_version].startswith(target_branch):
-                steps += generate_test_step(snapshots[snapshot_version], target_branch, "false")
+                steps.append(generate_test_step(snapshots[snapshot_version], target_branch, "false"))
                 break
 
     group_desc = f"{target_branch} branch E2E steps"
