@@ -32,19 +32,19 @@ In order to run tests with serverless, you also need to export `EC_API_KEY` whic
 In the pipelines, this will be automatically retrieved from Vault services.
 
 #### Stack version
-E2E also requires `STACK_VERSION` (ex: "8.12.0") environment variable in order to test against.
+E2E also requires `ELASTIC_STACK_VERSION` (ex: "8.12.0") environment variable in order to test against.
 Make sure to export it before running. In the Buildkite pipeline, this var will be resolved and exported. 
 
 #### Installing dependencies
 Make sure you have python installed on you local
 ```bash
-pip install -r .buildkite/scripts/e2e/requirements.txt
+pip install -r .buildkite/scripts/e2e-pipeline/requirements.txt
 ```
 
 ### Run
 Run the following command from the repo dir:
 ```bash
-python3 .buildkite/scripts/e2e/main.py
+python3 .buildkite/scripts/e2e-pipeline/main.py
 ```
 
 ## Troubleshooting
