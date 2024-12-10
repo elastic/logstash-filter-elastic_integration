@@ -1,0 +1,22 @@
+# a map defines the compatibility between versions
+# some of them might not exist,
+#  and they do not break CI which jobs generator validates the release/snapshot when generating the CI steps
+8.x:
+  releases:
+    - 8.previous
+    - 8.current
+  snapshots:
+    - 8.previous
+    - 8.current
+    - 8.next
+    - 8.future
+main:
+  releases:
+    - 9.previous
+    - 9.current
+  snapshots:
+    - 9.previous
+    - 9.current
+    - 9.next
+    - 9.future
+    - main
