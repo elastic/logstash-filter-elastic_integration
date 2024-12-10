@@ -1,43 +1,28 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
+- label: "Build pipeline"
+  command: |
+    #!/usr/bin/env bash
+    set -eo pipefail
 
-agents:
-  provider: "gcp"
-  machineType: "n1-standard-4"
-  image: family/core-ubuntu-2204
-
-steps:
-  - label: ":hammer: Build plugin with LS & ES 8.x :elasticsearch:"
-    # Builds with LS and ES last 8.x released version
-    # Runs integration tests on 8.x released versions
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      SNAPSHOT: false
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-      TARGET_BRANCH: "8.x"
-
-  - label: ":hammer: Build plugin with LS 8.x-SNAPSHOT & ES `main` branch :elasticsearch:"
-    # Builds with LS last 8.x released version and ES main
-    # Runs integration tests on 8.x released versions
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      ELASTICSEARCH_TREEISH: "main"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
-
-  - label: ":hammer: Build plugin with LS & ES `main` branch :elasticsearch:"
-    # Builds with LS last 8.x released version and ES main
-    # Runs integration tests on 8.x released versions
-    command:
-      - .buildkite/scripts/run_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "main"
-      ELASTICSEARCH_TREEISH: "main"
-      SNAPSHOT: true
-      INTEGRATION: true
-      SECURE_INTEGRATION: true
+    echo "--- Downloading prerequisites"
+    python3 -m pip install ruamel.yaml
+    python3 -m pip install requests
+    curl -fsSL --retry-max-time 60 --retry 3 --retry-delay 5 -o /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    chmod a+x /usr/bin/yq
+  
+    echo "--- Generating dynamic steps"
+    set +e
+    python3 .buildkite/scripts/build-pipeline/generate-steps.py > pipeline_steps.yml
+    if [[ $$? -ne 0 ]]; then
+      echo "^^^ +++"
+      echo "There was a problem with generating pipeline steps."
+      cat pipeline_steps.yml
+      echo "Exiting now."
+      exit 1
+    else
+      set -eo pipefail
+      cat pipeline_steps.yml | yq .
+    fi
+  
+    set -eo pipefail
+    echo "--- Uploading steps to buildkite"
+    cat pipeline_steps.yml | buildkite-agent pipeline upload
