@@ -7,6 +7,7 @@ from requests.adapters import HTTPAdapter, Retry
 from ruamel.yaml import YAML
 
 RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
+TEST_MATRIX_URL = "https://gist.githubusercontent.com/mashhurs/c5b66e05eac1c0968f841e489a8b43a6/raw/eb6b19174977aa4fbe6f7309e35481fb31690e88/tes.yaml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
 
 
@@ -50,6 +51,11 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
     return session.get(url)
 
 
+def make_matrix_version_key(branch: str) -> str:
+    branch_parts: typing.final = branch.split(".")
+    return branch_parts[0] + ".x"
+
+
 if __name__ == "__main__":
     structure = {
         "agents": {
@@ -63,27 +69,28 @@ if __name__ == "__main__":
     response = call_url_with_retry(RELEASES_URL)
     versions_json = response.json()
 
-    target_branch: typing.final = os.getenv("GITHUB_PR_TARGET_BRANCH")
-    if target_branch == '8.x':
-        full_stack_version: typing.final = versions_json["snapshots"]["8.future"]
-        steps += generate_unit_and_integration_test_steps(full_stack_version, "true")
-    elif target_branch == 'main':
-        full_stack_version: typing.final = versions_json["snapshots"][target_branch]
-        steps += generate_unit_and_integration_test_steps(full_stack_version, "true")
-    else:
-        # generate steps for the version if released
-        releases = versions_json["releases"]
-        for release_version in releases:
-            if releases[release_version].startswith(target_branch):
-                steps += generate_unit_and_integration_test_steps(releases[release_version], "false")
-                break
+    matrix_map = call_url_with_retry(TEST_MATRIX_URL)
+    matrix_map_yaml = YAML().load(matrix_map.text)
 
-        # steps for snapshot version
-        snapshots = versions_json["snapshots"]
-        for snapshot_version in snapshots:
-            if snapshots[snapshot_version].startswith(target_branch):
-                steps += generate_unit_and_integration_test_steps(snapshots[snapshot_version], "false")
-                break
+    target_branch: typing.final = os.getenv("GITHUB_PR_TARGET_BRANCH")
+    matrix_version_key = target_branch if target_branch == "main" else make_matrix_version_key(target_branch)
+    matrix_releases = matrix_map_yaml.get(matrix_version_key, {}).get("releases", [])
+    matrix_snapshots = matrix_map_yaml.get(matrix_version_key, {}).get("snapshots", [])
+
+    # let's print what matrix we have got, helps debugging
+    print(f"matrix_releases: {matrix_releases}")
+    print(f"matrix_snapshots: {matrix_snapshots}")
+    for matrix_release in matrix_releases:
+        full_stack_version: typing.final = versions_json["releases"].get(matrix_release)
+        # noop, if they are declared in the matrix but not in the release
+        if full_stack_version is not None:
+            steps += generate_unit_and_integration_test_steps(full_stack_version, "false")
+
+    for matrix_snapshot in matrix_snapshots:
+        full_stack_version: typing.final = versions_json["snapshots"].get(matrix_snapshot)
+        # noop, if they are declared in the matrix but not in the snapshot
+        if full_stack_version is not None:
+            steps += generate_unit_and_integration_test_steps(full_stack_version, "true")
 
     group_desc = f"{target_branch} branch steps"
     key_desc = "pr-and-build-steps"
