@@ -15,6 +15,7 @@ main:
     - 9.previous
     - 9.current
   snapshots:
+    - 8.future
     - 9.previous
     - 9.current
     - 9.next
