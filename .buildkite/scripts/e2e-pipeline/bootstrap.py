@@ -122,7 +122,7 @@ class Bootstrap:
         time.sleep(20)  # give a time Logstash pipeline to fully start
 
     def __update_pipeline_config(self) -> None:
-        local_config_file_path = ".buildkite/scripts/e2e/config/"
+        local_config_file_path = ".buildkite/scripts/e2e-pipeline/config/"
         config_file = "serverless_pipeline.conf" if self.project_type == "serverless" else "pipeline.conf"
         local_config_file = local_config_file_path + config_file
         container_config_file_path = "/usr/share/logstash/pipeline/logstash.conf"
