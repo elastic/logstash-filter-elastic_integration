@@ -31,7 +31,7 @@ class Bootstrap:
         self.__validate_and_set_project_type(project_type)
         self.__resolve_distro()
 
-    def __validate_and_set_project_type(self, project_type: str):
+    def __validate_and_set_project_type(self, project_type: str) -> None:
         project_types = ["on_prems", "serverless"]
         if project_type not in project_types:
             raise ValueError(f"project_type accepts {project_types} only")

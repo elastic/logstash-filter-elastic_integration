@@ -67,6 +67,7 @@ if __name__ == "__main__":
     # set MANUAL_TARGET_BRANCH with upstream target branch and run
     manually_set_target_branch: typing.final = os.getenv("MANUAL_TARGET_BRANCH")
     target_branch: typing.final = manually_set_target_branch if manually_set_target_branch else os.getenv("TARGET_BRANCH")
+    print(f"Running with target_branch: {target_branch}")
     if target_branch == '8.x':
         full_stack_version: typing.final = versions_json["snapshots"]["8.future"]
         steps += generate_unit_and_integration_test_steps(full_stack_version, "true")

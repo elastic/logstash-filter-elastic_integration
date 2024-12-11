@@ -77,6 +77,7 @@ if __name__ == "__main__":
     manually_set_target_branch: typing.final = os.getenv("MANUAL_TARGET_BRANCH")
     target_branch: typing.final = manually_set_target_branch if manually_set_target_branch \
         else os.getenv("TARGET_BRANCH")
+    print(f"Running with target_branch: {target_branch}")
 
     matrix_version_key = target_branch if target_branch == "main" else make_matrix_version_key(target_branch)
     matrix_releases = matrix_map_yaml.get(matrix_version_key, {}).get("releases", [])
