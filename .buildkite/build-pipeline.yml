@@ -13,7 +13,7 @@
     
     echo "--- Generating steps dynamically"
     set +e
-    python3 .buildkite/scripts/pr-and-build-pipeline/generate-steps.py > pipeline_steps.yml
+    python3 .buildkite/scripts/build-pipeline/generate-steps.py > pipeline_steps.yml
     if [[ $$? -ne 0 ]]; then
       echo "^^^ +++"
       echo "There was a problem with generating pipeline steps."
