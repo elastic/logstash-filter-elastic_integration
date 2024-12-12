@@ -203,7 +203,7 @@ def create_pr(parser, args):
 def get_version(base_dir):
     with open(os.path.join(base_dir, "VERSION"), "r") as f:
         for line in f:
-            return "v" + line
+            return "v" + line.strip()
 
 
 def get_github_token():

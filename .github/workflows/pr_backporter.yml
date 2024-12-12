@@ -43,7 +43,7 @@ jobs:
         with:
           python-version: 3.8
       - run: |
-          mkdir ~/.elastic && echo ${{ github.token }} >> ~/.elastic/github.token
+          mkdir ~/.elastic && echo ${{ github.token }} > ~/.elastic/github.token
       - run: pip install requests
       - name: run backport
         run: python devtools/backport ${{ steps.regex-match.outputs.group1 }} ${{ github.event.issue.number }} --remote=origin --yes
