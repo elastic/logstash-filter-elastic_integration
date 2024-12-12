@@ -7,7 +7,7 @@ from requests.adapters import HTTPAdapter, Retry
 from ruamel.yaml import YAML
 
 RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
-TEST_MATRIX_URL = "https://gist.githubusercontent.com/mashhurs/c5b66e05eac1c0968f841e489a8b43a6/raw/eb6b19174977aa4fbe6f7309e35481fb31690e88/tes.yaml"
+TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/main/.buildkite/pull-request-test-matrix.yml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
 
 
