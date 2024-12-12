@@ -59,7 +59,7 @@ class ElasticsearchPipelineConfigurationResolverTest {
             assertThat(resolvedPipelineConfiguration, isPresent());
             resolvedPipelineConfiguration.ifPresent(pipelineConfiguration -> {
                 assertThat(pipelineConfiguration.getId(), is(equalTo("my-pipeline-id")));
-                final Map<String, Object> configAsMap = pipelineConfiguration.getConfigAsMap();
+                final Map<String, Object> configAsMap = pipelineConfiguration.getConfig();
                 assertThat(configAsMap, is(equalTo(EXPECTED_MY_PIPELINE_ID_CONFIG_MAP)));
             });
         });
@@ -77,7 +77,7 @@ class ElasticsearchPipelineConfigurationResolverTest {
             assertThat(resolvedPipelineConfiguration, isPresent());
             resolvedPipelineConfiguration.ifPresent(pipelineConfiguration -> {
                 assertThat(pipelineConfiguration.getId(), is(equalTo("special char pipeline")));
-                final Map<String, Object> configAsMap = pipelineConfiguration.getConfigAsMap();
+                final Map<String, Object> configAsMap = pipelineConfiguration.getConfig();
                 assertThat(configAsMap, is(equalTo(EXPECTED_MY_PIPELINE_ID_CONFIG_MAP)));
             });
         });
