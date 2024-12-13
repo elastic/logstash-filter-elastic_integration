@@ -1,39 +1,28 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/buildkite/pipeline-schema/main/schema.json
+- label: "E2E pipeline"
+  command: |
+    #!/usr/bin/env bash
+    set -eo pipefail
 
-agents:
-  provider: gcp
-  imageProject: elastic-images-prod
-  image: family/platform-ingest-logstash-multi-jdk-ubuntu-2204
-  machineType: "n2-standard-4"
-  diskSizeGb: 120
-
-steps:
-  # ------------- Run E2E tests ---------------------
-  - label: ":test_tube: Run E2E tests with LS 8.x :rocket:"
-    # uses the LS main & plugin 8.x branch when building the plugin
-    # Runs integration tests against 8.x release version
-    command:
-      - .buildkite/scripts/run_e2e_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      TARGET_BRANCH: "8.x"
-
-  - label: ":test_tube: Run E2E tests with LS 8.x-SNAPSHOT :rocket:"
-    # uses the LS & plugin main branch when building the plugin
-    # Runs integration tests against 8.x-SNAPSHOT version
-    command:
-      - .buildkite/scripts/run_e2e_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: "8.current"
-      SNAPSHOT: true
-      TARGET_BRANCH: "8.x"
-
-  - label: ":test_tube: Run E2E tests with LS `main` :rocket:"
-    # uses the LS & plugin main branch when building the plugin
-    # Runs integration tests against snapshot.main of https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json
-    command:
-      - .buildkite/scripts/run_e2e_tests.sh
-    env:
-      ELASTIC_STACK_VERSION: main
-      SNAPSHOT: true
-      ELASTICSEARCH_TREEISH: main
+    echo "--- Downloading prerequisites"
+    python3 -m pip install ruamel.yaml
+    python3 -m pip install requests
+    curl -fsSL --retry-max-time 60 --retry 3 --retry-delay 5 -o /usr/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+    chmod a+x /usr/bin/yq
+    
+    echo "--- Generating steps dynamically"
+    set +e
+    python3 .buildkite/scripts/e2e-pipeline/generate-steps.py > pipeline_steps.yml
+    if [[ $$? -ne 0 ]]; then
+      echo "^^^ +++"
+      echo "There was a problem with generating pipeline steps."
+      cat pipeline_steps.yml
+      echo "Exiting now."
+      exit 1
+    else
+      set -eo pipefail
+      cat pipeline_steps.yml | yq .
+    fi
+    
+    set -eo pipefail
+    echo "--- Uploading steps to buildkite"
+    cat pipeline_steps.yml | buildkite-agent pipeline upload

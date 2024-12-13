@@ -6,26 +6,6 @@ export PATH="/opt/buildkite-agent/.rbenv/bin:/opt/buildkite-agent/.pyenv/bin:$PA
 eval "$(rbenv init -)"
 eval "$(pyenv init -)"
 
-VERSION_URL="https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
-
-###
-# Resolve stack version and export
-resolve_current_stack_version() {
-  set +o nounset
-  echo "Fetching versions from $VERSION_URL"
-  VERSIONS=$(curl --retry 5 --retry-delay 5 -fsSL $VERSION_URL)
-
-  if [[ "$SNAPSHOT" == "true" ]]; then
-    key=$(echo "$VERSIONS" | jq -r '.snapshots."'"$ELASTIC_STACK_VERSION"'"')
-    echo "resolved key: $key"
-  else
-    key=$(echo "$VERSIONS" | jq -r '.releases."'"$ELASTIC_STACK_VERSION"'"')
-  fi
-
-  echo "Resolved version: $key"
-  export STACK_VERSION="$key"
-}
-
 ###
 # Checkout the target branch if defined
 checkout_target_branch() {
@@ -38,6 +18,8 @@ checkout_target_branch() {
   fi
 }
 
+###
+# Set the Java home based on .java-version
 set_required_jdk() {
   set +o nounset
   java_version="$(cat .java-version)"
@@ -73,7 +55,6 @@ build_plugin() {
   ./gradlew clean vendor localGem
 }
 
-resolve_current_stack_version
 checkout_target_branch
 set_required_jdk
 build_logstash
@@ -81,5 +62,5 @@ build_plugin
 
 ###
 # Install E2E prerequisites and run E2E tests
-python3 -mpip install -r .buildkite/scripts/e2e/requirements.txt
-python3 .buildkite/scripts/e2e/main.py
+python3 -mpip install -r .buildkite/scripts/e2e-pipeline/requirements.txt
+python3 .buildkite/scripts/e2e-pipeline/main.py

@@ -1,9 +1,3 @@
-if [ -z "$ELASTICSEARCH_TREEISH" ]; then
-  source .buildkite/scripts/resolve_es_treeish.sh
-  echo "Resolved ELASTICSEARCH_TREEISH: ${ELASTICSEARCH_TREEISH}"
-else
-  echo "Using ELASTICSEARCH_TREEISH ${ELASTICSEARCH_TREEISH} defined in the ENV."
-fi
 
 if [ -z "$TARGET_BRANCH" ]; then
   echo "Target branch is not specified, using default branch: main or BK defined"

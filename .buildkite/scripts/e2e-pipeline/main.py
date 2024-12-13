@@ -12,10 +12,10 @@ INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
 
 class BootstrapContextManager:
     def __enter__(self):
-        stack_version = os.environ.get("STACK_VERSION")
+        stack_version = os.environ.get("ELASTIC_STACK_VERSION")
         project_type = os.environ.get("E2E_PROJECT_TYPE", "on_prems")
         if stack_version is None:
-            raise Exception("STACK_VERSION environment variable is missing, please export and try again.")
+            raise Exception("ELASTIC_STACK_VERSION environment variable is missing, please export and try again.")
 
         print(f"Starting E2E test of Logstash running Elastic Integrations against {stack_version} version.")
         self.bootstrap = Bootstrap(stack_version, project_type)
