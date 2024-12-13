@@ -7,7 +7,8 @@ from requests.adapters import HTTPAdapter, Retry
 from ruamel.yaml import YAML
 
 RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
-TEST_MATRIX_URL = "https://gist.githubusercontent.com/mashhurs/c5b66e05eac1c0968f841e489a8b43a6/raw/eb6b19174977aa4fbe6f7309e35481fb31690e88/tes.yaml"
+TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/main/.buildkite/pull" \
+                  "-request-test-matrix.yml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
 
 
@@ -72,7 +73,13 @@ if __name__ == "__main__":
     matrix_map = call_url_with_retry(TEST_MATRIX_URL)
     matrix_map_yaml = YAML().load(matrix_map.text)
 
-    target_branch: typing.final = os.getenv("GITHUB_PR_TARGET_BRANCH")
+    # there are situations to manually run CIs with PR change,
+    # set MANUAL_TARGET_BRANCH with upstream target branch and run
+    manually_set_target_branch: typing.final = os.getenv("MANUAL_TARGET_BRANCH")
+    target_branch: typing.final = manually_set_target_branch if manually_set_target_branch \
+        else os.getenv("TARGET_BRANCH")
+    print(f"Running with target_branch: {target_branch}")
+
     matrix_version_key = target_branch if target_branch == "main" else make_matrix_version_key(target_branch)
     matrix_releases = matrix_map_yaml.get(matrix_version_key, {}).get("releases", [])
     matrix_snapshots = matrix_map_yaml.get(matrix_version_key, {}).get("snapshots", [])
