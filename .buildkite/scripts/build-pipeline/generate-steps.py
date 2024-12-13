@@ -55,7 +55,7 @@ def generate_steps_for_scheduler(versions) -> list:
 def generate_steps_for_main_branch(versions) -> list:
     steps: list = []
     full_stack_version: typing.final = versions["snapshots"]["main"]
-    steps += generate_test_step(full_stack_version, None, "true")
+    steps.append(generate_test_step(full_stack_version, None, "true"))
     return steps
 
 
