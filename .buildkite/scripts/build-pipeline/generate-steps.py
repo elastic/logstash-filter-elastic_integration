@@ -42,7 +42,7 @@ def generate_steps_for_scheduler(versions) -> list:
     steps: list = []
     snapshots = versions["snapshots"]
     for snapshot_version in snapshots:
-        if snapshots.get(snapshot_version,"").startswith("7."):
+        if snapshots[snapshot_version] is None or snapshots[snapshot_version].startswith("7."):
             continue
         full_stack_version = snapshots[snapshot_version]
         version_parts = snapshots[snapshot_version].split(".")
