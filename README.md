@@ -19,7 +19,7 @@ All plugin documentation are placed under one [central location](http://www.elas
 - Point to the Elasticsearch branch/version to build the plugin with. Open the `gradle.properties` file and update `ELASTICSEARCH_TREEISH`.
 
 ### Build
-We use Gradle tool to build this plugin. Gradle seeks Logstash core jars from the `LOGSTASH_PATH` path, downloads the Elasticsearch version defined with `ELASTICSEARCH_TREEISH` and build the plugin.
+We use Gradle tool to build this plugin. Gradle is configured to load the Logstash core jars from the `LOGSTASH_PATH` path, download the Elasticsearch version defined with `ELASTICSEARCH_TREEISH` and build the plugin.
 The build process may fail if the Elasticsearch interfaces the plugin is using have changed.
 
 The following command builds plugin and generates the jar file, can be locally installed in Logstash core and verified:
