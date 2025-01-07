@@ -49,9 +49,9 @@ Events that _fail_ ingest pipeline processing will be tagged with `_ingest_pipel
 
 [id="plugins-{type}s-{plugin}-prerequisites"]
 ===== Prerequisites
-- This plugin requires its major and minor versions to be the same with stack major and minor versions.
-- When upgrading the stack product(s) or plugin, make sure {es} and {kib} are upgraded to the target version before {ls} and <<plugins-{type}s-{plugin}>> plugin.
-- This plugin requires minimum Java 17 with its `8.series` versions and Java 21 with its `9.series` versions.
+- This plugin embeds portions of Elasticsearch Ingest Node whose version matches the `major`.`minor` version of the plugin.
+- When upgrading the {stack} product(s), this plugin should be upgraded _before_ {kib} to ensure that {agent}-managed pipelines have access to the expected functionality.
+- This plugin requires minimum Java 17 with its `8.x` versions and Java 21 with its `9.x` versions.
 
 [id="plugins-{type}s-{plugin}-es-tips"]
 ===== Using `filter-elastic_integration` with `output-elasticsearch`
