@@ -1,5 +1,7 @@
 ## 8.17.0
-  - Compatible with stack (Logstash and Elasticsearch) 8.17 versions [#212](https://github.com/elastic/logstash-filter-elastic_integration/pull/212)
+    - Aligns with stack major and minor versions, no functional changes [#212](https://github.com/elastic/logstash-filter-elastic_integration/pull/212)
+  - Embeds Ingest Node components from Elasticsearch 8.17
+  - Compatible with Logstash 8.15+
 
 ## 0.1.17
   - Add `x-elastic-product-origin` header to Elasticsearch requests [#197](https://github.com/elastic/logstash-filter-elastic_integration/pull/197)
