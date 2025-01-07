@@ -1,5 +1,8 @@
+## 8.17.0
+  - Compatible with stack (Logstash and Elasticsearch) 8.17 versions [#212](https://github.com/elastic/logstash-filter-elastic_integration/pull/212)
+
 ## 0.1.17
-    - Add `x-elastic-product-origin` header to Elasticsearch requests [#197](https://github.com/elastic/logstash-filter-elastic_integration/pull/197)
+  - Add `x-elastic-product-origin` header to Elasticsearch requests [#197](https://github.com/elastic/logstash-filter-elastic_integration/pull/197)
 
 ## 0.1.16
   - Reflects the Elasticsearch GeoIP changes into the plugin and syncs with Elasticsearch 8.16 branch [#170](https://github.com/elastic/logstash-filter-elastic_integration/pull/170)
