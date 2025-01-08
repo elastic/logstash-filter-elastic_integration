@@ -27,7 +27,7 @@ jobs:
           username: ${{ github.actor }}
           organization: elastic
           team: logstash
-          GITHUB_TOKEN: ${{ secrets.READ_ORG_SECRET_JSVD }}
+          GITHUB_TOKEN: ${{ secrets.READ_ORG_SECRET_MASHHURS }}
       - name: Is user not a core team member?
         if: ${{ steps.checkUserMember.outputs.isTeamMember == 'false' }}
         run: exit 1
