@@ -105,6 +105,8 @@ spec:
     spec:
       pipeline_file: .buildkite/build-pipeline.yml
       maximum_timeout_in_minutes: 120
+      provider_settings:
+        trigger_mode: none
       repository: elastic/logstash-filter-elastic_integration
       env:
         ELASTIC_PR_COMMENTS_ENABLED: 'true'
@@ -152,6 +154,8 @@ spec:
     spec:
       pipeline_file: .buildkite/e2e-pipeline.yml
       maximum_timeout_in_minutes: 120
+      provider_settings:
+        trigger_mode: none
       repository: elastic/logstash-filter-elastic_integration
       env:
         ELASTIC_PR_COMMENTS_ENABLED: 'true'
