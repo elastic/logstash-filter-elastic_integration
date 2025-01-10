@@ -58,7 +58,7 @@ spec:
       provider_settings:
         build_pull_requests: true
         build_pull_request_forks: false
-        build_branches: false
+        build_branches: true
         build_tags: false
         filter_enabled: true
         filter_condition: >-
