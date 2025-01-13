@@ -2,7 +2,7 @@
   "jobs": [
     {
       "enabled": true,
-      "pipelineSlug": "logstash-filter-elastic-integration-pull-request",
+      "pipeline_slug": "logstash-filter-elastic-integration-pull-request",
       "allow_org_users": true,
       "allowed_repo_permissions": ["admin", "write"],
       "allowed_list": ["dependabot[bot]", "mergify[bot]", "elastic-vault-github-plugin-prod[bot]"],
@@ -13,7 +13,8 @@
       "always_trigger_comment_regex": "^(?:(?:buildkite\\W+)?(?:build|test)\\W+(?:this|it))",
       "skip_target_branches": [],
       "skip_ci_on_only_changed": ["^docs/"],
-      "always_require_ci_on_changed": []
+      "always_require_ci_on_changed": [],
+      "skip_ci_labels": []
     }
   ]
 }
