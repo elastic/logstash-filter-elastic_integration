@@ -16,7 +16,12 @@ describe LogStash::Filters::ElasticIntegration do
   subject(:plugin) { LogStash::Filters::ElasticIntegration.new(config) }
 
   let(:mock_geoip_database_manager) { double("LogStash::GeoipDatabaseManagement::Manager", :enabled? => false) }
-  before(:each) { allow(plugin).to receive(:load_geoip_database_manager!).and_return(mock_geoip_database_manager) }
+  before(:each) {
+    allow(plugin).to receive(:load_geoip_database_manager!).and_return(mock_geoip_database_manager)
+    allow(plugin).to receive(:logger).and_return(mock_logger)
+  }
+
+  let(:mock_logger) { double("Logger").as_null_object }
 
   describe 'the plugin class' do
     subject { described_class }
@@ -65,13 +70,15 @@ describe LogStash::Filters::ElasticIntegration do
 
   describe "plugin register" do
 
-    before(:each) { allow(plugin).to receive(:connected_es_version_info).and_return({'number' => '8.17.0', 'build_flavor' => 'default'}) }
+    before(:each) { allow(plugin).to receive(:connected_es_version_info).and_return(connected_es_version_info) }
     before(:each) { allow(plugin).to receive(:check_user_privileges!).and_return(true) }
     before(:each) { allow(plugin).to receive(:check_es_cluster_license!).and_return(true) }
     before(:each) { allow(plugin).to receive(:serverless?).and_return(false) }
 
     let(:registered_plugin) { plugin.tap(&:register) }
     after(:each) { plugin.close }
+
+    let(:connected_es_version_info) { {'number' => '8.17.0', 'build_flavor' => 'default'} }
 
     shared_examples "validate `ssl_enabled`" do
       it "enables SSL" do
@@ -724,5 +731,54 @@ describe LogStash::Filters::ElasticIntegration do
       end
     end
 
+    describe "plugin vs connected ES versions compatibility" do
+      let(:config) { super().merge("hosts" => %w[127.0.0.2:9300]) }
+      let(:version) { LogStash::Filters::ElasticIntegration::VERSION }
+      let(:plugin_major_version) { version.split('.').first.to_i }
+      let(:plugin_minor_version) { version.split('.')[1].to_i }
+      let(:base_message) { "This #{version} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}" }
+      let(:descriptive_message) { "Upgrade the plugin and/or stack to the same `major.minor` to get the minimal disruptive experience" }
+
+      before(:each) { plugin.tap(&:check_versions_alignment) }
+
+      it "informs which version of ES the plugin is built from" do
+        expect(mock_logger).to have_received(:info).with(base_message)
+      end
+
+      shared_examples "version mismatch" do |version_type, ahead_or_behind, first_log_level, second_log_level|
+        let(:connected_es_version_info) do
+          major = plugin_major_version
+          minor = plugin_minor_version
+          major += ahead_or_behind == :ahead ? -1 : 1 if version_type == :major
+          minor += ahead_or_behind == :ahead ? -1 : 1 if version_type == :minor
+          { 'number' => "#{major}.#{minor}.10", 'build_flavor' => 'default' }
+        end
+
+        it "informs to update" do
+          ahead_or_behind_msg = ahead_or_behind == :ahead ? "newer" : "older"
+          message = "This #{version} version of plugin is compiled with #{ahead_or_behind_msg} Elasticsearch version than " \
+                "currently connected Elasticsearch #{connected_es_version_info['number']} version. #{descriptive_message}"
+
+          expect(mock_logger).to have_received(first_log_level).with(base_message)
+          expect(mock_logger).to have_received(second_log_level).with(message)
+        end
+      end
+
+      context "plugin major version is behind" do
+        include_examples "version mismatch", :major, :behind, :info, :warn
+      end
+
+      context "plugin major version is ahead" do
+        include_examples "version mismatch", :major, :ahead, :info, :info
+      end
+
+      context "plugin minor version is behind" do
+        include_examples "version mismatch", :minor, :behind, :info, :info
+      end
+
+      context "plugin minor version is ahead" do
+        include_examples "version mismatch", :minor, :ahead, :info, :info
+      end
+    end
   end
 end

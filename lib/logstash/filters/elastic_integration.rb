@@ -378,8 +378,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     connected_es_version_info
     check_user_privileges!
     check_es_cluster_license!
-  rescue => e
-    raise_config_error!(e.message)
   end
 
   def preflight_check_instance
@@ -389,6 +387,8 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def connected_es_version_info
     @connected_es_version_info ||= preflight_check_instance.getElasticsearchVersionInfo
+  rescue => e
+    raise_config_error!(e.message)
   end
 
   def check_user_privileges!
@@ -422,12 +422,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def serverless?
     connected_es_version_info["build_flavor"] == 'serverless'
-  end
-
-  def set_api_version_to_rest_client!
-    @elasticsearch_rest_client = _elasticsearch_rest_client(config) do |builder|
-      builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
-    end
   end
 
   ##
@@ -471,14 +465,14 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   ##
   # compares the current plugin version with the Elasticsearch version connected to
-  # generates a warning or info message based on the situation where the plugin is ahead or behind of the Elasticsearch
+  # generates a warning or info message based on the situation where the plugin is ahead or behind of the connected Elasticsearch
   def check_versions_alignment
     plugin_version_parts = VERSION.split('.')
     plugin_major_version = plugin_version_parts[0].to_i
     plugin_minor_version = plugin_version_parts[1].to_i
 
     base_message = "This #{VERSION} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}"
-    @logger.info(base_message)
+    logger.info(base_message)
 
     es_version_parts = connected_es_version_info["number"].split('.')
     es_major_version = es_version_parts[0].to_i
@@ -494,14 +488,14 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
       # when plugin is behind of connected ES, BIG concern as it cannot utilize the features of the Ingest Node
       period_indicator = plugin_major_version > es_major_version ? "newer" : "older"
       message = "This #{VERSION} version of plugin is compiled with #{period_indicator} Elasticsearch version than" +
-        " currently connected Elasticsearch #{es_major_version}.#{es_minor_version} version. #{descriptive_message}"
-      @logger.info(message) if plugin_major_version > es_major_version
-      @logger.warn(message) if plugin_major_version < es_major_version
+        " currently connected Elasticsearch #{connected_es_version_info["number"]} version. #{descriptive_message}"
+      logger.warn(message) if plugin_major_version < es_major_version
+      logger.info(message) if plugin_major_version > es_major_version
     else
       period_indicator = plugin_minor_version > es_minor_version ? "newer" : "older"
       message = "This #{VERSION} version of plugin is compiled with #{period_indicator} Elasticsearch version than" +
-        " currently connected Elasticsearch #{es_major_version}.#{es_minor_version} version. #{descriptive_message}"
-      @logger.info(message) unless plugin_minor_version == es_minor_version
+        " currently connected Elasticsearch #{connected_es_version_info["number"]} version. #{descriptive_message}"
+      logger.info(message)
     end
   end
 end
