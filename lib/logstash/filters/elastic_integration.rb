@@ -135,9 +135,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     initialize_event_processor!
 
     perform_preflight_check!
-    if serverless?
-      set_api_version_to_rest_client!
-    end
     check_versions_alignment
   end # def register
 
@@ -346,6 +343,12 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def initialize_elasticsearch_rest_client!
     config = extract_immutable_config
     @elasticsearch_rest_client = _elasticsearch_rest_client(config)
+
+    if serverless?
+      @elasticsearch_rest_client = _elasticsearch_rest_client(config) do |builder|
+        builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
+      end
+    end
   end
 
   def _elasticsearch_rest_client(config, &builder_interceptor)
@@ -372,8 +375,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
-    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
-    @preflight_check = PreflightCheck.new(@elasticsearch_rest_client)
     connected_es_version_info
     check_user_privileges!
     check_es_cluster_license!
@@ -381,12 +382,17 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     raise_config_error!(e.message)
   end
 
+  def preflight_check_instance
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
+    @preflight_check ||= PreflightCheck.new(@elasticsearch_rest_client)
+  end
+
   def connected_es_version_info
-    @connected_es_version_info |= @preflight_check.getElasticsearchVersionInfo
+    @connected_es_version_info ||= preflight_check_instance.getElasticsearchVersionInfo
   end
 
   def check_user_privileges!
-    @preflight_check.checkUserPrivileges
+    preflight_check_instance.checkUserPrivileges
   rescue => e
     security_error_message = "no handler found for uri [/_security/user/_has_privileges]"
     if e.message.include?(security_error_message)
@@ -409,7 +415,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def check_es_cluster_license!
-    @preflight_check.checkLicense
+    preflight_check_instance.checkLicense
   rescue => e
     raise_config_error!(e.message)
   end
