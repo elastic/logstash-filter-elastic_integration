@@ -6,7 +6,6 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
-import co.elastic.logstash.api.Password;
 import com.github.tomakehurst.wiremock.extension.responsetemplating.ResponseTemplateTransformer;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
@@ -19,6 +18,7 @@ import org.mockito.Mockito;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Collections;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil.readResource;
@@ -75,7 +75,6 @@ class PreflightCheckTest {
             assertThat(failure.getMessage(), hasToString(stringContainsInOrder("cluster privilege `read_pipeline` is REQUIRED", "retrieve Elasticsearch ingest pipeline definitions")));
         }));
     }
-
 
 
     @Test
@@ -197,74 +196,56 @@ class PreflightCheckTest {
     }
 
     @Test
-    void checkIsServerlessTrue() throws Exception {
+    void checkServerlessVersionInfo() throws Exception {
         wireMock.stubFor(get("/")
-                .willReturn(okJson(getBodyFixture("is_serverless.true.json"))
+                .willReturn(okJson(getBodyFixture("serverless.response.json"))
                         .withTransformers("response-template")));
         withWiremockElasticsearch((restClient -> {
             final Logger logger = Mockito.mock(Logger.class);
-            boolean result = new PreflightCheck(logger, restClient).isServerless();
+            Map<String, String> result = new PreflightCheck(logger, restClient).getElasticsearchVersionInfo();
 
-            assertTrue(result);
+            assertNotNull(result);
+            assertThat(result.size(), equalTo(2));
+            assertEquals(result.get("number"), "8.11.0");
+            assertEquals(result.get("build_flavor"), "serverless");
+            Mockito.verify(logger).info(argThat(containsString("Connected to Elasticsearch version: 8.11.0")));
             Mockito.verify(logger).info(argThat(containsString("Elasticsearch build_flavor: serverless")));
         }));
     }
 
     @Test
-    void checkIsServerlessFalse() throws Exception {
+    void testElasticsearchVersionInfo() throws Exception {
         wireMock.stubFor(get("/")
-                .willReturn(okJson(getBodyFixture("is_serverless.false.json"))
+                .willReturn(okJson(getBodyFixture("elasticsearch.default.response.json"))
                         .withTransformers("response-template")));
         withWiremockElasticsearch((restClient -> {
             final Logger logger = Mockito.mock(Logger.class);
-            boolean result = new PreflightCheck(logger, restClient).isServerless();
+            Map<String, String> versionInfo = new PreflightCheck(logger, restClient).getElasticsearchVersionInfo();
 
-            assertFalse(result);
+            assertNotNull(versionInfo);
+            assertThat(versionInfo.size(), equalTo(2));
+            assertEquals(versionInfo.get("number"), "8.7.0");
+            assertEquals(versionInfo.get("build_flavor"), "default");
+            Mockito.verify(logger).info(argThat(containsString("Connected to Elasticsearch version: 8.7.0")));
             Mockito.verify(logger).info(argThat(containsString("Elasticsearch build_flavor: default")));
         }));
     }
 
     @Test
-    void checkIsServerless401Response() throws Exception {
+    void testElasticsearch401Response() throws Exception {
         wireMock.stubFor(get("/")
-                        .willReturn(jsonResponse(getBodyFixture("is_serverless.resp.401.json"), 401)));
+                        .willReturn(jsonResponse(getBodyFixture("elasticsearch.401.response.json"), 401)));
         withWiremockElasticsearch((restClient -> {
             final PreflightCheck.Failure failure = assertThrows(PreflightCheck.Failure.class, () -> {
-                new PreflightCheck(restClient).isServerless();
+                new PreflightCheck(restClient).getElasticsearchVersionInfo();
             });
-            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Preflight check failed", "401 Unauthorized")));
-        }));
-    }
-
-    public static final String ELASTIC_API_VERSION = "2023-10-31";
-    public static final String ENCODED_API_KEY = "iamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiamapikeyiama==";
-    @Test
-    void checkServerlessRequestContainsHeaders() throws Exception {
-        wireMock.stubFor(get("/")
-                        .withHeader("Elastic-Api-Version", containing(ELASTIC_API_VERSION))
-                        .withHeader("Authorization", containing(ENCODED_API_KEY))
-                .willReturn(okJson(getBodyFixture("is_serverless.true.json"))
-                        .withTransformers("response-template")));
-        withWiremockServerlessElasticsearch((restClient -> {
-            boolean result = new PreflightCheck(restClient).isServerless();
-            assertTrue(result);
+            assertThat(failure.getMessage(), hasToString(stringContainsInOrder("Fetching Elasticsearch version information failed", "401 Unauthorized")));
         }));
     }
 
     private void withWiremockElasticsearch(final Consumer<RestClient> handler) throws Exception{
         final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
         try (RestClient restClient = ElasticsearchRestClientBuilder.forURLs(Collections.singletonList(wiremockElasticsearch)).build()) {
-            handler.accept(restClient);
-        }
-    }
-
-    private void withWiremockServerlessElasticsearch(final Consumer<RestClient> handler) throws Exception{
-        final URL wiremockElasticsearch = new URL("http", "127.0.0.1", wireMock.getRuntimeInfo().getHttpPort(),"/");
-        try (RestClient restClient = ElasticsearchRestClientBuilder
-                .forURLs(Collections.singletonList(wiremockElasticsearch))
-                .configureElasticApi(c -> c.setApiVersion(ELASTIC_API_VERSION))
-                .configureRequestAuth(c -> c.setApiKey(new Password(ENCODED_API_KEY)))
-                .build()) {
             handler.accept(restClient);
         }
     }

@@ -135,6 +135,10 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
     initialize_event_processor!
 
     perform_preflight_check!
+    if serverless?
+      set_api_version_to_rest_client!
+    end
+    check_versions_alignment
   end # def register
 
   def filter(event)
@@ -342,12 +346,6 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   def initialize_elasticsearch_rest_client!
     config = extract_immutable_config
     @elasticsearch_rest_client = _elasticsearch_rest_client(config)
-
-    if serverless?
-      @elasticsearch_rest_client = _elasticsearch_rest_client(config) do |builder|
-                                    builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
-                                  end
-    end
   end
 
   def _elasticsearch_rest_client(config, &builder_interceptor)
@@ -374,13 +372,21 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def perform_preflight_check!
+    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
+    @preflight_check = PreflightCheck.new(@elasticsearch_rest_client)
+    connected_es_version_info
     check_user_privileges!
     check_es_cluster_license!
+  rescue => e
+    raise_config_error!(e.message)
+  end
+
+  def connected_es_version_info
+    @connected_es_version_info |= @preflight_check.getElasticsearchVersionInfo
   end
 
   def check_user_privileges!
-    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
-    PreflightCheck.new(@elasticsearch_rest_client).checkUserPrivileges
+    @preflight_check.checkUserPrivileges
   rescue => e
     security_error_message = "no handler found for uri [/_security/user/_has_privileges]"
     if e.message.include?(security_error_message)
@@ -403,17 +409,19 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   end
 
   def check_es_cluster_license!
-    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
-    PreflightCheck.new(@elasticsearch_rest_client).checkLicense
+    @preflight_check.checkLicense
   rescue => e
     raise_config_error!(e.message)
   end
 
   def serverless?
-    java_import('co.elastic.logstash.filters.elasticintegration.PreflightCheck')
-    PreflightCheck.new(@elasticsearch_rest_client).isServerless
-  rescue => e
-    raise_config_error!(e.message)
+    connected_es_version_info["build_flavor"] == 'serverless'
+  end
+
+  def set_api_version_to_rest_client!
+    @elasticsearch_rest_client = _elasticsearch_rest_client(config) do |builder|
+      builder.configureElasticApi { |elasticApi| elasticApi.setApiVersion(ELASTIC_API_VERSION) }
+    end
   end
 
   ##
@@ -452,6 +460,42 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
         You can either remove the plugin from your pipeline definition or run
         Logstash with a supported JVM.
       ERR
+    end
+  end
+
+  ##
+  # compares the current plugin version with the Elasticsearch version connected to
+  # generates a warning or info message based on the situation where the plugin is ahead or behind of the Elasticsearch
+  def check_versions_alignment
+    plugin_version_parts = VERSION.split('.')
+    plugin_major_version = plugin_version_parts[0].to_i
+    plugin_minor_version = plugin_version_parts[1].to_i
+
+    base_message = "This #{VERSION} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}"
+    @logger.info(base_message)
+
+    es_version_parts = connected_es_version_info["number"].split('.')
+    es_major_version = es_version_parts[0].to_i
+    es_minor_version = es_version_parts[1].to_i
+
+    return if (plugin_major_version == es_major_version && plugin_minor_version == es_minor_version)
+
+    descriptive_message = "Upgrade the plugin and/or stack to the same `major.minor` to get the minimal disruptive experience"
+
+    if plugin_major_version != es_major_version
+      # major version difference may alarm the warning, it doesn't seem useful to inform minor here
+      # when plugin is ahead of connected ES, not much concern but recommended to keep the same version
+      # when plugin is behind of connected ES, BIG concern as it cannot utilize the features of the Ingest Node
+      period_indicator = plugin_major_version > es_major_version ? "newer" : "older"
+      message = "This #{VERSION} version of plugin is compiled with #{period_indicator} Elasticsearch version than" +
+        " currently connected Elasticsearch #{es_major_version}.#{es_minor_version} version. #{descriptive_message}"
+      @logger.info(message) if plugin_major_version > es_major_version
+      @logger.warn(message) if plugin_major_version < es_major_version
+    else
+      period_indicator = plugin_minor_version > es_minor_version ? "newer" : "older"
+      message = "This #{VERSION} version of plugin is compiled with #{period_indicator} Elasticsearch version than" +
+        " currently connected Elasticsearch #{es_major_version}.#{es_minor_version} version. #{descriptive_message}"
+      @logger.info(message) unless plugin_minor_version == es_minor_version
     end
   end
 end

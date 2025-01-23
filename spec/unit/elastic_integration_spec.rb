@@ -29,7 +29,7 @@ describe LogStash::Filters::ElasticIntegration do
         allow(java.lang.System).to receive(:getProperty).with("java.specification.version").and_return("11.0.16.1")
       end
 
-      it 'prevents initialization and presents helpful guidancee' do
+      it 'prevents initialization and presents helpful guidance' do
         expect { described_class.new({}) }.to raise_error(LogStash::EnvironmentError)
                                                 .with_message(including("requires Java 21 or later", # reason +
                                                                         "current JVM version `11.0.16.1`",
@@ -65,7 +65,9 @@ describe LogStash::Filters::ElasticIntegration do
 
   describe "plugin register" do
 
-    before(:each) { allow(plugin).to receive(:perform_preflight_check!).and_return(true) }
+    before(:each) { allow(plugin).to receive(:connected_es_version_info).and_return({'number' => '8.17.0', 'build_flavor' => 'default'}) }
+    before(:each) { allow(plugin).to receive(:check_user_privileges!).and_return(true) }
+    before(:each) { allow(plugin).to receive(:check_es_cluster_license!).and_return(true) }
     before(:each) { allow(plugin).to receive(:serverless?).and_return(false) }
 
     let(:registered_plugin) { plugin.tap(&:register) }
