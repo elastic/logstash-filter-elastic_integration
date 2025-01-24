@@ -87,7 +87,7 @@ class Bootstrap:
         curr_dir = os.getcwd()
         pipeline_definition_file_path = "integrations/packages/**/data_stream/**/elasticsearch/ingest_pipeline/*.yml"
         files = glob.glob(os.path.join(curr_dir, pipeline_definition_file_path))
-        unsupported_processors: dict = {}   # {type: file}
+        unsupported_processors: dict[list] = {}   # {processor_type: list<file>}
 
         for file in files:
             try:
@@ -98,8 +98,14 @@ class Bootstrap:
                     for processor in processors:
                         for processor_type, _ in processor.items():
                             if processor_type not in self.SUPPORTED_PROCESSORS:
-                                unsupported_processors[processor_type] = file
+                                if processor_type not in unsupported_processors:
+                                    unsupported_processors[processor_type]: list = []
+                                if file not in unsupported_processors[processor_type]:
+                                    unsupported_processors[processor_type].append(file)
             except Exception as e:
+                # Intentionally failing CI for better visibility
+                # For the long term, creating a whitelist of unsupported processors (assuming _really_ cannot support)
+                #   and skipping them by warning would be ideal approach.
                 print(f"Failed to parse file: {file}. Error: {e}")
 
         if len(unsupported_processors) > 0:
