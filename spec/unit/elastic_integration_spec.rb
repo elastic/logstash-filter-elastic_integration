@@ -744,7 +744,7 @@ describe LogStash::Filters::ElasticIntegration do
       it "informs which version of ES the plugin is built from" do
         expected_message =
           "This plugin v#{version} is connected to the same MAJOR/MINOR version " +
-            "of Elasticsearch v#{connected_es_version_info['number']}.\n"
+            "of Elasticsearch v#{connected_es_version_info['number']}."
 
         expect(mock_logger).to have_received(:info).with(base_message)
         expect(mock_logger).to have_received(:debug).with(expected_message)
@@ -770,7 +770,7 @@ describe LogStash::Filters::ElasticIntegration do
           "This plugin v#{version} is connected to a newer MAJOR version of " +
             "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
             "running pipelines that use new features; for the best experience, " +
-            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}\n"
+            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}."
         }
         include_examples "version mismatch", :major, :behind, :info, :warn
       end
@@ -781,7 +781,7 @@ describe LogStash::Filters::ElasticIntegration do
             "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
             "running pipelines that use features that were deprecated before " +
             "Elasticsearch v#{plugin_major_version}.0; for the best experience, " +
-            "align major/minor versions across the Elastic Stack.\n"
+            "align major/minor versions across the Elastic Stack."
         }
         include_examples "version mismatch", :major, :ahead, :info, :warn
       end
@@ -791,7 +791,7 @@ describe LogStash::Filters::ElasticIntegration do
           "This plugin v#{version} is connected to a newer MINOR version of " +
             "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
             "running pipelines that use new features; for the best experience, " +
-            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}\n"
+            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}."
         }
         include_examples "version mismatch", :minor, :behind, :info, :warn
       end
@@ -800,7 +800,7 @@ describe LogStash::Filters::ElasticIntegration do
         let(:expected_message) {
           "This plugin v#{version} is connected to an older MINOR version of " +
             "Elasticsearch v#{connected_es_version_info['number']}; for the best experience, " +
-            "align major/minor versions across the Elastic Stack.\n"
+            "align major/minor versions across the Elastic Stack."
         }
         include_examples "version mismatch", :minor, :ahead, :info, :info
       end
