@@ -467,35 +467,46 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # compares the current plugin version with the Elasticsearch version connected to
   # generates a warning or info message based on the situation where the plugin is ahead or behind of the connected Elasticsearch
   def check_versions_alignment
-    plugin_version_parts = VERSION.split('.')
-    plugin_major_version = plugin_version_parts[0].to_i
-    plugin_minor_version = plugin_version_parts[1].to_i
+    plugin_major_version, plugin_minor_version = VERSION.split('.').map(&:to_i)
+    es_major_version, es_minor_version = connected_es_version_info["number"].split('.').first(2).map(&:to_i)
 
-    base_message = "This #{VERSION} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}"
-    logger.info(base_message)
+    logger.info("This #{VERSION} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}")
 
-    es_version_parts = connected_es_version_info["number"].split('.')
-    es_major_version = es_version_parts[0].to_i
-    es_minor_version = es_version_parts[1].to_i
+    es_full_version = connected_es_version_info["number"]
 
-    return if (plugin_major_version == es_major_version && plugin_minor_version == es_minor_version)
-
-    descriptive_message = "Upgrade the plugin and/or stack to the same `major.minor` to get the minimal disruptive experience"
-
-    if plugin_major_version != es_major_version
-      # major version difference may alarm the warning, it doesn't seem useful to inform minor here
-      # when plugin is ahead of connected ES, not much concern but recommended to keep the same version
-      # when plugin is behind of connected ES, BIG concern as it cannot utilize the features of the Ingest Node
-      period_indicator = plugin_major_version > es_major_version ? "newer" : "older"
-      message = "This #{VERSION} version of plugin is compiled with #{period_indicator} Elasticsearch version than" +
-        " currently connected Elasticsearch #{connected_es_version_info["number"]} version. #{descriptive_message}"
-      logger.warn(message) if plugin_major_version < es_major_version
-      logger.info(message) if plugin_major_version > es_major_version
+    if es_major_version > plugin_major_version
+      logger.warn <<~WARNING
+        this plugin v#{VERSION} is connected to a newer MAJOR version of
+        Elasticsearch v#{es_full_version}, and may have trouble loading or
+        running pipelines that use new features; for the best experience,
+        update this plugin to at least v#{es_major_version}.#{es_minor_version}
+      WARNING
+    elsif es_major_version < plugin_major_version
+      logger.warn <<~WARNING
+        this plugin v#{VERSION} is connected to an older MAJOR version of
+        Elasticsearch v#{es_full_version}, and may have trouble loading or
+        running pipelines that use features that were deprecated before
+        Elasticsearch v#{plugin_major_version}.0; for the best experience,
+        align major/minor versions across the Elastic Stack.
+      WARNING
+    elsif es_minor_version > plugin_minor_version
+      logger.warn <<~WARNING
+        this plugin v#{VERSION} is connected to a newer MINOR version of
+        Elasticsearch v#{es_full_version}, and may have trouble loading or
+        running pipelines that use new features; for the best experience,
+        update this plugin to at least v#{es_major_version}.#{es_minor_version}
+      WARNING
+    elsif es_minor_version < plugin_minor_version
+      logger.info <<~INFO
+        this plugin v#{VERSION} is connected to an older MINOR version of
+        Elasticsearch v#{es_full_version}; for the best experience,
+        align major/minor versions across the Elastic Stack.
+      INFO
     else
-      period_indicator = plugin_minor_version > es_minor_version ? "newer" : "older"
-      message = "This #{VERSION} version of plugin is compiled with #{period_indicator} Elasticsearch version than" +
-        " currently connected Elasticsearch #{connected_es_version_info["number"]} version. #{descriptive_message}"
-      logger.info(message)
+      logger.debug <<~DEBUG
+        this plugin v#{VERSION} is connected to the same MAJOR/MINOR version
+        of Elasticsearch v#{es_full_version}.
+      DEBUG
     end
   end
 end

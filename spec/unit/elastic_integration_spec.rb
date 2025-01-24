@@ -737,12 +737,17 @@ describe LogStash::Filters::ElasticIntegration do
       let(:plugin_major_version) { version.split('.').first.to_i }
       let(:plugin_minor_version) { version.split('.')[1].to_i }
       let(:base_message) { "This #{version} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}" }
-      let(:descriptive_message) { "Upgrade the plugin and/or stack to the same `major.minor` to get the minimal disruptive experience" }
+      let(:expected_message) { }
 
       before(:each) { plugin.tap(&:check_versions_alignment) }
 
       it "informs which version of ES the plugin is built from" do
+        expected_message =
+          "this plugin v#{version} is connected to the same MAJOR/MINOR version\n" +
+            "of Elasticsearch v#{connected_es_version_info['number']}.\n"
+
         expect(mock_logger).to have_received(:info).with(base_message)
+        expect(mock_logger).to have_received(:debug).with(expected_message)
       end
 
       shared_examples "version mismatch" do |version_type, ahead_or_behind, first_log_level, second_log_level|
@@ -751,34 +756,55 @@ describe LogStash::Filters::ElasticIntegration do
           minor = plugin_minor_version
           major += ahead_or_behind == :ahead ? -1 : 1 if version_type == :major
           minor += ahead_or_behind == :ahead ? -1 : 1 if version_type == :minor
-          { 'number' => "#{major}.#{minor}.10", 'build_flavor' => 'default' }
+          { "number" => "#{major}.#{minor}.10", "major" => "#{major}", "minor" => "#{minor}", "build_flavor" => "default" }
         end
 
         it "informs to update" do
-          ahead_or_behind_msg = ahead_or_behind == :ahead ? "newer" : "older"
-          message = "This #{version} version of plugin is compiled with #{ahead_or_behind_msg} Elasticsearch version than " \
-                "currently connected Elasticsearch #{connected_es_version_info['number']} version. #{descriptive_message}"
-
           expect(mock_logger).to have_received(first_log_level).with(base_message)
-          expect(mock_logger).to have_received(second_log_level).with(message)
+          expect(mock_logger).to have_received(second_log_level).with(expected_message)
         end
       end
 
       context "plugin major version is behind" do
+        let(:expected_message) {
+          "this plugin v#{version} is connected to a newer MAJOR version of\n" +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or\n" +
+            "running pipelines that use new features; for the best experience,\n" +
+            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}\n"
+        }
         include_examples "version mismatch", :major, :behind, :info, :warn
       end
 
       context "plugin major version is ahead" do
-        include_examples "version mismatch", :major, :ahead, :info, :info
+        let(:expected_message) {
+          "this plugin v#{version} is connected to an older MAJOR version of\n" +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or\n" +
+            "running pipelines that use features that were deprecated before\n" +
+            "Elasticsearch v#{plugin_major_version}.0; for the best experience,\n" +
+            "align major/minor versions across the Elastic Stack.\n"
+        }
+        include_examples "version mismatch", :major, :ahead, :info, :warn
       end
 
       context "plugin minor version is behind" do
-        include_examples "version mismatch", :minor, :behind, :info, :info
+        let(:expected_message) {
+          "this plugin v#{version} is connected to a newer MINOR version of\n" +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or\n" +
+            "running pipelines that use new features; for the best experience,\n" +
+            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}\n"
+        }
+        include_examples "version mismatch", :minor, :behind, :info, :warn
       end
 
       context "plugin minor version is ahead" do
+        let(:expected_message) {
+          "this plugin v#{version} is connected to an older MINOR version of\n" +
+            "Elasticsearch v#{connected_es_version_info['number']}; for the best experience,\n" +
+            "align major/minor versions across the Elastic Stack.\n"
+        }
         include_examples "version mismatch", :minor, :ahead, :info, :info
       end
+
     end
   end
 end
