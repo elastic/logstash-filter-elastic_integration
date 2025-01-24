@@ -476,36 +476,23 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
     if es_major_version > plugin_major_version
       logger.warn <<~WARNING
-        this plugin v#{VERSION} is connected to a newer MAJOR version of
-        Elasticsearch v#{es_full_version}, and may have trouble loading or
-        running pipelines that use new features; for the best experience,
-        update this plugin to at least v#{es_major_version}.#{es_minor_version}
+        This plugin v#{VERSION} is connected to a newer MAJOR version of Elasticsearch v#{es_full_version}, and may have trouble loading or running pipelines that use new features; for the best experience, update this plugin to at least v#{es_major_version}.#{es_minor_version}
       WARNING
     elsif es_major_version < plugin_major_version
       logger.warn <<~WARNING
-        this plugin v#{VERSION} is connected to an older MAJOR version of
-        Elasticsearch v#{es_full_version}, and may have trouble loading or
-        running pipelines that use features that were deprecated before
-        Elasticsearch v#{plugin_major_version}.0; for the best experience,
-        align major/minor versions across the Elastic Stack.
+        This plugin v#{VERSION} is connected to an older MAJOR version of Elasticsearch v#{es_full_version}, and may have trouble loading or running pipelines that use features that were deprecated before Elasticsearch v#{plugin_major_version}.0; for the best experience, align major/minor versions across the Elastic Stack.
       WARNING
     elsif es_minor_version > plugin_minor_version
       logger.warn <<~WARNING
-        this plugin v#{VERSION} is connected to a newer MINOR version of
-        Elasticsearch v#{es_full_version}, and may have trouble loading or
-        running pipelines that use new features; for the best experience,
-        update this plugin to at least v#{es_major_version}.#{es_minor_version}
+        This plugin v#{VERSION} is connected to a newer MINOR version of Elasticsearch v#{es_full_version}, and may have trouble loading or running pipelines that use new features; for the best experience, update this plugin to at least v#{es_major_version}.#{es_minor_version}
       WARNING
     elsif es_minor_version < plugin_minor_version
       logger.info <<~INFO
-        this plugin v#{VERSION} is connected to an older MINOR version of
-        Elasticsearch v#{es_full_version}; for the best experience,
-        align major/minor versions across the Elastic Stack.
+        This plugin v#{VERSION} is connected to an older MINOR version of Elasticsearch v#{es_full_version}; for the best experience, align major/minor versions across the Elastic Stack.
       INFO
     else
       logger.debug <<~DEBUG
-        this plugin v#{VERSION} is connected to the same MAJOR/MINOR version
-        of Elasticsearch v#{es_full_version}.
+        This plugin v#{VERSION} is connected to the same MAJOR/MINOR version of Elasticsearch v#{es_full_version}.
       DEBUG
     end
   end

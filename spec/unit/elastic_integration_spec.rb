@@ -743,7 +743,7 @@ describe LogStash::Filters::ElasticIntegration do
 
       it "informs which version of ES the plugin is built from" do
         expected_message =
-          "this plugin v#{version} is connected to the same MAJOR/MINOR version\n" +
+          "This plugin v#{version} is connected to the same MAJOR/MINOR version " +
             "of Elasticsearch v#{connected_es_version_info['number']}.\n"
 
         expect(mock_logger).to have_received(:info).with(base_message)
@@ -767,9 +767,9 @@ describe LogStash::Filters::ElasticIntegration do
 
       context "plugin major version is behind" do
         let(:expected_message) {
-          "this plugin v#{version} is connected to a newer MAJOR version of\n" +
-            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or\n" +
-            "running pipelines that use new features; for the best experience,\n" +
+          "This plugin v#{version} is connected to a newer MAJOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
+            "running pipelines that use new features; for the best experience, " +
             "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}\n"
         }
         include_examples "version mismatch", :major, :behind, :info, :warn
@@ -777,10 +777,10 @@ describe LogStash::Filters::ElasticIntegration do
 
       context "plugin major version is ahead" do
         let(:expected_message) {
-          "this plugin v#{version} is connected to an older MAJOR version of\n" +
-            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or\n" +
-            "running pipelines that use features that were deprecated before\n" +
-            "Elasticsearch v#{plugin_major_version}.0; for the best experience,\n" +
+          "This plugin v#{version} is connected to an older MAJOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
+            "running pipelines that use features that were deprecated before " +
+            "Elasticsearch v#{plugin_major_version}.0; for the best experience, " +
             "align major/minor versions across the Elastic Stack.\n"
         }
         include_examples "version mismatch", :major, :ahead, :info, :warn
@@ -788,9 +788,9 @@ describe LogStash::Filters::ElasticIntegration do
 
       context "plugin minor version is behind" do
         let(:expected_message) {
-          "this plugin v#{version} is connected to a newer MINOR version of\n" +
-            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or\n" +
-            "running pipelines that use new features; for the best experience,\n" +
+          "This plugin v#{version} is connected to a newer MINOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
+            "running pipelines that use new features; for the best experience, " +
             "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}\n"
         }
         include_examples "version mismatch", :minor, :behind, :info, :warn
@@ -798,8 +798,8 @@ describe LogStash::Filters::ElasticIntegration do
 
       context "plugin minor version is ahead" do
         let(:expected_message) {
-          "this plugin v#{version} is connected to an older MINOR version of\n" +
-            "Elasticsearch v#{connected_es_version_info['number']}; for the best experience,\n" +
+          "This plugin v#{version} is connected to an older MINOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}; for the best experience, " +
             "align major/minor versions across the Elastic Stack.\n"
         }
         include_examples "version mismatch", :minor, :ahead, :info, :info
