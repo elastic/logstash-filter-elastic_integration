@@ -16,7 +16,12 @@ describe LogStash::Filters::ElasticIntegration do
   subject(:plugin) { LogStash::Filters::ElasticIntegration.new(config) }
 
   let(:mock_geoip_database_manager) { double("LogStash::GeoipDatabaseManagement::Manager", :enabled? => false) }
-  before(:each) { allow(plugin).to receive(:load_geoip_database_manager!).and_return(mock_geoip_database_manager) }
+  before(:each) {
+    allow(plugin).to receive(:load_geoip_database_manager!).and_return(mock_geoip_database_manager)
+    allow(plugin).to receive(:logger).and_return(mock_logger)
+  }
+
+  let(:mock_logger) { double("Logger").as_null_object }
 
   describe 'the plugin class' do
     subject { described_class }
@@ -29,7 +34,7 @@ describe LogStash::Filters::ElasticIntegration do
         allow(java.lang.System).to receive(:getProperty).with("java.specification.version").and_return("11.0.16.1")
       end
 
-      it 'prevents initialization and presents helpful guidancee' do
+      it 'prevents initialization and presents helpful guidance' do
         expect { described_class.new({}) }.to raise_error(LogStash::EnvironmentError)
                                                 .with_message(including("requires Java 21 or later", # reason +
                                                                         "current JVM version `11.0.16.1`",
@@ -65,11 +70,15 @@ describe LogStash::Filters::ElasticIntegration do
 
   describe "plugin register" do
 
-    before(:each) { allow(plugin).to receive(:perform_preflight_check!).and_return(true) }
+    before(:each) { allow(plugin).to receive(:connected_es_version_info).and_return(connected_es_version_info) }
+    before(:each) { allow(plugin).to receive(:check_user_privileges!).and_return(true) }
+    before(:each) { allow(plugin).to receive(:check_es_cluster_license!).and_return(true) }
     before(:each) { allow(plugin).to receive(:serverless?).and_return(false) }
 
     let(:registered_plugin) { plugin.tap(&:register) }
     after(:each) { plugin.close }
+
+    let(:connected_es_version_info) { {'number' => '8.17.0', 'build_flavor' => 'default'} }
 
     shared_examples "validate `ssl_enabled`" do
       it "enables SSL" do
@@ -722,5 +731,80 @@ describe LogStash::Filters::ElasticIntegration do
       end
     end
 
+    describe "plugin vs connected ES versions compatibility" do
+      let(:config) { super().merge("hosts" => %w[127.0.0.2:9300]) }
+      let(:version) { LogStash::Filters::ElasticIntegration::VERSION }
+      let(:plugin_major_version) { version.split('.').first.to_i }
+      let(:plugin_minor_version) { version.split('.')[1].to_i }
+      let(:base_message) { "This #{version} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}" }
+      let(:expected_message) { }
+
+      before(:each) { plugin.tap(&:check_versions_alignment) }
+
+      it "informs which version of ES the plugin is built from" do
+        expected_message =
+          "This plugin v#{version} is connected to the same MAJOR/MINOR version " +
+            "of Elasticsearch v#{connected_es_version_info['number']}."
+
+        expect(mock_logger).to have_received(:info).with(base_message)
+        expect(mock_logger).to have_received(:debug).with(expected_message)
+      end
+
+      shared_examples "version mismatch" do |version_type, ahead_or_behind, first_log_level, second_log_level|
+        let(:connected_es_version_info) do
+          major = plugin_major_version
+          minor = plugin_minor_version
+          major += ahead_or_behind == :ahead ? -1 : 1 if version_type == :major
+          minor += ahead_or_behind == :ahead ? -1 : 1 if version_type == :minor
+          { "number" => "#{major}.#{minor}.10", "major" => "#{major}", "minor" => "#{minor}", "build_flavor" => "default" }
+        end
+
+        it "informs to update" do
+          expect(mock_logger).to have_received(first_log_level).with(base_message)
+          expect(mock_logger).to have_received(second_log_level).with(expected_message)
+        end
+      end
+
+      context "plugin major version is behind" do
+        let(:expected_message) {
+          "This plugin v#{version} is connected to a newer MAJOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
+            "running pipelines that use new features; for the best experience, " +
+            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}."
+        }
+        include_examples "version mismatch", :major, :behind, :info, :warn
+      end
+
+      context "plugin major version is ahead" do
+        let(:expected_message) {
+          "This plugin v#{version} is connected to an older MAJOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
+            "running pipelines that use features that were deprecated before " +
+            "Elasticsearch v#{plugin_major_version}.0; for the best experience, " +
+            "align major/minor versions across the Elastic Stack."
+        }
+        include_examples "version mismatch", :major, :ahead, :info, :warn
+      end
+
+      context "plugin minor version is behind" do
+        let(:expected_message) {
+          "This plugin v#{version} is connected to a newer MINOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}, and may have trouble loading or " +
+            "running pipelines that use new features; for the best experience, " +
+            "update this plugin to at least v#{connected_es_version_info['major']}.#{connected_es_version_info['minor']}."
+        }
+        include_examples "version mismatch", :minor, :behind, :info, :warn
+      end
+
+      context "plugin minor version is ahead" do
+        let(:expected_message) {
+          "This plugin v#{version} is connected to an older MINOR version of " +
+            "Elasticsearch v#{connected_es_version_info['number']}; for the best experience, " +
+            "align major/minor versions across the Elastic Stack."
+        }
+        include_examples "version mismatch", :minor, :ahead, :info, :info
+      end
+
+    end
   end
 end
