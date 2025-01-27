@@ -331,16 +331,13 @@ The root cause may depend on configuration, environment or integration you are r
 Check out {ls} and {integrations} documents for further assistance.
 
 2. **Errors internally occurred in the ingest pipeline**
-To figure out such cases, go to the {kib} Dev Tools, search for the data (`GET index-ingest-pipeline-is-writing/_search`) and see if the index documents contain `error` fields.
-If the index documents contain `error` fields, you can analyze the error messages to understand the root cause.
-For example, if `rename` processor cannot find the field needs to be renamed, it errors with the following:
-[source]
-----
-"error": {
-    "message": "field [non_exist_source_field] doesn't exist"
-},
-----
-Check out {integrations} documents for further assistance.
+If ingest pipeline are build with failure processors, failures will be internally handled by ingest pipeline and will not be visible to Logstash.
+To figure out such cases, go to the {kib} -> Stack Management -> Ingest pipelines and find the ingest pipeline you are using.
+Click on it and navigate to the Failure processors section. If failure processors are set, it usually tells which field includes the failures.
+Go to the {kib} Dev Tools and search for the data (`GET index-ingest-pipeline-is-writing/_search`) and see if the index documents contain the fields failure processors mention.
+The fields will have error details which will help you to analyze the root cause.
+
+Check out {integrations} and {es} {ref}/ingest.html#handling-pipeline-failures[Handling pipeline failures] documents for further assistance.
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== {elastic-integration-name} Filter Configuration Options
