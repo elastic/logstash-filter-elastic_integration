@@ -323,11 +323,24 @@ For example, the following error message indicating `inference` processor in the
 In such cases, review the pipeline configuration for <<plugins-{type}s-{plugin}-unsupported_ingest_processors>> and refer to relevant integration and ingestion pipeline documentation for guidance.
 
 - **Errors happened during pipeline execution**
+There are mainly two cases require investigation:
+1. **Logstash catches issues while running ingest pipelines**
 If errors are occurred during the pipeline execution, the event will not be processed and the `_ingest_pipeline_failure` tag will be attached.
-For this case, the errors mostly contain the stack trace or detail reasoning.
-The root cause may depend on the environment or integration you are running.
+The detailed logs will be available in the Logstash logs for your investigation.
+The root cause may depend on configuration, environment or integration you are running.
 Check out {ls} and {integrations} documents for further assistance.
 
+2. **Errors internally occurred in the ingest pipeline**
+To figure out such cases, go to the {kib} Dev Tools, search for the data (`GET index-ingest-pipeline-is-writing/_search`) and see if the index documents contain `error` fields.
+If the index documents contain `error` fields, you can analyze the error messages to understand the root cause.
+For example, if `rename` processor cannot find the field needs to be renamed, it errors with the following:
+[source]
+----
+"error": {
+    "message": "field [non_exist_source_field] doesn't exist"
+},
+----
+Check out {integrations} documents for further assistance.
 
 [id="plugins-{type}s-{plugin}-options"]
 ==== {elastic-integration-name} Filter Configuration Options
