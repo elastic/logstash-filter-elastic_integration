@@ -78,7 +78,11 @@ describe LogStash::Filters::ElasticIntegration do
     let(:registered_plugin) { plugin.tap(&:register) }
     after(:each) { plugin.close }
 
-    let(:connected_es_version_info) { {'number' => '8.17.0', 'build_flavor' => 'default'} }
+    let(:version) { LogStash::Filters::ElasticIntegration::VERSION }
+
+    # assuming that the plugin is connected to the ES with the same version
+    # see the "plugin vs connected ES versions compatibility" unit test when versions differ
+    let(:connected_es_version_info) { {'number' => version, 'build_flavor' => 'default'} }
 
     shared_examples "validate `ssl_enabled`" do
       it "enables SSL" do
@@ -733,7 +737,6 @@ describe LogStash::Filters::ElasticIntegration do
 
     describe "plugin vs connected ES versions compatibility" do
       let(:config) { super().merge("hosts" => %w[127.0.0.2:9300]) }
-      let(:version) { LogStash::Filters::ElasticIntegration::VERSION }
       let(:plugin_major_version) { version.split('.').first.to_i }
       let(:plugin_minor_version) { version.split('.')[1].to_i }
       let(:base_message) { "This #{version} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}" }
