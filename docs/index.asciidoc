@@ -206,22 +206,6 @@ h| GeoIp
 
 |=======================================================================
 
-[id="plugins-{type}s-{plugin}-unsupported_ingest_processors"]
-==== Unsupported Ingest Processors
-
-This plugin has limited capabilities to execute all processors, as certain processors require external access or depend on additional resources that are not available in the plugin's environment.
-Some processors may not function as expected, potentially leading to errors or silent failures in Logstash.
-The following processors are known unsupported processors. Note that this list is not fully comprehensive:
-
-[cols="<1,<5",options="header"]
-|=======================================================================
-|Processor | Behavior
-| `set_security_user` | Logstash will not warn or error
-| `inference` | Logstash raises `No processor type exists with name [inference]` error
-| `enrich` | Logstash raises  `No processor type exists with name [enrich]` error
-|=======================================================================
-
-
 [id="plugins-{type}s-{plugin}-field_mappings"]
 ===== Field Mappings
 
@@ -298,24 +282,34 @@ To achieve this, mappings are cached for a maximum of {cached-entry-ttl}, and ca
 ==== Troubleshooting
 
 Troubleshooting ingest pipelines associated with data streams requires a pragmatic approach, involving thorough analysis and debugging techniques.
-To identify the root cause of issues with pipeline execution, it is essential to enable debug-level logging. This allows monitoring the plugin's behavior and detect any anomalies or errors that may be causing pipeline execution.
+To identify the root cause of issues with pipeline execution, you need to enable debug-level logging.
+The debug logs allow monitoring the plugin's behavior and help to detect issues.
 The plugin operates through following phases: pipeline _resolution_, ingest pipeline _creation_, and pipeline _execution_.
 
-* If you encounter `No pipeline resolved for event ...` messages in the debug logs, it indicates that the plugin is unable to resolve the ingest pipeline from the data stream. In such cases, explicitly
-defining the pipeline name using the <<plugins-{type}s-{plugin}-pipeline_name>> is a one option to resolve the issue.
+[ingest-pipeline-resolution-errors]
+===== Ingest Pipeline Resolution Errors
+
+*Plugin does not resolve ingest pipeline associated with data stream*
+
+If you encounter `No pipeline resolved for event ...` messages in the debug logs, the error indicates that the plugin is unable to resolve the ingest pipeline from the data stream.
 To further diagnose and resolve the issue, verify whether the data stream's index settings include a `default_pipeline` or `final_pipeline` configuration.
-You can inspect the index settings by running a simple query in the {kib} Dev Tools: `POST _index_template/_simulate_index/{type}-{dataset}-{namespace}`. Make sure to replace `{type}-{dataset}-{namespace}` with values corresponding to your data stream.
+You can inspect the index settings by running a `POST _index_template/_simulate_index/{type}-{dataset}-{namespace}` query in the {kib} Dev Tools.
+Make sure to replace `{type}-{dataset}-{namespace}` with values corresponding to your data stream.
 
-For further guidance, we recommend exploring following {es} {ref}/ingest.html#pipelines-for-fleet-elastic-agent[Ingest pipelines for fleet] and https://docs.elastic.co/integrations/all_integrations[Elastic {integrations}] resources.
+For further guidance, we recommend exploring {es} {ref}/ingest.html#pipelines-for-fleet-elastic-agent[Ingest pipelines for fleet] and {integrations-docs}[Elastic {integrations}] resources.
 
-* If you notice `pipeline not found: ...` debug messages in the logs or `Pipeline {pipeline-name} could not be loaded` warning messages, it indicates that the plugin has successfully resolved the ingest pipeline from `default_pipeline` or `final_pipeline`, but the specified pipeline does not exist.
-To confirm whether pipeline exists, run a simple request in the {kib} Dev Tools console: `GET _ingest/pipeline/{ingest-pipeline-name}`.
+*Ingest pipeline does not exist*
 
-For further guidance, it is recommended visiting {es} {ref}/ingest.html#pipelines-for-fleet-elastic-agent[Ingest pipelines for fleet] and https://docs.elastic.co/integrations/all_integrations[Elastic {integrations}] guidelines.
+If you notice `pipeline not found: ...` messages in the debug logs or `Pipeline {pipeline-name} could not be loaded` warning messages, it indicates that the plugin has successfully resolved the ingest pipeline from `default_pipeline` or `final_pipeline`, but the specified pipeline does not exist.
+To confirm whether pipeline exists, run a `GET _ingest/pipeline/{ingest-pipeline-name}` query in the {kib} Dev Tools console.
+For further guidance, we recommend exploring {es} {ref}/ingest.html#pipelines-for-fleet-elastic-agent[Ingest pipelines for fleet] and {integrations-docs}[Elastic {integrations}] resources.
 
-* If you encounter `failed to create ingest pipeline {pipeline-name} from pipeline configuration` error messages, it indicates that the plugin is unable to create an ingest pipeline from the resolved  pipeline configuration.
+[ingest-pipeline-creation-errors]
+===== Ingest Pipeline Creation Errors
+
+If you encounter `failed to create ingest pipeline {pipeline-name} from pipeline configuration` error messages, it indicates that the plugin is unable to create an ingest pipeline from the resolved pipeline configuration.
 This issue typically arises when the pipeline configuration contains unsupported or invalid processor(s) that the plugin cannot execute.
-In such situations, the log output will mostly include a stack trace with detailed information about the issue.
+In such situations, the log output includes information about the issue.
 For example, the following error message indicating `inference` processor in the pipeline configuration which is not supported processor type.
 
   [source]
@@ -326,22 +320,28 @@ For example, the following error message indicating `inference` processor in the
   2025-01-21 12:29:13     at org.elasticsearch.ingest.ConfigurationUtils.readProcessor(ConfigurationUtils.java:635)
   ----
 
-Review the pipeline configuration for <<plugins-{type}s-{plugin}-unsupported_ingest_processors>> and refer to relevant integration and ingestion pipeline documentation for guidance.
+For further guidance, we recommend exploring {es} {ref}/ingest.html#handling-pipeline-failures[Handling pipeline failures] documentation.
 
-- **Errors happened during pipeline execution**
+[ingest-pipeline-execution-errors]
+===== Ingest Pipeline Execution Errors
+
 These errors typically fall into two main categories, each requiring specific investigation and resolution steps:
-1. **Logstash catches issues while running ingest pipelines**
-When errors occur during the execution of ingest pipelines, Logstash will attach the `_ingest_pipeline_failure` tag to the event, making it easier to identify and investigate problematic events.
-The detailed logs will be also available in the Logstash logs for your investigation.
-The root cause may depend on configuration, environment or integration you are running.
-Check out {ls} and {integrations} documents for further assistance.
 
-2. **Errors internally occurred in the ingest pipeline**
-If an ingest pipeline is configured with failure processors, failures during pipeline execution are internally handled by the ingest pipeline itself and will not be visible to Logstash. This means that errors are captured and processed within the pipeline, rather than being passed to Logstash for logging or tagging.
+*Logstash catches issues while running ingest pipelines*
+
+When errors occur during the execution of ingest pipelines, {ls} attaches the `_ingest_pipeline_failure` tag to the event, making it easier to identify and investigate problematic events.
+The detailed logs are available in the {ls} logs for your investigation.
+The root cause may depend on configuration, environment or integration you are running.
+
+*Errors internally occurred in the ingest pipeline*
+
+If an ingest pipeline is configured with `on_failure` conditions, failures during pipeline execution are internally handled by the ingest pipeline itself and not be visible to {ls}.
+This means that errors are captured and processed within the pipeline, rather than being passed to {ls} for logging or tagging.
 To identify and analyze such cases, go to the {kib} -> Stack Management -> Ingest pipelines and find the ingest pipeline you are using.
-Click on it and navigate to the Failure processors section. If failure processors are configured, they will typically specify which field contains the failure details. For example, the pipeline might store error information in a field like `error.message` or a custom field defined in the failure processor configuration.
-Go to the {kib} Dev Tools and search for the data (`GET index-ingest-pipeline-is-writing/_search`) and look for the fields mentioned in the failure processors .
-The fields will have error details which will help you to analyze the root cause.
+Click on it and navigate to the _Failure processors_ section. If processors are configured, they may specify which field contains the failure details.
+For example, the pipeline might store error information in a `error.message` field or a custom field defined in the _Failure processors_ configuration.
+Go to the {kib} Dev Tools and search for the data (`GET {index-ingest-pipeline-is-writing}/_search`) and look for the fields mentioned in the failure processors .
+The fields have error details which help you to analyze the root cause.
 
 Check out {integrations} and {es} {ref}/ingest.html#handling-pipeline-failures[Handling pipeline failures] documents for further assistance.
 
