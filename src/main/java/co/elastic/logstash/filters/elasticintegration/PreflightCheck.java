@@ -50,6 +50,38 @@ public class PreflightCheck {
         this.elasticsearchRestClient = elasticsearchRestClient;
     }
 
+    /**
+     * Get Elasticsearch cluster info and store version number and build flavor.
+     * @return {@link Map} containing
+     * <ul>
+     *   <li>"number": the key for a version number (e.g., "8.17.0")</li>
+     *   <li>"build_flavor": the key for a build flavor (e.g., "default" "oss" or "serverless")</li>
+     * </ul>
+     * Throws {@link Failure} if an error occurs while sending the request, parsing the response or extracting the
+     *  required information.
+     */
+    public Map<String, String> getElasticsearchVersionInfo() {
+        try {
+            final Request request = new Request("GET", "/");
+            final Response response = elasticsearchRestClient.performRequest(request);
+
+            final String resBody = new String(response.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
+            logger.debug(() -> String.format("Elasticsearch '/' RAW: %s", resBody));
+
+            final JsonNode versionNode = OBJECT_MAPPER.readTree(resBody).get("version");
+
+            final String elasticsearchVersion = versionNode.get("number").asText();
+            logger.info(String.format("Connected to Elasticsearch version: %s", elasticsearchVersion));
+
+            final String elasticsearchBuildFlavor = versionNode.get("build_flavor").asText();
+            logger.info(String.format("Elasticsearch build_flavor: %s", elasticsearchBuildFlavor));
+
+            return Map.of("number", elasticsearchVersion, "build_flavor", elasticsearchBuildFlavor);
+        } catch (Exception e) {
+            throw new Failure(String.format("Fetching Elasticsearch version information failed: %s", e.getMessage()), e);
+        }
+    }
+
     public void checkUserPrivileges() {
         try {
             final Request hasPrivilegesRequest = new Request("POST", "/_security/user/_has_privileges");
@@ -105,26 +137,6 @@ public class PreflightCheck {
         }
     }
 
-    public boolean isServerless() {
-        try {
-            final Request req = new Request("GET", "/");
-            final Response res = elasticsearchRestClient.performRequest(req);
-
-            final String resBody = new String(res.getEntity().getContent().readAllBytes(), StandardCharsets.UTF_8);
-            logger.debug(() -> String.format("Elasticsearch '/' RAW: %s", resBody));
-
-            final JsonNode versionNode = OBJECT_MAPPER.readTree(resBody).get("version");
-
-            final String buildFlavor = versionNode.get("build_flavor").asText();
-            logger.info(String.format("Elasticsearch build_flavor: %s", buildFlavor));
-
-            return buildFlavor.equals("serverless");
-        } catch (Exception e) {
-            logger.error(String.format("Exception checking serverless: %s", e.getMessage()));
-            throw new Failure(String.format("Preflight check failed: %s", e.getMessage()), e);
-        }
-    }
-    
     public static class Failure extends RuntimeException {
         public Failure(String message, Throwable cause) {
             super(message, cause);
