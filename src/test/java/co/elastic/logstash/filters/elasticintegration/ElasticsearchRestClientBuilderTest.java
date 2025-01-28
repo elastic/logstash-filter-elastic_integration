@@ -156,6 +156,8 @@ class ElasticsearchRestClientBuilderTest {
             for (HttpRequestInterceptor interceptor : interceptors) {
                 interceptor.process(request, null);
             }
+            assertThat(request.getFirstHeader("Elastic-Api-Version").getValue(),
+                    is("2023-10-31"));
             assertThat(request.getFirstHeader("x-elastic-product-origin").getValue(),
                     is("logstash-filter-elastic_integration"));
         }
