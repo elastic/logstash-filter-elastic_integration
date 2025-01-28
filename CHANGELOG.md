@@ -3,6 +3,11 @@
   - Embeds Ingest Node components from Elasticsearch 8.17
   - Compatible with Logstash 8.15+
 
+## 8.16.1
+  - Provides a guidance in logs when plugin version mismatches with connected Elasticsearch `major.minor` version [#253](https://github.com/elastic/logstash-filter-elastic_integration/pull/253)
+  - Embeds Ingest Node components from Elasticsearch 8.16
+  - Compatible with Logstash 8.15+
+
 ## 8.16.0
   - Aligns with stack major and minor versions, no functional changes [#210](https://github.com/elastic/logstash-filter-elastic_integration/pull/210)
   - Embeds Ingest Node components from Elasticsearch 8.16
