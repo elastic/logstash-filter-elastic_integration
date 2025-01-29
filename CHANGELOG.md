@@ -1,9 +1,19 @@
 ## UNRELEASED
   - Releases from `main` are not desired until we get closer to Stack 9.x, and beginning the changelog with something other than release notes matching the version will prevent the plugin release tooling from allowing publication.
 
+## 8.17.1
+  - Provides a guidance in logs when plugin version mismatches with connected Elasticsearch `major.minor` version [#255](https://github.com/elastic/logstash-filter-elastic_integration/pull/255)
+  - Embeds Ingest Node components from Elasticsearch 8.17
+  - Compatible with Logstash 8.15+
+
 ## 8.17.0
   - Aligns with stack major and minor versions, no functional changes [#212](https://github.com/elastic/logstash-filter-elastic_integration/pull/212)
   - Embeds Ingest Node components from Elasticsearch 8.17
+  - Compatible with Logstash 8.15+
+
+## 8.16.1
+  - Provides a guidance in logs when plugin version mismatches with connected Elasticsearch `major.minor` version [#253](https://github.com/elastic/logstash-filter-elastic_integration/pull/253)
+  - Embeds Ingest Node components from Elasticsearch 8.16
   - Compatible with Logstash 8.15+
 
 ## 8.16.0
