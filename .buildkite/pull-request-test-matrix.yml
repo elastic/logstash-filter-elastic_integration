@@ -10,6 +10,15 @@
     - 8.current
     - 8.next
     - 8.future
+9.x:
+  releases:
+    - 9.previous
+    - 9.current
+  snapshots:
+    - 9.previous
+    - 9.current
+    - 9.next
+    - 9.future
 main:
   releases:
     - 9.previous
