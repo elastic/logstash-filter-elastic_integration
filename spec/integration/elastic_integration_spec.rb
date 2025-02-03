@@ -1510,4 +1510,61 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
     end
   end
 
+  context '#unsupported processors' do
+    let(:settings) {
+      super().merge(
+        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+      )
+    }
+
+    unsupported_processors = {
+      'set_security_user' =>
+        '{
+            "set_security_user": {
+                "field": "user"
+             }
+        }',
+      'inference' =>
+        '{
+            "inference": {
+                "model_id": "model_deployment_for_inference",
+                "input_output": [{"input_field": "content", "output_field": "content_embedding"}]
+            }
+        }',
+      'enrich' =>
+        '{
+            "enrich": {
+                "policy_name": "enrich_policy_name",
+                "field": "source_field",
+                "target_field": "target_field"
+            }
+         }'
+    }
+
+    before(:each) do
+      subject.register
+    end
+
+    shared_examples 'processor failure' do
+      it 'adds failure tag to metadata' do
+        events = [LogStash::Event.new(
+          "message" => "55.3.244.1 GET /index.html 15824 0.043",
+          "data_stream" => data_stream
+        )]
+
+        subject.multi_filter(events).each do |event|
+          failure_reason = event.get("[@metadata][_ingest_pipeline_failure]")
+          expect(failure_reason).to be_truthy
+        end
+      end
+    end
+
+    unsupported_processors.each do |name, config|
+      describe "with #{name} processor" do
+        let(:pipeline_processor) { config }
+        include_examples 'processor failure'
+      end
+    end
+  end
+
 end
