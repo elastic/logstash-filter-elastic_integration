@@ -9,7 +9,6 @@ package co.elastic.logstash.filters.elasticintegration;
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
 import co.elastic.logstash.filters.elasticintegration.ingest.RedactPlugin;
-import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
 import co.elastic.logstash.filters.elasticintegration.resolver.CachingResolver;
@@ -33,7 +32,6 @@ import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
 import org.elasticsearch.painless.PainlessScriptEngine;
 import org.elasticsearch.painless.spi.PainlessExtension;
-import org.elasticsearch.painless.spi.Whitelist;
 import org.elasticsearch.plugins.ExtensiblePlugin;
 import org.elasticsearch.plugins.IngestPlugin;
 import org.elasticsearch.script.IngestConditionalScript;
@@ -128,7 +126,6 @@ public class EventProcessorBuilder {
                 org.elasticsearch.ingest.common.UriPartsProcessor.TYPE));
         this.addProcessorsFromPlugin(IngestUserAgentPlugin::new);
         this.addProcessorsFromPlugin(RedactPlugin::new);
-        this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
     // event -> pipeline name
