@@ -2,6 +2,7 @@
  Main entry point of the E2E test suites
 """
 
+import argparse
 import os
 from bootstrap import Bootstrap
 from plugin_test import PluginTest
@@ -11,6 +12,10 @@ INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
 
 
 class BootstrapContextManager:
+    def __init__(self, skip_setup=False):
+        # save args as attributes
+        self.skip_setup = skip_setup
+
     def __enter__(self):
         stack_version = os.environ.get("ELASTIC_STACK_VERSION")
         project_type = os.environ.get("E2E_PROJECT_TYPE", "on_prems")
@@ -19,7 +24,7 @@ class BootstrapContextManager:
 
         print(f"Starting E2E test of Logstash running Elastic Integrations against {stack_version} version.")
         self.bootstrap = Bootstrap(stack_version, project_type)
-        self.bootstrap.run_elastic_stack()
+        self.bootstrap.run_elastic_stack(self.skip_setup)
         return self.bootstrap
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -30,13 +35,14 @@ class BootstrapContextManager:
             self.bootstrap.stop_elastic_stack()
 
 
-def main():
+def main(skip_setup=False, integrations=[]):
     failed_packages = []
 
-    with BootstrapContextManager() as bootstrap:
+    with BootstrapContextManager(skip_setup) as bootstrap:
         working_dir = os.getcwd()
         test_plugin = PluginTest()
-        for package in INTEGRATION_PACKAGES_TO_TEST:
+        packages = integrations if len(integrations) > 0 else INTEGRATION_PACKAGES_TO_TEST
+        for package in packages:
             try:
                 os.chdir(f"{working_dir}/integrations/packages/{package}")
                 test_plugin.on(package)
@@ -57,4 +63,13 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--skip-setup')
+    parser.add_argument('--integrations')
+    args = parser.parse_args()
+
+    skip_setup = args.skip_setup == 'true' if args.skip_setup is not None else False
+    integrations = args.integrations.split(',') if args.integrations is not None else []
+
+    print(f"Running with --skip-setup:{skip_setup}, --integrations:{integrations}")
+    main(skip_setup, integrations)
