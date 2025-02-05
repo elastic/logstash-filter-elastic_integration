@@ -1,4 +1,4 @@
-## 9.0.0-prerelease01
+## 9.0.0.prerelease01
   - Pre-release for 9.0, no functional change [#265](https://github.com/elastic/logstash-filter-elastic_integration/pull/265)
   - Embeds Ingest Node components from Elasticsearch 9.0.0 prerelease
   - Compatible with Logstash 8.17+
