@@ -12,7 +12,7 @@
       "trigger_comment_regex": "^(?:(?:buildkite\\W+)?(?:build|test)\\W+(?:this|it))",
       "always_trigger_comment_regex": "^(?:(?:buildkite\\W+)?(?:build|test)\\W+(?:this|it))",
       "skip_target_branches": [],
-      "skip_ci_on_only_changed": ["^docs/"],
+      "skip_ci_on_only_changed": ["^.github/", "^docs/", "^.mergify.yml", "^.pre-commit-config.yaml"],
       "always_require_ci_on_changed": [],
       "skip_ci_labels": []
     }
