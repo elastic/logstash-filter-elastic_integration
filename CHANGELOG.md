@@ -1,5 +1,7 @@
-## UNRELEASED
-  - Releases from `main` are not desired until we get closer to Stack 9.x, and beginning the changelog with something other than release notes matching the version will prevent the plugin release tooling from allowing publication.
+## 9.0.0-prerelease01
+  - Pre-release for 9.0, no functional change [#265](https://github.com/elastic/logstash-filter-elastic_integration/pull/265)
+  - Embeds Ingest Node components from Elasticsearch 9.0.0 prerelease
+  - Compatible with Logstash 8.17+
 
 ## 8.17.1
   - Provides a guidance in logs when plugin version mismatches with connected Elasticsearch `major.minor` version [#255](https://github.com/elastic/logstash-filter-elastic_integration/pull/255)
