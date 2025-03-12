@@ -10,6 +10,7 @@ import co.elastic.logstash.filters.elasticintegration.IngestPipeline;
 import co.elastic.logstash.filters.elasticintegration.IngestPipelineResolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.ingest.AbstractProcessor;
 import org.elasticsearch.ingest.ConfigurationUtils;
 import org.elasticsearch.ingest.IngestDocument;
@@ -91,7 +92,8 @@ public class PipelineProcessor extends AbstractProcessor {
         public Processor create(Map<String, Processor.Factory> registry,
                                 String processorTag,
                                 String description,
-                                Map<String, Object> config) throws Exception {
+                                Map<String, Object> config,
+                                ProjectId projectId) throws Exception {
             String pipeline = ConfigurationUtils.readStringProperty(TYPE, processorTag, config, "name");
             TemplateScript.Factory pipelineTemplate = ConfigurationUtils.compileTemplate(TYPE, processorTag, "name", pipeline, scriptService);
             boolean ignoreMissingPipeline = ConfigurationUtils.readBooleanProperty(TYPE, processorTag, config, "ignore_missing_pipeline", false);

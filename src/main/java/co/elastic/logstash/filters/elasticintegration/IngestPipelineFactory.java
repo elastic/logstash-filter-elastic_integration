@@ -9,6 +9,7 @@ package co.elastic.logstash.filters.elasticintegration;
 import co.elastic.logstash.filters.elasticintegration.ingest.PipelineProcessor;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.ingest.Pipeline;
 import org.elasticsearch.ingest.PipelineConfiguration;
 import org.elasticsearch.ingest.Processor;
@@ -46,7 +47,7 @@ public class IngestPipelineFactory {
 
     public Optional<IngestPipeline> create(final PipelineConfiguration pipelineConfiguration) {
         try {
-            final Pipeline pipeline = Pipeline.create(pipelineConfiguration.getId(), pipelineConfiguration.getConfig(false), processorFactories, scriptService);
+            final Pipeline pipeline = Pipeline.create(pipelineConfiguration.getId(), pipelineConfiguration.getConfig(false), processorFactories, scriptService, ProjectId.DEFAULT);
             final IngestPipeline ingestPipeline = new IngestPipeline(pipelineConfiguration, pipeline);
             LOGGER.debug(() -> String.format("successfully created ingest pipeline `%s` from pipeline configuration", pipelineConfiguration.getId()));
             return Optional.of(ingestPipeline);
