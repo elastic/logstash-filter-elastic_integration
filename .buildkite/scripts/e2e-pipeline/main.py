@@ -41,7 +41,7 @@ def main(skip_setup=False, integrations=[]):
     with BootstrapContextManager(skip_setup) as bootstrap:
         working_dir = os.getcwd()
         test_plugin = PluginTest()
-        packages = integrations if len(integrations) > 0 else INTEGRATION_PACKAGES_TO_TEST
+        packages = integrations or INTEGRATION_PACKAGES_TO_TEST
         for package in packages:
             try:
                 os.chdir(f"{working_dir}/integrations/packages/{package}")
@@ -64,12 +64,12 @@ def main(skip_setup=False, integrations=[]):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--skip-setup')
+    parser.add_argument('--skip-setup, 'action='store_true')
     parser.add_argument('--integrations')
     args = parser.parse_args()
 
-    skip_setup = args.skip_setup == 'true' if args.skip_setup is not None else False
-    integrations = args.integrations.split(',') if args.integrations is not None else []
+    skip_setup = args.skip_setup
+    integrations = args.integrations.split(',') if args.integrations else []
 
     print(f"Running with --skip-setup:{skip_setup}, --integrations:{integrations}")
     main(skip_setup, integrations)

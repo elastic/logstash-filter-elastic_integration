@@ -190,7 +190,7 @@ class Bootstrap:
         """
         Downloads elastic-package, creates a profile and runs ELK, Fleet, ERP and elastic-agent
         """
-        if skip_setup is False:
+        if not skip_setup:
             self.__download_elastic_package()
             self.__make_elastic_package_global()
             self.__clone_integrations_repo()
