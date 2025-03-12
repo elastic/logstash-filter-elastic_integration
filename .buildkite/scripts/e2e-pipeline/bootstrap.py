@@ -14,6 +14,7 @@ import ruamel.yaml
 
 YAML = ruamel.yaml.YAML()
 
+
 class Bootstrap:
     ELASTIC_PACKAGE_DISTRO_URL = "https://api.github.com/repos/elastic/elastic-package/releases/latest"
     LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
@@ -87,7 +88,7 @@ class Bootstrap:
         curr_dir = os.getcwd()
         pipeline_definition_file_path = "integrations/packages/**/data_stream/**/elasticsearch/ingest_pipeline/*.yml"
         files = glob.glob(os.path.join(curr_dir, pipeline_definition_file_path))
-        unsupported_processors: dict[list] = {}   # {processor_type: list<file>}
+        unsupported_processors: dict[list] = {}  # {processor_type: list<file>}
 
         for file in files:
             try:
@@ -185,15 +186,16 @@ class Bootstrap:
         util.run_or_raise_error(["elastic-package", "stack", "down"],
                                 "Error occurred while stopping stacks with elastic-package. Check logs for details.")
 
-    def run_elastic_stack(self) -> None:
+    def run_elastic_stack(self, skip_setup=False) -> None:
         """
         Downloads elastic-package, creates a profile and runs ELK, Fleet, ERP and elastic-agent
         """
-        self.__download_elastic_package()
-        self.__make_elastic_package_global()
-        self.__clone_integrations_repo()
-        self.__scan_for_unsupported_processors()
-        self.__setup_elastic_package_profile()
+        if not skip_setup:
+            self.__download_elastic_package()
+            self.__make_elastic_package_global()
+            self.__clone_integrations_repo()
+            self.__scan_for_unsupported_processors()
+            self.__setup_elastic_package_profile()
         self.__spin_stack()
         self.__install_plugin()
         self.__reload_container()
