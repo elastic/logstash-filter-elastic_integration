@@ -159,7 +159,6 @@ pull_request_rules:
           - "8.17"
           - "8.16"
           - "8.x"
-          - "7.17"
         labels:
           - "backport"
         title: "[{{ destination_branch }}] {{ title }} (backport #{{ number }})"
