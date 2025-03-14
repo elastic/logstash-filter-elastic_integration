@@ -6,6 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.geoip.GeoIpProcessor;
 
@@ -22,7 +23,9 @@ public class GeoIpProcessorFactory implements Processor.Factory {
     public Processor create(Map<String, Processor.Factory> processorFactories,
                             String tag,
                             String description,
-                            Map<String, Object> config) throws Exception {
-        return new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider).create(processorFactories, tag, description, config);
+                            Map<String, Object> config,
+                            ProjectId projectId) throws Exception {
+        return new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider)
+                .create(processorFactories, tag, description, config, projectId);
     }
 }

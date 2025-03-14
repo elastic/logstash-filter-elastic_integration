@@ -6,6 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.ingest.AbstractProcessor;
 import org.elasticsearch.ingest.IngestDocument;
 import org.elasticsearch.ingest.Processor;
@@ -36,7 +37,7 @@ public class SetSecurityUserProcessor  extends AbstractProcessor {
 
         @Override
         public SetSecurityUserProcessor create(Map<String, Processor.Factory> registry, String processorTag,
-                                               String description, Map<String, Object> config) {
+                                               String description, Map<String, Object> config, ProjectId projectId) {
             String[] supportedConfigs = {"field", "properties"};
             for (String cfg : supportedConfigs) {
                 config.remove(cfg);
