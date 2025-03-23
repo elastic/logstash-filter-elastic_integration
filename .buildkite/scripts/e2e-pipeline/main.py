@@ -64,7 +64,7 @@ def main(skip_setup=False, integrations=[]):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--skip-setup', action='store_false')
+    parser.add_argument('--skip-setup', action='store_true') # store_true adds default False if argument is unavailable.
     parser.add_argument('--integrations')
     args = parser.parse_args()
 
