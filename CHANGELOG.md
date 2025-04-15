@@ -4,7 +4,7 @@
   - Compatible with Logstash 8.17+
 
 ## 8.18.0
-  - Aligns with stack major and minor versions, no functional changes [#n](https://github.com/elastic/logstash-filter-elastic_integration/pull/n)
+  - Aligns with stack major and minor versions, no functional changes [#285](https://github.com/elastic/logstash-filter-elastic_integration/pull/285)
   - Embeds Ingest Node components from Elasticsearch 8.18
   
 ## 8.17.1
