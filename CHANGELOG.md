@@ -1,15 +1,8 @@
-<<<<<<< HEAD
-=======
-## 9.0.0.prerelease01
-  - Pre-release for 9.0, no functional change [#265](https://github.com/elastic/logstash-filter-elastic_integration/pull/265)
-  - Embeds Ingest Node components from Elasticsearch 9.0.0 prerelease
-  - Compatible with Logstash 8.17+
-
 ## 8.18.0
   - Aligns with stack major and minor versions, no functional changes [#285](https://github.com/elastic/logstash-filter-elastic_integration/pull/285)
   - Embeds Ingest Node components from Elasticsearch 8.18
   
->>>>>>> cfb20a7 (Update CHANGELOG.md for 8.18.0 (#285))
+
 ## 8.17.1
   - Provides a guidance in logs when plugin version mismatches with connected Elasticsearch `major.minor` version [#255](https://github.com/elastic/logstash-filter-elastic_integration/pull/255)
   - Embeds Ingest Node components from Elasticsearch 8.17
