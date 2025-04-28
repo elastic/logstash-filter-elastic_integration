@@ -243,7 +243,16 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
     ignoreExitValue true // handled in doLast
     doLast {
         def exitValue = executionResult.get().exitValue
-        assert exitValue == 0 : "Elasticsearch build failed; logs available in ${logFile.path}"
+        if (exitValue != 0) {
+            if (logFile.exists()) {
+                println "\n===== Elasticsearch Build Log ====="
+                println logFile.text
+                println "===== End of Build Log =====\n"
+            } else {
+                "Elasticsearch build failed and ${logFile.path} log does not exist"
+            }
+            throw new GradleException("Elasticsearch build failed, see the logs for details.")
+        }
         assert ext.localDistroResult.isPresent() : "Elasticsearch did not produce exactly one localdistro build"
     }
 }
