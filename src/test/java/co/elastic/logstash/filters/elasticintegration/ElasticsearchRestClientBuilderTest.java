@@ -10,12 +10,12 @@ import org.apache.http.HttpException;
 import org.apache.http.HttpHost;
 import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
-import org.apache.http.message.BasicHeader;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.hamcrest.Matchers;
+import org.mockito.Mockito;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -24,7 +24,6 @@ import java.net.URL;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 import co.elastic.logstash.filters.elasticintegration.ElasticsearchRestClientBuilder.ElasticApiConfig;
 
@@ -33,7 +32,6 @@ import org.mockito.ArgumentCaptor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -65,6 +63,35 @@ class ElasticsearchRestClientBuilderTest {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Test
+    public void testProxyConfigSetProxy() {
+        ElasticsearchRestClientBuilder.ProxyConfig proxyConfig = new ElasticsearchRestClientBuilder.ProxyConfig();
+        proxyConfig.setProxy("https://proxy.mycorp.com:9043");
+        
+        // Verify the proxy is configured in the HttpAsyncClientBuilder
+        HttpAsyncClientBuilder httpClientBuilder = Mockito.mock(HttpAsyncClientBuilder.class);
+        proxyConfig.configureHttpClient(httpClientBuilder);
+
+        // Verify setProxy was called with the correct HttpHost
+        ArgumentCaptor<HttpHost> proxyCaptor = ArgumentCaptor.forClass(HttpHost.class);
+        verify(httpClientBuilder).setProxy(proxyCaptor.capture());
+        
+        HttpHost capturedProxy = proxyCaptor.getValue();
+        assertThat(capturedProxy.getHostName(), is("proxy.mycorp.com"));
+        assertThat(capturedProxy.getPort(), is(9043));
+        assertThat(capturedProxy.getSchemeName(), is("https"));
+    }
+
+    @Test
+    public void testNoProxyConfigurationDoesNotSetProxy() {
+        ElasticsearchRestClientBuilder.ProxyConfig proxyConfig = new ElasticsearchRestClientBuilder.ProxyConfig();
+        HttpAsyncClientBuilder httpClientBuilder = Mockito.mock(HttpAsyncClientBuilder.class);
+        proxyConfig.configureHttpClient(httpClientBuilder);
+
+        // Verify setProxy was never called
+        verify(httpClientBuilder, never()).setProxy(any(HttpHost.class));
     }
 
     @Test

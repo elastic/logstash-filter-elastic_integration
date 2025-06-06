@@ -131,7 +131,7 @@ class IpDatabaseProviderTest {
     }
 
     static void withGeoipProcessor(final IpDatabaseProvider geoIpDatabaseProvider, Map<String, Object> config, ExceptionalConsumer<Processor> geoIpProcessorConsumer) throws Exception {
-        Processor processor = new GeoIpProcessor.Factory("geoip", geoIpDatabaseProvider).create(Map.of(), null, null, config);
+        Processor processor = new GeoIpProcessor.Factory("geoip", geoIpDatabaseProvider).create(Map.of(), null, null, config, null);
         geoIpProcessorConsumer.accept(processor);
     }
 
