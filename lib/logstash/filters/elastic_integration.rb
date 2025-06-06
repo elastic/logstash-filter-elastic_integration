@@ -40,6 +40,9 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
   # Any special characters present in the URLs here MUST be URL escaped! This means `#` should be put in as `%23` for instance.
   config :hosts, :validate => :uri, :list => true
 
+  # An HTTP forward proxy to use for connecting to the Elasticsearch cluster.
+  config :proxy, :validate => :uri
+
   # Cloud ID, from the Elastic Cloud web console. If set `hosts` should not be used.
   #
   # For more details, check out the https://www.elastic.co/guide/en/logstash/current/connecting-to-cloud.html#_cloud_id[cloud documentation]
@@ -312,6 +315,7 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
       builder.setHosts @hosts&.map(&:to_s)
       builder.setCloudId @cloud_id
+      builder.setProxy @proxy&.to_s
 
       builder.setSslEnabled @ssl_enabled
 
