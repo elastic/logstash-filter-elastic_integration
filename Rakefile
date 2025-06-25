@@ -1,7 +1,7 @@
 require 'logstash/devutils/rake'
 
 task :install_jars do
-  sh('./gradlew clean vendor')
+  sh('./gradlew clean vendor test')
 end
 task :prepare_geoip_resources do
   sh('./gradlew geoipTestResources')
