@@ -27,6 +27,7 @@ bundle exec rake prepare_geoip_resources
 
 if [[ "$INTEGRATION" != "true" ]]; then
   bundle exec rspec --format=documentation spec/unit --tag ~integration --tag ~secure_integration
+  bundle exec rake java_test
 else
 
   if [[ "$SECURE_INTEGRATION" == "true" ]]; then
