@@ -8,6 +8,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.ingest.geoip.IpDatabase;
 
@@ -33,13 +34,13 @@ public class IpDatabaseProvider implements org.elasticsearch.ingest.geoip.IpData
     }
 
     @Override
-    public Boolean isValid(String databaseIdentifierFileName) {
+    public Boolean isValid(ProjectId projectId, String databaseIdentifierFileName) {
         final IpDatabaseHolder holder = getDatabaseHolder(databaseIdentifierFileName);
         return Objects.nonNull(holder) && holder.isValid();
     }
 
     @Override
-    public IpDatabase getDatabase(String databaseIdentifierFileName) {
+    public IpDatabase getDatabase(ProjectId projectId, String databaseIdentifierFileName) {
         final IpDatabaseHolder holder = getDatabaseHolder(databaseIdentifierFileName);
         if (Objects.isNull(holder)) {
             return null;

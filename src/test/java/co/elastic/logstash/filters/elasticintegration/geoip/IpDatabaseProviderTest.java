@@ -9,6 +9,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import co.elastic.logstash.filters.elasticintegration.util.IngestDocumentUtil;
 import co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil;
+import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.ingest.IngestDocument;
 import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.geoip.GeoIpProcessor;
@@ -35,16 +36,17 @@ class IpDatabaseProviderTest {
 
     @Test
     void loadTestVendoredDatabases() throws Exception {
+
         withVendoredGeoIpDatabaseProvider(geoIpDatabaseProvider -> {
             assertAll("Loaded databases all report valid",
-                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-ASN.mmdb"), is(true)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-City.mmdb"), is(true)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-Country.mmdb"), is(true)));
+                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-ASN.mmdb"), is(true)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-City.mmdb"), is(true)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-Country.mmdb"), is(true)));
 
             assertAll("Non-loaded databases all report invalid",
-                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-Global.mmdb"), is(false)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid("Bananas.mmdb"), is(false)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid("Intergalactic.mmdb"), is(false)));
+                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-Global.mmdb"), is(false)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "Bananas.mmdb"), is(false)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "Intergalactic.mmdb"), is(false)));
         });
     }
 
@@ -131,7 +133,7 @@ class IpDatabaseProviderTest {
     }
 
     static void withGeoipProcessor(final IpDatabaseProvider geoIpDatabaseProvider, Map<String, Object> config, ExceptionalConsumer<Processor> geoIpProcessorConsumer) throws Exception {
-        Processor processor = new GeoIpProcessor.Factory("geoip", geoIpDatabaseProvider).create(Map.of(), null, null, config);
+        Processor processor = new GeoIpProcessor.Factory("geoip", geoIpDatabaseProvider).create(Map.of(), null, null, config, null);
         geoIpProcessorConsumer.accept(processor);
     }
 
