@@ -1,3 +1,6 @@
+## 8.18.1
+  - Introduces `proxy` param to support proxy [#318](https://github.com/elastic/logstash-filter-elastic_integration/pull/318)
+
 ## 8.18.0
   - Aligns with stack major and minor versions, no functional changes [#285](https://github.com/elastic/logstash-filter-elastic_integration/pull/285)
   - Embeds Ingest Node components from Elasticsearch 8.18
