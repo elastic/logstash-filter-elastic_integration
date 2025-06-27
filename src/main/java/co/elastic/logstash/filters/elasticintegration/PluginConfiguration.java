@@ -29,6 +29,7 @@ public final class PluginConfiguration {
     // elasticsearch-source: connection target
     private final String       cloudId;
     private final List<String> hosts;
+    private final String       proxy;
     private final Boolean      sslEnabled;
 
     // elasticsearch-source: ssl connection trust config
@@ -79,6 +80,7 @@ public final class PluginConfiguration {
         this.apiKey = builder.apiKey;
         // pipeline name resolver
         this.pipelineNameTemplate = builder.pipelineNameTemplate;
+        this.proxy = builder.proxy;
     }
 
     private static <T> List<T> copyOfNullableList(final List<T> source) {
@@ -102,6 +104,10 @@ public final class PluginConfiguration {
     public Optional<List<URL>> hosts() {
         return Optional.ofNullable(hosts)
                 .map(hosts -> hosts.stream().map(PluginConfiguration::uncheckedParseURL).toList());
+    }
+
+    public Optional<String> proxy() {
+        return Optional.ofNullable(proxy);
     }
 
     public Optional<Boolean> sslEnabled() {
@@ -171,6 +177,7 @@ public final class PluginConfiguration {
         if (Objects.nonNull(id)) { config.add(String.format("id=%s", id)); }
         if (Objects.nonNull(cloudId)) { config.add(String.format("cloudId=%s", cloudId)); }
         if (Objects.nonNull(hosts)) { config.add(String.format("hosts=%s", hosts)); }
+        if (Objects.nonNull(proxy)) { config.add(String.format("proxy=%s", proxy)); }
         if (Objects.nonNull(sslEnabled)) { config.add(String.format("sslEnabled=%s", sslEnabled)); }
         if (Objects.nonNull(sslVerificationMode)) { config.add(String.format("sslVerificationMode=%s", sslVerificationMode)); }
         if (Objects.nonNull(sslTruststorePath)) { config.add(String.format("sslTruststorePath=%s", sslTruststorePath)); }
@@ -203,6 +210,7 @@ public final class PluginConfiguration {
         String id;
         String cloudId;
         List<String> hosts;
+        String proxy;
         Boolean sslEnabled;
         String sslVerificationMode;
         String sslTruststorePath;
@@ -236,6 +244,13 @@ public final class PluginConfiguration {
         public Builder setHosts(final List<String> hosts) {
             if (Objects.nonNull(hosts)) {
                 this.hosts = List.copyOf(hosts);
+            }
+            return this;
+        }
+
+        public Builder setProxy(final String proxy) {
+            if (Objects.nonNull(proxy) && !proxy.isBlank()) {
+                this.proxy = proxy;
             }
             return this;
         }
