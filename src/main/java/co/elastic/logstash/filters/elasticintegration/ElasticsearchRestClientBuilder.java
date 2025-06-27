@@ -65,6 +65,7 @@ public class ElasticsearchRestClientBuilder {
     private final IdentityConfig identityConfig = new IdentityConfig();
     private final RequestAuthConfig requestAuthConfig = new RequestAuthConfig();
     private final ElasticApiConfig elasticApiConfig = new ElasticApiConfig();
+    private final ProxyConfig proxyConfig = new ProxyConfig();
     private String userAgentHeaderValue;
 
     public static ElasticsearchRestClientBuilder forCloudId(final String cloudId) {
@@ -122,6 +123,8 @@ public class ElasticsearchRestClientBuilder {
                 });
                 config.cloudAuth().ifPresent(requestAuthConfig::setCloudAuth);
                 config.apiKey().ifPresent(requestAuthConfig::setApiKey);
+            }).configureProxy(proxyConfig -> {
+                config.proxy().ifPresent(proxyConfig::setProxy);
             })
         );
     }
@@ -133,6 +136,11 @@ public class ElasticsearchRestClientBuilder {
     private static Optional<ElasticsearchRestClientBuilder> builderInit(final PluginConfiguration config) {
         return config.cloudId().map(ElasticsearchRestClientBuilder::forCloudId)
                 .or(() -> config.hosts().map(ElasticsearchRestClientBuilder::forURLs));
+    }
+
+    public ElasticsearchRestClientBuilder configureProxy(final Consumer<ProxyConfig> proxyConfigurator) {
+        proxyConfigurator.accept(this.proxyConfig);
+        return this;
     }
 
     private ElasticsearchRestClientBuilder(final Supplier<RestClientBuilder> restClientBuilderSupplier) {
@@ -178,6 +186,7 @@ public class ElasticsearchRestClientBuilder {
             }));
 
             this.elasticApiConfig.configureHttpClient(httpClientBuilder);
+            this.proxyConfig.configureHttpClient(httpClientBuilder);
 
             if (Objects.nonNull(this.userAgentHeaderValue)) {
                 httpClientBuilder.setUserAgent(this.userAgentHeaderValue);
@@ -465,6 +474,22 @@ public class ElasticsearchRestClientBuilder {
             final BasicHeader productOriginHeader = new BasicHeader("x-elastic-product-origin", "logstash-filter-elastic_integration");
             final HttpRequestInterceptor productOriginHeaderInterceptor = new EAVHttpRequestInterceptor(productOriginHeader);
             HttpClientConfigurator.forAddInterceptorFirst(productOriginHeaderInterceptor).configure(httpClientBuilder);
+        }
+    }
+
+    public static class ProxyConfig {
+        private HttpHost httpProxy;
+
+        public synchronized void setProxy(final String proxy) {
+            if (Objects.nonNull(this.httpProxy)) {
+                throw new IllegalStateException("Only one proxy may be provided");
+            }
+            this.httpProxy = HttpHost.create(proxy);
+        }
+        public void configureHttpClient(final HttpAsyncClientBuilder httpClientBuilder) {
+            if (Objects.nonNull(httpProxy)) {
+                httpClientBuilder.setProxy(httpProxy);
+            }
         }
     }
 }
