@@ -1,3 +1,6 @@
+## 9.0.1
+  - Introduces `proxy` param to support proxy [#320](https://github.com/elastic/logstash-filter-elastic_integration/pull/320)
+
 ## 9.0.0
   - Embeds Ingest Node components from Elasticsearch 9.0, no functional change [#291](https://github.com/elastic/logstash-filter-elastic_integration/pull/291)
 
