@@ -24,7 +24,7 @@ class Bootstrap:
         "append", "bytes", "community_id", "convert", "csv", "date", "date_index_name", "dissect", "dot_expander",
         "drop", "fail", "fingerprint", "foreach", "grok", "gsub", "html_strip", "join", "json", "kv", "lowercase",
         "network_direction", "pipeline", "registered_domain", "remove", "rename", "reroute", "script", "set",
-        "sort", "split", "trim", "uppercase", "uri_parts", "urldecode", "user_agent", "redact", "geoip"
+        "sort", "split", "terminate", "trim", "uppercase", "uri_parts", "urldecode", "user_agent", "redact", "geoip"
     ]
 
     def __init__(self, stack_version: str, project_type: str) -> None:
