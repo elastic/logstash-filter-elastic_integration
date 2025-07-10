@@ -9,8 +9,8 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.cluster.metadata.ProjectId;
-import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.ingest.geoip.IpDatabase;
+import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
 
 import java.io.Closeable;
 import java.io.File;
@@ -58,7 +58,7 @@ public class IpDatabaseProvider implements org.elasticsearch.ingest.geoip.IpData
     public void close() throws IOException {
         databaseMap.forEach((name, holder) -> {
             if (holder instanceof Closeable) {
-                IOUtils.closeWhileHandlingException((Closeable) holder);
+                IOUtilsBridge.closeWhileHandlingException((Closeable) holder);
             }
         });
     }
@@ -71,7 +71,7 @@ public class IpDatabaseProvider implements org.elasticsearch.ingest.geoip.IpData
             if (Objects.nonNull(previous)) {
                 LOGGER.warn(String.format("de-registered previous entry for `%s`: %s", identifierFileName, previous.info()));
                 if (previous instanceof Closeable) {
-                    IOUtils.closeWhileHandlingException((Closeable) previous);
+                    IOUtilsBridge.closeWhileHandlingException((Closeable) previous);
                 }
             }
             return this;
