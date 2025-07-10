@@ -15,7 +15,7 @@ import org.elasticsearch.client.Request;
 import org.elasticsearch.client.Response;
 import org.elasticsearch.client.ResponseException;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.ingest.PipelineConfiguration;
+import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 
 import java.util.Optional;
 
@@ -24,7 +24,7 @@ import java.util.Optional;
  * that retrieves pipelines from Elasticsearch.
  */
 public class ElasticsearchPipelineConfigurationResolver
-        extends AbstractSimpleResolver<String,PipelineConfiguration>
+        extends AbstractSimpleResolver<String, PipelineConfigurationBridge>
         implements PipelineConfigurationResolver {
     private final RestClient elasticsearchRestClient;
     private final PipelineConfigurationFactory pipelineConfigurationFactory;
@@ -37,13 +37,13 @@ public class ElasticsearchPipelineConfigurationResolver
     }
 
     @Override
-    public Optional<PipelineConfiguration> resolveSafely(String pipelineName) throws Exception {
+    public Optional<PipelineConfigurationBridge> resolveSafely(String pipelineName) throws Exception {
         final Response response;
         try {
             final Request request = new Request("GET", URLEncodedUtils.formatSegments("_ingest", "pipeline", pipelineName));
             response = elasticsearchRestClient.performRequest(request);
             final String jsonEncodedPayload = EntityUtils.toString(response.getEntity());
-            final PipelineConfiguration pipelineConfiguration = pipelineConfigurationFactory.parseNamedObject(jsonEncodedPayload);
+            final PipelineConfigurationBridge pipelineConfiguration = pipelineConfigurationFactory.parseNamedObject(jsonEncodedPayload);
             return Optional.of(pipelineConfiguration);
         } catch (ResponseException re) {
             if (re.getResponse().getStatusLine().getStatusCode() == 404) {
