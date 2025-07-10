@@ -6,13 +6,13 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.cluster.metadata.ProjectId;
-import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.ingest.geoip.GeoIpProcessor;
+import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
 
 import java.util.Map;
+import java.util.stream.Collectors;
 
-public class GeoIpProcessorFactory implements Processor.Factory {
+public class GeoIpProcessorFactory implements ProcessorBridge.Factory {
     private final IpDatabaseProvider ipDatabaseProvider;
 
     public GeoIpProcessorFactory(final IpDatabaseProvider ipDatabaseProvider) {
@@ -20,12 +20,17 @@ public class GeoIpProcessorFactory implements Processor.Factory {
     }
 
     @Override
-    public Processor create(Map<String, Processor.Factory> processorFactories,
+    public ProcessorBridge create(Map<String, ProcessorBridge.Factory> processorFactories,
                             String tag,
                             String description,
-                            Map<String, Object> config,
-                            ProjectId projectId) throws Exception {
-        return new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider)
-                .create(processorFactories, tag, description, config, projectId);
+                            Map<String, Object> config) throws Exception {
+        return ProcessorBridge.wrap(new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider)
+                .create(processorFactories.entrySet()
+                                .stream()
+                                .collect(Collectors.toMap(Map.Entry::getKey,e -> e.getValue().unwrap())),
+                        tag,
+                        description,
+                        config,
+                        null));
     }
 }

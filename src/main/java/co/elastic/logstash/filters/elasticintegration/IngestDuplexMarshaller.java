@@ -10,8 +10,8 @@ import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.EventFactory;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.ingest.IngestDocument;
-import org.elasticsearch.script.Metadata;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
+import org.elasticsearch.logstashbridge.script.MetadataBridge;
 import org.logstash.Javafier;
 import org.logstash.Timestamp;
 import org.logstash.plugins.BasicEventFactory;
@@ -34,7 +34,7 @@ import java.util.Set;
 
 /**
  * The {@code IngestDuplexMarshaller} is capable of marshalling events between the internal logstash {@link Event}
- * and the external Elasticsearch {@link IngestDocument}.
+ * and the external Elasticsearch {@link IngestDocumentBridge}.
  */
 public class IngestDuplexMarshaller {
     private final EventFactory eventFactory;
@@ -74,17 +74,17 @@ public class IngestDuplexMarshaller {
     }
 
     /**
-     * Converts the provided Logstash {@link Event} into an Elasticsearch {@link IngestDocument},
+     * Converts the provided Logstash {@link Event} into an Elasticsearch {@link IngestDocumentBridge},
      * ensuring that required values are present, reserved values are of the appropriate shape,
      * and field values are of types that are useful to Ingest Processors.
      *
      * @param event the event to convert
-     * @return an equivalent Elasticsearch {@link IngestDocument}
+     * @return an equivalent Elasticsearch {@link IngestDocumentBridge}
      */
-    public IngestDocument toIngestDocument(final Event event) {
+    public IngestDocumentBridge toIngestDocument(final Event event) {
 
-        // The public Elasticsearch IngestDocument constructor accepts a single source-and-metadata map,
-        // which it splits into two maps based keys being valid IngestDocument.Metadata properties.
+        // The public Elasticsearch IngestDocumentBridge constructor accepts a single source-and-metadata map,
+        // which it splits into two maps based keys being valid IngestDocumentBridge.Metadata properties.
         // we copy the entirety of the event's top-level fields into this.
         Map<String, Object> sourceAndMetadata = new HashMap<>(externalize(event.getData()));
 
@@ -98,12 +98,12 @@ public class IngestDuplexMarshaller {
         // event's @version if available or provide a sensible default
         sanitizeIngestDocumentRequiredMetadataVersion(sourceAndMetadata, event);
 
-        // When an IngestDocument is initialized, its "ingestMetadata" is only expected to contain the
+        // When an IngestDocumentBridge is initialized, its "ingestMetadata" is only expected to contain the
         // event's timestamp, which is copied into the event and can be either a String or a ZonedDateTime.
         final Timestamp eventTimestamp = safeTimestampFrom(event.getField(org.logstash.Event.TIMESTAMP));
         Map<String, Object> ingestMetadata = Map.of(INGEST_METADATA_TIMESTAMP_FIELD, Objects.requireNonNullElseGet(eventTimestamp, Timestamp::now).toString());
 
-        return new IngestDocument(sourceAndMetadata, ingestMetadata);
+        return new IngestDocumentBridge(sourceAndMetadata, ingestMetadata);
     }
 
     /**
@@ -116,7 +116,7 @@ public class IngestDuplexMarshaller {
      *           should be largely safe in Elasticsearch.
      *
      * @param internalObject an object that may need to be externalized
-     * @return an object that is safe for use as a field value in an IngestDocument
+     * @return an object that is safe for use as a field value in an IngestDocumentBridge
      */
     private Object externalize(final @Nullable Object internalObject) {
         if (Objects.isNull(internalObject)) { return null; }
@@ -198,12 +198,13 @@ public class IngestDuplexMarshaller {
      * @param event the event to fetch fallback values from
      */
     private void sanitizeIngestDocumentRequiredMetadataVersion(final Map<String,Object> sourceAndMetadata, final Event event) {
-        Object sourceVersion = safeLongFrom(sourceAndMetadata.remove(IngestDocument.Metadata.VERSION.getFieldName()));
+        // TODO: make IngestDocument.Metadata.VERSION.getFieldName() available
+        Object sourceVersion = safeLongFrom(sourceAndMetadata.remove("_version"));
         if (Objects.isNull(sourceVersion)) {
             sourceVersion = safeLongFrom(event.getField(org.logstash.Event.VERSION));
         }
-
-        sourceAndMetadata.put(IngestDocument.Metadata.VERSION.getFieldName(), Objects.requireNonNullElse(sourceVersion, 1L));
+        // TODO: make IngestDocument.Metadata.VERSION.getFieldName() available
+        sourceAndMetadata.put("_version", Objects.requireNonNullElse(sourceVersion, 1L));
     }
 
     /**
@@ -232,16 +233,16 @@ public class IngestDuplexMarshaller {
     }
 
     /**
-     * Converts the provided Elasticsearch {@link IngestDocument} into a Logstash {@link Event},
+     * Converts the provided Elasticsearch {@link IngestDocumentBridge} into a Logstash {@link Event},
      * ensuring that required values are present, reserved values are of the appropriate shape,
-     * and relevant metadata from the {@code IngestDocument} are available to further processing
+     * and relevant metadata from the {@code IngestDocumentBridge} are available to further processing
      * in Logstash.
      *
      * @param ingestDocument the document to convert
      * @return an equivalent Logstash {@link Event}
      */
-    public Event toLogstashEvent(final IngestDocument ingestDocument) {
-        // the IngestDocument we get back will have modified source directly.
+    public Event toLogstashEvent(final IngestDocumentBridge ingestDocument) {
+        // the IngestDocumentBridge we get back will have a modified source directly.
         Map<String, Object> eventMap = internalize(ingestDocument.getSource());
 
         // ensure that Logstash-reserved fields are of the expected shape
@@ -252,7 +253,7 @@ public class IngestDuplexMarshaller {
 
         final Event event = eventFactory.newEvent(eventMap);
 
-        // inject the relevant normalized metadata from the IngestDocument
+        // inject the relevant normalized metadata from the IngestDocumentBridge
         event.setField(LOGSTASH_METADATA_INGEST_DOCUMENT_METADATA, normalizeIngestDocumentMetadata(ingestDocument));
         return event;
     }
@@ -323,14 +324,14 @@ public class IngestDuplexMarshaller {
     }
 
     /**
-     * Normalizes the IngestDocument's various metadata into a map that can be added to an Event
+     * Normalizes the IngestDocumentBridge's various metadata into a map that can be added to an Event
      *
      * @param ingestDocument the source
      * @return a simple map containing non-{@code null} metadata
      */
-    private Map<String,Object> normalizeIngestDocumentMetadata(final IngestDocument ingestDocument) {
+    private Map<String,Object> normalizeIngestDocumentMetadata(final IngestDocumentBridge ingestDocument) {
         final Map<String,Object> collectedMetadata = new HashMap<>();
-        final Metadata metadata = ingestDocument.getMetadata();
+        final MetadataBridge metadata = ingestDocument.getMetadata();
 
         collectedMetadata.put("index", metadata.getIndex());
         collectedMetadata.put("id", metadata.getId());
@@ -354,7 +355,7 @@ public class IngestDuplexMarshaller {
      * @param eventMap the map to mutate
      * @param ingestDocument the document to fetch version information from
      */
-    private void sanitizeEventRequiredVersion(final Map<String,Object> eventMap, final IngestDocument ingestDocument) {
+    private void sanitizeEventRequiredVersion(final Map<String,Object> eventMap, final IngestDocumentBridge ingestDocument) {
         final Object sourceVersion = eventMap.remove(org.logstash.Event.VERSION);
         String safeVersion = null;
         if (Objects.nonNull(sourceVersion)) {
@@ -383,7 +384,7 @@ public class IngestDuplexMarshaller {
      * <ol>
      *     <li>the value of ECS field with same semantic meaning `event.created`</li>
      *     <li>the value of `_ingest.timestamp`</li>
-     *     <li>the IngestDocument's initialization timestamp</li>
+     *     <li>the IngestDocumentBridge's initialization timestamp</li>
      * </ol>
      * When the source contains a {@code @timestamp} value that cannot be coerced,
      * it is re-routed to {@code _@timestamp}.
@@ -392,7 +393,7 @@ public class IngestDuplexMarshaller {
      * @param ingestDocument the document to fetch timestamp information from
      */
     // extract and set the timestamp, moving a pre-existing `@timestamp` field out of the way
-    private void sanitizeEventRequiredTimestamp(final Map<String,Object> eventMap, final IngestDocument ingestDocument) {
+    private void sanitizeEventRequiredTimestamp(final Map<String,Object> eventMap, final IngestDocumentBridge ingestDocument) {
         final Object sourceTimestamp = eventMap.remove(org.logstash.Event.TIMESTAMP);
 
         Timestamp safeTimestamp = safeTimestampFrom(sourceTimestamp);
