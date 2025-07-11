@@ -261,7 +261,6 @@ task buildElasticsearchLogstashBridge(type: Exec) {
     description "builds logstash-bridge lib module"
 
     dependsOn buildElasticsearchLocalDistro
-    mustRunAfter buildElasticsearchLocalDistro
 
     def logFile = project.file("${buildDir}/logstash-bridge-build.log")
     doFirst {
