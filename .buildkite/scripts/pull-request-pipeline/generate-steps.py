@@ -7,7 +7,7 @@ from requests.adapters import HTTPAdapter, Retry
 from ruamel.yaml import YAML
 
 RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
-TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/main/.buildkite/pull" \
+TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/move-to-es-bridge-api/.buildkite/pull" \
                   "-request-test-matrix.yml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
         else os.getenv("TARGET_BRANCH")
     print(f"Running with target_branch: {target_branch}")
 
-    matrix_version_key = target_branch if target_branch == "main" else make_matrix_version_key(target_branch)
+    matrix_version_key = target_branch if target_branch in ["main", "move-to-es-bridge-api"] else make_matrix_version_key(target_branch)
     matrix_releases = matrix_map_yaml.get(matrix_version_key, {}).get("releases", [])
     matrix_snapshots = matrix_map_yaml.get(matrix_version_key, {}).get("snapshots", [])
 
