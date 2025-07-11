@@ -30,3 +30,14 @@ main:
     - 9.next
     - 9.future
     - main
+move-to-es-bridge-api:
+  releases:
+    - 9.previous
+    - 9.current
+  snapshots:
+    - 8.future
+    - 9.previous
+    - 9.current
+    - 9.next
+    - 9.future
+    - main
