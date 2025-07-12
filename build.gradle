@@ -257,6 +257,44 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
     }
 }
 
+task buildElasticsearchLogstashBridge(type: Exec) {
+    description "builds logstash-bridge lib module"
+
+    dependsOn buildElasticsearchLocalDistro
+
+    def logFile = project.file("${buildDir}/logstash-bridge-build.log")
+    doFirst {
+        def funneler = new OutputStreamFunneler(new LazyFileOutputStream(logFile))
+        standardOutput = funneler.funnelInstance
+        errorOutput = funneler.funnelInstance
+    }
+
+    def esSource = "${buildDir}/elasticsearch-source/"
+    def esBuildDir = "${esSource}/build"
+
+    inputs.dir esSource
+    outputs.dir "${esBuildDir}/libs/logstash-bridge"
+
+    ext.buildRoot = esBuildDir
+    workingDir esSource
+    commandLine "./gradlew", ":lib:logstash-bridge:build"
+
+    ignoreExitValue true // handled in doLast
+    doLast {
+        def exitValue = executionResult.get().exitValue
+        if (exitValue != 0) {
+            if (logFile.exists()) {
+                println "\n===== Elasticsearch logstash-bridge build Log ====="
+                println logFile.text
+                println "===== End of Elasticsearch logstash-bridge build Log =====\n"
+            } else {
+                "Elasticsearch logstash-bridge build failed and ${logFile.path} log does not exist"
+            }
+            throw new GradleException("Elasticsearch logstash-bridge build failed, see the logs for details.")
+        }
+    }
+}
+
 task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades embedded dependencies of the Elasticsearch Ingest GeoIP module"
 
@@ -316,13 +354,30 @@ task shadeElasticsearchRedactPlugin(type: com.github.jengelman.gradle.plugins.sh
     exclude '**/module-info.class'
 }
 
+task shadeElasticsearchLogstashBridge(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades the Elasticsearch logstash-bridge jar"
+
+    dependsOn buildElasticsearchLogstashBridge
+    
+    from("${buildDir}/elasticsearch-source/libs/logstash-bridge/build/distributions") {
+        include "elasticsearch-logstash-bridge-*.jar"
+    }
+    
+    archiveFileName = "elasticsearch-logstash-bridge-shaded.jar"
+    destinationDirectory = file("${buildDir}/shaded")
+    
+    exclude '**/module-info.class'
+}
+
 task importMinimalElasticsearch() {
     description "Imports minimal portions of Elasticsearch localDistro"
 
     dependsOn buildElasticsearchLocalDistro
+    dependsOn buildElasticsearchLogstashBridge
     dependsOn shadeElasticsearchIngestGeoIpModule
     dependsOn shadeElasticsearchGrokImplementation
     dependsOn shadeElasticsearchRedactPlugin
+    dependsOn shadeElasticsearchLogstashBridge
 
     ext.jars = "${buildDir}/elasticsearch-minimal-jars"
 
@@ -341,6 +396,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
             }
+            from(shadeElasticsearchLogstashBridge)
             from(shadeElasticsearchGrokImplementation)
             from(buildElasticsearchLocalDistro.module("x-pack-core"))
 
