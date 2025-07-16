@@ -1,3 +1,6 @@
+## 8.18.2
+  - Add `terminate` processor support [#345](https://github.com/elastic/logstash-filter-elastic_integration/pull/345)
+
 ## 8.18.1
   - Introduces `proxy` param to support proxy [#318](https://github.com/elastic/logstash-filter-elastic_integration/pull/318)
 

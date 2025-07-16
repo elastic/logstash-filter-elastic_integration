@@ -1134,6 +1134,35 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       # end
     end
 
+    describe 'with terminate processor' do
+      let(:pipeline_processor) {
+        '{
+          "terminate": {
+            "if": "ctx.error != null",
+            "tag": "terminated_ingest_pipeline"
+          }
+        },
+        {
+          "append": {
+            "field": "append_field",
+            "value": ["integration", "test"]
+          }
+        }'
+      }
+
+      it 'terminates the ingest pipeline' do
+        events = [LogStash::Event.new(
+          "message" => "Send message to pipeline which gets terminated.",
+          "error" => "This is intentionally placed error.",
+          "data_stream" => data_stream)]
+
+        subject.multi_filter(events).each do |event|
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to include("_none")
+          # intentionally placed append processor to check if it is not executed after terminate processor
+          expect(event.get("append_field")).to be_nil
+        end
+      end
+    end
   end
 
   context '#multi-pipeline execution' do
