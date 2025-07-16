@@ -6,7 +6,6 @@
  */
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
-import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
 
@@ -26,7 +25,7 @@ public class SetSecurityUserProcessor implements ProcessorBridge {
 
 
     @Override
-    public void execute(IngestDocumentBridge ingestDocumentBridge, BiConsumer<IngestDocumentBridge, Exception> biConsumer) throws Exception {
+    public void execute(IngestDocumentBridge ingestDocumentBridge, BiConsumer<IngestDocumentBridge, Exception> biConsumer) {
         // within Logstash, the set_security_user processor is a no-op
     }
 
@@ -48,13 +47,6 @@ public class SetSecurityUserProcessor implements ProcessorBridge {
     @Override
     public boolean isAsync() {
         return false;
-    }
-
-    // TODO: find a way to remove this method
-    //  it is due to StableBridgeAPI#unwrap() requirement
-    @Override
-    public Processor unwrap() {
-        return null;
     }
 
     public static final class Factory implements ProcessorBridge.Factory {

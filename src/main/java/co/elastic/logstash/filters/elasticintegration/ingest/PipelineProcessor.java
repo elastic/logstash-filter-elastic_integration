@@ -8,9 +8,6 @@ package co.elastic.logstash.filters.elasticintegration.ingest;
 
 import co.elastic.logstash.filters.elasticintegration.IngestPipeline;
 import co.elastic.logstash.filters.elasticintegration.IngestPipelineResolver;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.elasticsearch.ingest.Processor;
 import org.elasticsearch.logstashbridge.ingest.ConfigurationUtilsBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
@@ -30,8 +27,6 @@ public class PipelineProcessor implements ProcessorBridge {
     private final TemplateScriptBridge.Factory pipelineTemplate;
     private final IngestPipelineResolver pipelineProvider;
     private final boolean ignoreMissingPipeline;
-
-    private static final Logger LOGGER = LogManager.getLogger(PipelineProcessor.class);
 
     private PipelineProcessor(String tag,
                               String description,
@@ -90,12 +85,6 @@ public class PipelineProcessor implements ProcessorBridge {
         }
     }
 
-    // TODO: find a way to remove this method
-    //  it is due to StableBridgeAPI#unwrap() requirement
-    @Override
-    public Processor unwrap() {
-        throw new RuntimeException("Unallowed operation.");
-    }
 
     public static class Factory implements ProcessorBridge.Factory {
 
