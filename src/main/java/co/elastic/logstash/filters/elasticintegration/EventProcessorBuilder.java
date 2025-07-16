@@ -122,6 +122,7 @@ public class EventProcessorBuilder {
                 org.elasticsearch.ingest.common.SetProcessor.TYPE,
                 org.elasticsearch.ingest.common.SortProcessor.TYPE,
                 org.elasticsearch.ingest.common.SplitProcessor.TYPE,
+                "terminate", // note: upstream constant is package-private
                 org.elasticsearch.ingest.common.TrimProcessor.TYPE,
                 org.elasticsearch.ingest.common.URLDecodeProcessor.TYPE,
                 org.elasticsearch.ingest.common.UppercaseProcessor.TYPE,
