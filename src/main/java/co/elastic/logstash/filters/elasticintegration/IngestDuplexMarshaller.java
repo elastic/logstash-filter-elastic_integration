@@ -198,13 +198,11 @@ public class IngestDuplexMarshaller {
      * @param event the event to fetch fallback values from
      */
     private void sanitizeIngestDocumentRequiredMetadataVersion(final Map<String,Object> sourceAndMetadata, final Event event) {
-        // TODO: make IngestDocument.Metadata.VERSION.getFieldName() available
-        Object sourceVersion = safeLongFrom(sourceAndMetadata.remove("_version"));
+        Object sourceVersion = safeLongFrom(sourceAndMetadata.remove(IngestDocumentBridge.Constants.METADATA_VERSION_FIELD_NAME));
         if (Objects.isNull(sourceVersion)) {
             sourceVersion = safeLongFrom(event.getField(org.logstash.Event.VERSION));
         }
-        // TODO: make IngestDocument.Metadata.VERSION.getFieldName() available
-        sourceAndMetadata.put("_version", Objects.requireNonNullElse(sourceVersion, 1L));
+        sourceAndMetadata.put(IngestDocumentBridge.Constants.METADATA_VERSION_FIELD_NAME, Objects.requireNonNullElse(sourceVersion, 1L));
     }
 
     /**
