@@ -358,14 +358,14 @@ task shadeElasticsearchLogstashBridge(type: com.github.jengelman.gradle.plugins.
     description "Shades the Elasticsearch logstash-bridge jar"
 
     dependsOn buildElasticsearchLogstashBridge
-    
+
     from("${buildDir}/elasticsearch-source/libs/logstash-bridge/build/distributions") {
         include "elasticsearch-logstash-bridge-*.jar"
     }
-    
+
     archiveFileName = "elasticsearch-logstash-bridge-shaded.jar"
     destinationDirectory = file("${buildDir}/shaded")
-    
+
     exclude '**/module-info.class'
 }
 
