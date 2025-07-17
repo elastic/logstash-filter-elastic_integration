@@ -6,7 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
-import org.elasticsearch.core.IOUtils;
+import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
 
@@ -36,7 +36,7 @@ public class SingleProcessorIngestPlugin implements IngestPluginBridge, Closeabl
     @Override
     public void close() throws IOException {
         if (this.processorFactory instanceof Closeable) {
-            IOUtils.closeWhileHandlingException((Closeable) this.processorFactory);
+            IOUtilsBridge.closeWhileHandlingException((Closeable) this.processorFactory);
         }
     }
 }
