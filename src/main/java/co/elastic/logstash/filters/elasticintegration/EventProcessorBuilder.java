@@ -8,7 +8,6 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
-import co.elastic.logstash.filters.elasticintegration.ingest.RedactPlugin;
 import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
@@ -24,7 +23,10 @@ import org.elasticsearch.logstashbridge.common.SettingsBridge;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
 import org.elasticsearch.logstashbridge.env.EnvironmentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.plugins.IngestCommonPluginBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
+import org.elasticsearch.logstashbridge.plugins.IngestUserAgentPluginBridge;
+import org.elasticsearch.logstashbridge.plugins.RedactPluginBridge;
 import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
 import org.elasticsearch.logstashbridge.threadpool.ThreadPoolBridge;
 
@@ -70,44 +72,44 @@ public class EventProcessorBuilder {
     }
 
     public EventProcessorBuilder() {
-        this.addProcessorsFromPlugin(() -> IngestPluginBridge.wrap(new org.elasticsearch.ingest.common.IngestCommonPlugin()), Set.of(
-                org.elasticsearch.ingest.common.AppendProcessor.TYPE,
-                org.elasticsearch.ingest.common.BytesProcessor.TYPE,
-                org.elasticsearch.ingest.common.CommunityIdProcessor.TYPE,
-                org.elasticsearch.ingest.common.ConvertProcessor.TYPE,
-                org.elasticsearch.ingest.common.CsvProcessor.TYPE,
-                org.elasticsearch.ingest.common.DateIndexNameProcessor.TYPE,
-                org.elasticsearch.ingest.common.DateProcessor.TYPE,
-                org.elasticsearch.ingest.common.DissectProcessor.TYPE,
+        this.addProcessorsFromPlugin(IngestCommonPluginBridge::new, Set.of(
+                ProcessorBridge.Constants.APPEND_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.BYTES_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.COMMUNITY_ID_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.CONVERT_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.CSV_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.DATE_INDEX_NAME_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.DATE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.DISSECT_PROCESSOR_TYPE,
                 "dot_expander", // note: upstream constant is package-private
-                org.elasticsearch.ingest.DropProcessor.TYPE, // note: not in ingest-common
-                org.elasticsearch.ingest.common.FailProcessor.TYPE,
-                org.elasticsearch.ingest.common.FingerprintProcessor.TYPE,
-                org.elasticsearch.ingest.common.ForEachProcessor.TYPE,
-                org.elasticsearch.ingest.common.GrokProcessor.TYPE,
-                org.elasticsearch.ingest.common.GsubProcessor.TYPE,
-                org.elasticsearch.ingest.common.HtmlStripProcessor.TYPE,
-                org.elasticsearch.ingest.common.JoinProcessor.TYPE,
-                org.elasticsearch.ingest.common.JsonProcessor.TYPE,
-                org.elasticsearch.ingest.common.KeyValueProcessor.TYPE,
-                org.elasticsearch.ingest.common.LowercaseProcessor.TYPE,
-                org.elasticsearch.ingest.common.NetworkDirectionProcessor.TYPE,
+                ProcessorBridge.Constants.DROP_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.FAIL_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.FINGERPRINT_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.FOR_EACH_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.GROK_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.GSUB_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.HTML_STRIP_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.JOIN_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.JSON_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.KEY_VALUE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.LOWERCASE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.NETWORK_DIRECTION_PROCESSOR_TYPE,
                 // note: no `pipeline` processor, as we provide our own
-                org.elasticsearch.ingest.common.RegisteredDomainProcessor.TYPE,
-                org.elasticsearch.ingest.common.RemoveProcessor.TYPE,
-                org.elasticsearch.ingest.common.RenameProcessor.TYPE,
-                org.elasticsearch.ingest.common.RerouteProcessor.TYPE,
-                org.elasticsearch.ingest.common.ScriptProcessor.TYPE,
-                org.elasticsearch.ingest.common.SetProcessor.TYPE,
-                org.elasticsearch.ingest.common.SortProcessor.TYPE,
-                org.elasticsearch.ingest.common.SplitProcessor.TYPE,
+                ProcessorBridge.Constants.REGISTERED_DOMAIN_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.REMOVE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.RENAME_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.REROUTE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.SCRIPT_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.SET_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.SORT_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.SPLIT_PROCESSOR_TYPE,
                 "terminate", // note: upstream constant is package-private
-                org.elasticsearch.ingest.common.TrimProcessor.TYPE,
-                org.elasticsearch.ingest.common.URLDecodeProcessor.TYPE,
-                org.elasticsearch.ingest.common.UppercaseProcessor.TYPE,
-                org.elasticsearch.ingest.common.UriPartsProcessor.TYPE));
-        this.addProcessorsFromPlugin(() -> IngestPluginBridge.wrap(new org.elasticsearch.ingest.useragent.IngestUserAgentPlugin()));
-        this.addProcessorsFromPlugin(RedactPlugin::new);
+                ProcessorBridge.Constants.TRIM_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.URL_DECODE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.UPPERCASE_PROCESSOR_TYPE,
+                ProcessorBridge.Constants.URI_PARTS_PROCESSOR_TYPE));
+        this.addProcessorsFromPlugin(IngestUserAgentPluginBridge::new);
+        this.addProcessorsFromPlugin(RedactPluginBridge::new);
         this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
