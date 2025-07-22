@@ -17,7 +17,7 @@ import org.elasticsearch.logstashbridge.script.TemplateScriptBridge;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class PipelineProcessor implements ProcessorBridge {
+public class PipelineProcessor extends ProcessorBridge.AbstractExternal {
     public static final String TYPE = "pipeline";
 
     private final String tag;

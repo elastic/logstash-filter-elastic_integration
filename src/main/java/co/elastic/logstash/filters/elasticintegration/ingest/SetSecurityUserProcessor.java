@@ -12,7 +12,7 @@ import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class SetSecurityUserProcessor implements ProcessorBridge {
+public class SetSecurityUserProcessor extends ProcessorBridge.AbstractExternal {
 
     public static final String TYPE = "set_security_user";
     private final String tag;

@@ -24,10 +24,10 @@ public class GeoIpProcessorFactory implements ProcessorBridge.Factory {
                             String tag,
                             String description,
                             Map<String, Object> config) throws Exception {
-        return ProcessorBridge.wrap(new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider)
+        return ProcessorBridge.fromInternal(new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider)
                 .create(processorFactories.entrySet()
                                 .stream()
-                                .collect(Collectors.toMap(Map.Entry::getKey,e -> e.getValue().unwrap())),
+                                .collect(Collectors.toMap(Map.Entry::getKey,e -> e.getValue().toInternal())),
                         tag,
                         description,
                         config,
