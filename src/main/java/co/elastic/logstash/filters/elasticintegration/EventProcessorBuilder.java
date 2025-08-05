@@ -20,6 +20,7 @@ import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.cluster.project.DefaultProjectResolver;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.core.TimeValue;
@@ -318,7 +319,7 @@ public class EventProcessorBuilder {
         Map<String, ScriptEngine> engines = new HashMap<>();
         engines.put(PainlessScriptEngine.NAME, getPainlessScriptEngine(settings));
         engines.put(MustacheScriptEngine.NAME, new MustacheScriptEngine(settings));
-        return new ScriptService(settings, engines, ScriptModule.CORE_CONTEXTS, threadPool::absoluteTimeInMillis);
+        return new ScriptService(settings, engines, ScriptModule.CORE_CONTEXTS, threadPool::absoluteTimeInMillis, null);
     }
 
     /**
