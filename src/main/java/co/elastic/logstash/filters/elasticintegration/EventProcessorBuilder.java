@@ -20,7 +20,6 @@ import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.cluster.project.DefaultProjectResolver;
 import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.core.IOUtils;
 import org.elasticsearch.core.TimeValue;
