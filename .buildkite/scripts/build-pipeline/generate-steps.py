@@ -65,8 +65,7 @@ if __name__ == "__main__":
             "provider": "gcp",
             "machineType": "n2-standard-4",
             "imageProject": "elastic-images-prod",
-            "image": "family/platform-ingest-logstash-multi-jdk-ubuntu-2204",
-            "diskSizeGb": 120
+            "image": "family/platform-ingest-logstash-multi-jdk-ubuntu-2204"
         },
         "steps": []}
 
