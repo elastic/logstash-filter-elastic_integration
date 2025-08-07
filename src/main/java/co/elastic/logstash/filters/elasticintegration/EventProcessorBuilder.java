@@ -17,6 +17,7 @@ import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCac
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
 import co.elastic.logstash.filters.elasticintegration.util.Exceptions;
 import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
+import co.elastic.logstash.filters.elasticintegration.util.PluginProjectResolver;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
@@ -33,7 +34,6 @@ import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
 import org.elasticsearch.painless.PainlessPlugin;
 import org.elasticsearch.painless.PainlessScriptEngine;
 import org.elasticsearch.painless.spi.PainlessExtension;
-import org.elasticsearch.painless.spi.Whitelist;
 import org.elasticsearch.plugins.ExtensiblePlugin;
 import org.elasticsearch.plugins.IngestPlugin;
 import org.elasticsearch.script.IngestConditionalScript;
@@ -318,7 +318,13 @@ public class EventProcessorBuilder {
         Map<String, ScriptEngine> engines = new HashMap<>();
         engines.put(PainlessScriptEngine.NAME, getPainlessScriptEngine(settings));
         engines.put(MustacheScriptEngine.NAME, new MustacheScriptEngine(settings));
-        return new ScriptService(settings, engines, ScriptModule.CORE_CONTEXTS, threadPool::absoluteTimeInMillis);
+
+        return new ScriptService(
+                settings,
+                engines,
+                ScriptModule.CORE_CONTEXTS,
+                threadPool::absoluteTimeInMillis,
+                new PluginProjectResolver());
     }
 
     /**
