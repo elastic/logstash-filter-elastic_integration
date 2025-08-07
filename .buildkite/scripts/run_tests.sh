@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-export PATH="/opt/buildkite-agent/.rbenv/bin:/opt/buildkite-agent/.pyenv/bin:/opt/buildkite-agent/.java/bin:$PATH"
-export JAVA_HOME="/opt/buildkite-agent/.java"
+export JAVA_HOME="/opt/buildkite-agent/.java/adoptiumjdk_21"
+export PATH="/opt/buildkite-agent/.rbenv/bin:/opt/buildkite-agent/.pyenv/bin:/opt/buildkite-agent/.java/bin:$JAVA_HOME:$PATH"
 eval "$(rbenv init -)"
 
 if [ -z "$TARGET_BRANCH" ]; then
