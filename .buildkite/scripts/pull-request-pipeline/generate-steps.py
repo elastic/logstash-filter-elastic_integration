@@ -6,7 +6,7 @@ from requests.adapters import HTTPAdapter, Retry
 
 from ruamel.yaml import YAML
 
-RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
+RELEASES_URL = "https://raw.githubusercontent.com/logstash-plugins/.ci/refs/heads/1.x/logstash-versions.yml"
 TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/main/.buildkite/pull" \
                   "-request-test-matrix.yml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
@@ -61,14 +61,16 @@ if __name__ == "__main__":
     structure = {
         "agents": {
             "provider": "gcp",
-            "machineType": "n1-standard-4",
-            "image": "family/core-ubuntu-2204"
+            "machineType": "n2-standard-4",
+            "imageProject": "elastic-images-prod",
+            "image": "family/platform-ingest-logstash-multi-jdk-ubuntu-2204"
         },
         "steps": []}
 
     steps = []
     response = call_url_with_retry(RELEASES_URL)
-    versions_json = response.json()
+    yaml = YAML(typ='safe')
+    versions_yaml: typing.final = yaml.load(response.text)
 
     matrix_map = call_url_with_retry(TEST_MATRIX_URL)
     matrix_map_yaml = YAML().load(matrix_map.text)
@@ -88,13 +90,13 @@ if __name__ == "__main__":
     print(f"matrix_releases: {matrix_releases}")
     print(f"matrix_snapshots: {matrix_snapshots}")
     for matrix_release in matrix_releases:
-        full_stack_version: typing.final = versions_json["releases"].get(matrix_release)
+        full_stack_version: typing.final = versions_yaml["releases"].get(matrix_release)
         # noop, if they are declared in the matrix but not in the release
         if full_stack_version is not None:
             steps += generate_unit_and_integration_test_steps(full_stack_version, "false")
 
     for matrix_snapshot in matrix_snapshots:
-        full_stack_version: typing.final = versions_json["snapshots"].get(matrix_snapshot)
+        full_stack_version: typing.final = versions_yaml["snapshots"].get(matrix_snapshot)
         # noop, if they are declared in the matrix but not in the snapshot
         if full_stack_version is not None:
             steps += generate_unit_and_integration_test_steps(full_stack_version, "true")
