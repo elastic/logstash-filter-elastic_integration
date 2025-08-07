@@ -6,7 +6,7 @@ from requests.adapters import HTTPAdapter, Retry
 
 from ruamel.yaml import YAML
 
-RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
+RELEASES_URL = "https://raw.githubusercontent.com/logstash-plugins/.ci/refs/heads/1.x/logstash-versions.yml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
 
 
@@ -63,13 +63,15 @@ if __name__ == "__main__":
     structure = {
         "agents": {
             "provider": "gcp",
-            "machineType": "n1-standard-4",
-            "image": "family/core-ubuntu-2204"
+            "machineType": "n2-standard-4",
+            "imageProject": "elastic-images-prod",
+            "image": "family/platform-ingest-logstash-multi-jdk-ubuntu-2204"
         },
         "steps": []}
 
     response = call_url_with_retry(RELEASES_URL)
-    versions_json: typing.final = response.json()
+    yaml = YAML(typ='safe')
+    versions_yaml: typing.final = yaml.load(response.text)
 
     # Use BUILDKITE_SOURCE to figure out PR merge or schedule.
     # If PR merge, no need to run builds on all branches, target branch will be good
@@ -79,8 +81,8 @@ if __name__ == "__main__":
     #       - manual kick off will be on PR or entire main branch, can be decided with BUILDKITE_BRANCH
     bk_source = os.getenv("BUILDKITE_SOURCE")
     bk_branch = os.getenv("BUILDKITE_BRANCH")
-    steps = generate_steps_for_scheduler(versions_json) if (bk_source == "schedule" or bk_branch == "main") \
-        else generate_steps_for_main_branch(versions_json)
+    steps = generate_steps_for_scheduler(versions_yaml) if (bk_source == "schedule" or bk_branch == "main") \
+        else generate_steps_for_main_branch(versions_yaml)
 
     group_desc = f"Build steps"
     key_desc = "build-steps"
