@@ -6,14 +6,9 @@ from requests.adapters import HTTPAdapter, Retry
 
 from ruamel.yaml import YAML
 
-<<<<<<< HEAD
-RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
-TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/main/.buildkite/pull-request-test-matrix.yml"
-=======
 RELEASES_URL = "https://raw.githubusercontent.com/logstash-plugins/.ci/refs/heads/1.x/logstash-versions.yml"
 TEST_MATRIX_URL = "https://raw.githubusercontent.com/elastic/logstash-filter-elastic_integration/main/.buildkite/pull" \
                   "-request-test-matrix.yml"
->>>>>>> febb207 (Update buildkite script to look for new logstash releases location (#358))
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_tests.sh"
 
 
