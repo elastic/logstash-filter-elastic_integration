@@ -307,10 +307,6 @@ task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugi
 
     mergeServiceFiles()
 
-    String shadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
-    relocate('com.fasterxml.jackson', "${shadeNamespace}.com.fasterxml.jackson")
-    relocate('com.maxmind',           "${shadeNamespace}.com.maxmind")
-
     exclude '**/module-info.class'
 }
 

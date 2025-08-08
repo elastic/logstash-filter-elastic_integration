@@ -8,30 +8,25 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.ExceptionsHelper;
-import org.elasticsearch.common.CheckedBiFunction;
-import org.elasticsearch.ingest.geoip.IpDatabase;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NoCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.Reader;
+import org.elasticsearch.logstashbridge.geoip.IpDatabaseBridge;
+import org.elasticsearch.logstashbridge.geoip.MaxMindDbBridge;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public class IpDatabaseAdapter implements IpDatabase {
+public class IpDatabaseAdapter extends IpDatabaseBridge.AbstractExternal {
     private static final Logger LOGGER = LogManager.getLogger(IpDatabaseAdapter.class);
 
-    private final Reader databaseReader;
+    private final MaxMindDbBridge.Reader databaseReader;
     private final String databaseType;
 
     private volatile boolean isReaderClosed = false;
 
-    public IpDatabaseAdapter(final Reader databaseReader) {
+    public IpDatabaseAdapter(final MaxMindDbBridge.Reader databaseReader) {
         this.databaseReader = databaseReader;
-        this.databaseType = databaseReader.getMetadata().getDatabaseType();
+        this.databaseType = databaseReader.getDatabaseType();
     }
 
     @Override
@@ -40,12 +35,8 @@ public class IpDatabaseAdapter implements IpDatabase {
     }
 
     @Override
-    public <RESPONSE> RESPONSE getResponse(String ipAddress, CheckedBiFunction<Reader, String, RESPONSE, Exception> responseProvider) {
-        try {
-            return responseProvider.apply(this.databaseReader, ipAddress);
-        } catch (Exception e) {
-            throw ExceptionsHelper.convertToRuntime(e);
-        }
+    public MaxMindDbBridge.Reader getDatabaseReader() throws IOException {
+        return this.databaseReader;
     }
 
     @Override
@@ -67,25 +58,25 @@ public class IpDatabaseAdapter implements IpDatabase {
     }
 
     public static IpDatabaseAdapter defaultForPath(final Path database) throws IOException {
-        return new Builder(database.toFile()).setCache(new CHMCache(10_000)).build();
+        return new Builder(database.toFile()).setCache(MaxMindDbBridge.NodeCache.get(10_000)).build();
     }
 
     public static class Builder {
         private File databasePath;
-        private NodeCache nodeCache;
+        private MaxMindDbBridge.NodeCache nodeCache;
 
-        public Builder(File databasePath) {
+        public Builder(final File databasePath) {
             this.databasePath = databasePath;
         }
 
-        public Builder setCache(final NodeCache nodeCache) {
+        public Builder setCache(final MaxMindDbBridge.NodeCache nodeCache) {
             this.nodeCache = nodeCache;
             return this;
         }
 
         public IpDatabaseAdapter build() throws IOException {
-            final NodeCache nodeCache = Optional.ofNullable(this.nodeCache).orElseGet(NoCache::getInstance);
-            final Reader databaseReader = new Reader(this.databasePath, nodeCache);
+            final MaxMindDbBridge.NodeCache nodeCache = Optional.ofNullable(this.nodeCache).orElseGet(MaxMindDbBridge.NodeCache::getInstance);
+            final MaxMindDbBridge.Reader databaseReader = new MaxMindDbBridge.Reader(this.databasePath, nodeCache);
             return new IpDatabaseAdapter(databaseReader);
         }
     }

@@ -8,9 +8,9 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.cluster.metadata.ProjectId;
-import org.elasticsearch.ingest.geoip.IpDatabase;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
+import org.elasticsearch.logstashbridge.geoip.IpDatabaseBridge;
+import org.elasticsearch.logstashbridge.geoip.IpDatabaseProviderBridge;
 
 import java.io.Closeable;
 import java.io.File;
@@ -23,24 +23,24 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class IpDatabaseProvider implements org.elasticsearch.ingest.geoip.IpDatabaseProvider, Closeable {
+public class IpDatabaseProvider extends IpDatabaseProviderBridge.AbstractExternal implements Closeable {
 
     private static final Logger LOGGER = LogManager.getLogger(IpDatabaseProvider.class);
 
     private final Map<String, IpDatabaseHolder> databaseMap;
 
-    IpDatabaseProvider(Map<String, IpDatabaseHolder> databaseMap) {
+    public IpDatabaseProvider(Map<String, IpDatabaseHolder> databaseMap) {
         this.databaseMap = Map.copyOf(databaseMap);
     }
 
     @Override
-    public Boolean isValid(ProjectId projectId, String databaseIdentifierFileName) {
+    public Boolean isValid(String databaseIdentifierFileName) {
         final IpDatabaseHolder holder = getDatabaseHolder(databaseIdentifierFileName);
         return Objects.nonNull(holder) && holder.isValid();
     }
 
     @Override
-    public IpDatabase getDatabase(ProjectId projectId, String databaseIdentifierFileName) {
+    public IpDatabaseBridge getDatabase(String databaseIdentifierFileName) {
         final IpDatabaseHolder holder = getDatabaseHolder(databaseIdentifierFileName);
         if (Objects.isNull(holder)) {
             return null;

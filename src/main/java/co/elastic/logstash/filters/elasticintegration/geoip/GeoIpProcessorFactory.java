@@ -6,8 +6,8 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.ingest.geoip.GeoIpProcessor;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.geoip.GeoIpProcessorBridge;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -24,8 +24,9 @@ public class GeoIpProcessorFactory implements ProcessorBridge.Factory {
                             String tag,
                             String description,
                             Map<String, Object> config) throws Exception {
-        return ProcessorBridge.fromInternal(new GeoIpProcessor.Factory("geoip", this.ipDatabaseProvider)
-                .create(processorFactories.entrySet()
+        return ProcessorBridge.fromInternal(
+                new GeoIpProcessorBridge.Factory("geoip", this.ipDatabaseProvider.toInternal()).toInternal()
+                    .create(processorFactories.entrySet()
                                 .stream()
                                 .collect(Collectors.toMap(Map.Entry::getKey,e -> e.getValue().toInternal())),
                         tag,
