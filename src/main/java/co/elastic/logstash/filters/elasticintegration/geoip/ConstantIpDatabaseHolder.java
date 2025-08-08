@@ -1,7 +1,5 @@
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-import org.elasticsearch.ingest.geoip.IpDatabase;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Objects;

@@ -8,7 +8,7 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.filters.elasticintegration.util.TestCapturingLogger;
-import org.elasticsearch.ingest.IngestDocument;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.junit.jupiter.api.Test;
 import org.logstash.Timestamp;
 import org.logstash.plugins.BasicEventFactory;
@@ -76,7 +76,7 @@ class IngestDuplexMarshallerTest {
                 "@version", "3",
                 "message", "hello, world"
         ));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final ZonedDateTime updatedTimestamp = ZonedDateTime.parse("2023-03-12T01:17:38.135792468Z");
         intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp);
@@ -93,7 +93,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final ZonedDateTime updatedTimestamp = ZonedDateTime.parse("2023-03-12T01:17:38.135792468Z");
         intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp.toString());
@@ -110,7 +110,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, "high noon");
 
@@ -130,7 +130,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         intermediate.removeField(org.logstash.Event.TIMESTAMP);
 
@@ -148,7 +148,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         intermediate.removeField(org.logstash.Event.TIMESTAMP);
 
@@ -172,7 +172,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final long updatedMetadataVersion = 17L;
         intermediate.getMetadata().setVersion(updatedMetadataVersion);
@@ -192,7 +192,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         intermediate.getMetadata().setVersion(8191L);
         intermediate.getMetadata().setVersionType("external_gte"); // constrained
@@ -217,7 +217,7 @@ class IngestDuplexMarshallerTest {
                 "@version", "3",
                 "message",
                 "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         // intentionally String to pass-through Valuifier#convert and make validation easier
         final String atTimestampInSource = "2023-03-12T01:17:38.135792468Z";
@@ -237,7 +237,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final String atVersionInSource = "bananas";
         intermediate.setFieldValue(org.logstash.Event.VERSION, atVersionInSource);
@@ -256,7 +256,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3", "message",
                 "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final Map<String,Object> atMetadataInSource = Map.of("this", "that","flip", "flop");
         intermediate.setFieldValue(org.logstash.Event.METADATA, atMetadataInSource);
@@ -276,7 +276,7 @@ class IngestDuplexMarshallerTest {
                 "@timestamp", "2023-01-17T23:19:04.765182352Z",
                 "@version", "3",
                 "message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final List<String> atMetadataInSource = List.of("wrong", "incorrect");
         intermediate.setFieldValue(org.logstash.Event.METADATA, atMetadataInSource);
@@ -295,7 +295,7 @@ class IngestDuplexMarshallerTest {
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithInvalidShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final Map<String,Object> atTagsInSource = Map.of("this", "that");
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
@@ -311,7 +311,7 @@ class IngestDuplexMarshallerTest {
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithInvalidCoercibleShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final Set<String> atTagsInSource = Set.of("this", "that");
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
@@ -328,7 +328,7 @@ class IngestDuplexMarshallerTest {
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithStringShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final String atTagsInSource = "this";
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
@@ -344,7 +344,7 @@ class IngestDuplexMarshallerTest {
     @Test
     void ingestDocToEventIncludingReservedTagsFieldWithListOfStringShape() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final List<String> atTagsInSource = List.of("this", "that");
         intermediate.setFieldValue(org.logstash.Event.TAGS, atTagsInSource);
@@ -367,7 +367,7 @@ class IngestDuplexMarshallerTest {
 
     @Test void ingestDocToEventIncludingArrayType() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final String[] arrayValueInSource = new String[]{"this", "that"};
         intermediate.setFieldValue("deeply.nested", arrayValueInSource);
@@ -381,7 +381,7 @@ class IngestDuplexMarshallerTest {
     @Test
     void eventToIngestDocFieldWithNestedZonedDateTimeValue() {
         final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of("message", "hello, world"));
-        final IngestDocument intermediate = idm.toIngestDocument(input);
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
 
         final String iso8601value = "2023-05-03T03:17:59.182736455Z";
         final ZonedDateTime zonedDateTime = ZonedDateTime.parse(iso8601value);
@@ -407,7 +407,7 @@ class IngestDuplexMarshallerTest {
                         "flip", "flop"
                 )));
 
-        final IngestDocument ingestDocument = idm.toIngestDocument(input);
+        final IngestDocumentBridge ingestDocument = idm.toIngestDocument(input);
 
         final String ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
         assertThat(ingestTimestamp, is(notNullValue()));
@@ -428,7 +428,7 @@ class IngestDuplexMarshallerTest {
                 )));
         input.remove(org.logstash.Event.VERSION);
 
-        final IngestDocument ingestDocument = idm.toIngestDocument(input);
+        final IngestDocumentBridge ingestDocument = idm.toIngestDocument(input);
 
         // sensible default
         assertThat(ingestDocument.getMetadata().getVersion(), is(equalTo(1L)));
@@ -446,7 +446,7 @@ class IngestDuplexMarshallerTest {
                 )));
         input.remove(org.logstash.Event.TIMESTAMP);
 
-        final IngestDocument ingestDocument = idm.toIngestDocument(input);
+        final IngestDocumentBridge ingestDocument = idm.toIngestDocument(input);
 
         final String ingestTimestamp = getIngestDocumentTimestamp(ingestDocument);
         assertThat(ingestTimestamp, where(Instant::parse, is(recentCurrentTimestamp())));
@@ -470,11 +470,11 @@ class IngestDuplexMarshallerTest {
         return ((org.logstash.Timestamp) event.getField(org.logstash.Event.TIMESTAMP)).toInstant();
     }
 
-    String getIngestDocumentTimestamp(final IngestDocument ingestDocument) {
-        return ingestDocument.getFieldValue(IngestDocument.INGEST_KEY + "." + INGEST_METADATA_TIMESTAMP_FIELD, String.class);
+    String getIngestDocumentTimestamp(final IngestDocumentBridge ingestDocument) {
+        return (String) ingestDocument.getIngestMetadata().get(INGEST_METADATA_TIMESTAMP_FIELD);
     }
 
-    void validateIngestDocument(final IngestDocument ingestDocument, Consumer<IngestDocument> ingestDocumentConsumer) {
+    void validateIngestDocument(final IngestDocumentBridge ingestDocument, Consumer<IngestDocumentBridge> ingestDocumentConsumer) {
         ingestDocumentConsumer.accept(ingestDocument);
     }
 

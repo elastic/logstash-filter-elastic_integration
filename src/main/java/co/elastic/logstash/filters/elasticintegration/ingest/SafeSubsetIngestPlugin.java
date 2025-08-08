@@ -1,8 +1,8 @@
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
-import org.elasticsearch.core.IOUtils;
-import org.elasticsearch.ingest.Processor;
-import org.elasticsearch.plugins.IngestPlugin;
+import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
 
 import javax.annotation.Nonnull;
 import java.io.Closeable;
@@ -14,35 +14,35 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
-public class SafeSubsetIngestPlugin implements IngestPlugin, Closeable {
-    private final IngestPlugin ingestPlugin;
+public class SafeSubsetIngestPlugin implements IngestPluginBridge, Closeable {
+    private final IngestPluginBridge ingestPlugin;
     private final Set<String> requiredProcessors;
 
-    public static Supplier<IngestPlugin> safeSubset(final @Nonnull Supplier<IngestPlugin> ingestPluginSupplier,
-                                                    final @Nonnull Set<String> requiredProcessors) {
+    public static Supplier<IngestPluginBridge> safeSubset(final @Nonnull Supplier<IngestPluginBridge> ingestPluginSupplier,
+                                                          final @Nonnull Set<String> requiredProcessors) {
         return () -> new SafeSubsetIngestPlugin(ingestPluginSupplier, requiredProcessors);
     }
 
-    private SafeSubsetIngestPlugin(final @Nonnull Supplier<IngestPlugin> ingestPluginSupplier,
+    private SafeSubsetIngestPlugin(final @Nonnull Supplier<IngestPluginBridge> ingestPluginSupplier,
                                    final @Nonnull Set<String> requiredProcessors) {
         try {
             this.ingestPlugin = Objects.requireNonNull(ingestPluginSupplier.get(), "an IngestPlugin must be supplied!");
             this.requiredProcessors = Set.copyOf(requiredProcessors);
         } catch (Exception e) {
-            IOUtils.closeWhileHandlingException(this);
+            IOUtilsBridge.closeWhileHandlingException(this);
             throw e;
         }
     }
 
     @Override
-    public Map<String, Processor.Factory> getProcessors(Processor.Parameters parameters) {
-        final Map<String, Processor.Factory> providedProcessors = this.ingestPlugin.getProcessors(parameters);
+    public Map<String, ProcessorBridge.Factory> getProcessors(ProcessorBridge.Parameters parameters) {
+        final Map<String, ProcessorBridge.Factory> providedProcessors = this.ingestPlugin.getProcessors(parameters);
 
-        final Map<String, Processor.Factory> acceptedProcessors = new HashMap<>();
+        final Map<String, ProcessorBridge.Factory> acceptedProcessors = new HashMap<>();
         final Set<String> missingProcessors = new HashSet<>();
 
         for (String requiredProcessor : this.requiredProcessors) {
-            final Processor.Factory processor = providedProcessors.get(requiredProcessor);
+            final ProcessorBridge.Factory processor = providedProcessors.get(requiredProcessor);
             if (!Objects.nonNull(processor)) {
                 missingProcessors.add(requiredProcessor);
             } else {
