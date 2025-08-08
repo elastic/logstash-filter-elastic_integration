@@ -6,7 +6,7 @@ from requests.adapters import HTTPAdapter, Retry
 
 from ruamel.yaml import YAML
 
-RELEASES_URL = "https://raw.githubusercontent.com/elastic/logstash/main/ci/logstash_releases.json"
+RELEASES_URL = "https://raw.githubusercontent.com/logstash-plugins/.ci/refs/heads/1.x/logstash-versions.yml"
 TEST_COMMAND: typing.final = ".buildkite/scripts/run_e2e_tests.sh"
 
 
@@ -45,7 +45,8 @@ if __name__ == "__main__":
 
     steps = []
     response = call_url_with_retry(RELEASES_URL)
-    versions_json = response.json()
+    yaml = YAML(typ='safe')
+    versions_yaml: typing.final = yaml.load(response.text)
 
     # there are situations to manually run CIs with PR change,
     # set MANUAL_TARGET_BRANCH with upstream target branch and run
@@ -53,21 +54,20 @@ if __name__ == "__main__":
     target_branch: typing.final = manually_set_target_branch if manually_set_target_branch else os.getenv("TARGET_BRANCH")
     print(f"Running with target_branch: {target_branch}")
     if target_branch == '8.x':
-        full_stack_version: typing.final = versions_json["snapshots"]["8.future"]
+        full_stack_version: typing.final = versions_yaml["snapshots"]["8.future"]
         steps.append(generate_test_step(full_stack_version, target_branch, "true"))
     elif target_branch == 'main':
-        full_stack_version: typing.final = versions_json["snapshots"][target_branch]
+        full_stack_version: typing.final = versions_yaml["snapshots"][target_branch]
         steps.append(generate_test_step(full_stack_version, target_branch, "true"))
     else:
         # generate steps for the version if released
-        releases = versions_json["releases"]
+        releases = versions_yaml["releases"]
         for release_version in releases:
             if releases[release_version].startswith(target_branch):
                 steps.append(generate_test_step(releases[release_version], target_branch, "false"))
                 break
-
         # steps for snapshot version
-        snapshots = versions_json["snapshots"]
+        snapshots = versions_yaml["snapshots"]
         for snapshot_version in snapshots:
             if snapshots[snapshot_version].startswith(target_branch):
                 steps.append(generate_test_step(snapshots[snapshot_version], target_branch, "false"))
