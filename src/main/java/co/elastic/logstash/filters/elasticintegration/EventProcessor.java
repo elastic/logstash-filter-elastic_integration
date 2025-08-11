@@ -13,9 +13,9 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.action.support.RefCountingRunnable;
-import org.elasticsearch.ingest.common.FailProcessorException;
+import org.elasticsearch.logstashbridge.core.FailProcessorExceptionBridge;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
+import org.elasticsearch.logstashbridge.core.RefCountingRunnableBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 
 import java.io.Closeable;
@@ -93,8 +93,11 @@ public class EventProcessor implements Closeable {
         final CountDownLatch latch = new CountDownLatch(1);
         final IntegrationBatch batch = new IntegrationBatch(incomingEvents);
 
-        try (RefCountingRunnable ref = new RefCountingRunnable(latch::countDown)) {
+        RefCountingRunnableBridge ref = new RefCountingRunnableBridge(latch::countDown);
+        try {
             batch.eachRequest(ref::acquire, this::processRequest);
+        } finally {
+            ref.close();
         }
 
         // await on work that has gone async
@@ -254,7 +257,9 @@ public class EventProcessor implements Closeable {
     }
 
     static private Throwable unwrapException(final Exception exception) {
-        if (exception.getCause() instanceof FailProcessorException) { return exception.getCause(); }
+        if (FailProcessorExceptionBridge.isInstanceOf(exception.getCause())) {
+            return exception.getCause();
+        }
         return exception;
     }
 
