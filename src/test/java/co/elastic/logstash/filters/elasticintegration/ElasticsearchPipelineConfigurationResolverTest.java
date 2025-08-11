@@ -8,7 +8,7 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.ingest.PipelineConfiguration;
+import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -54,7 +54,7 @@ class ElasticsearchPipelineConfigurationResolverTest {
                     .willReturn(okJson(getMockResponseBody("get-ingest-pipeline-(my-pipeline-id).json"))));
 
             final AtomicReference<Exception> lastException = new AtomicReference<>();
-            final Optional<PipelineConfiguration> resolvedPipelineConfiguration = resolver.resolve("my-pipeline-id", lastException::set);
+            final Optional<PipelineConfigurationBridge> resolvedPipelineConfiguration = resolver.resolve("my-pipeline-id", lastException::set);
             assertThat(lastException.get(), is(nullValue()));
             assertThat(resolvedPipelineConfiguration, isPresent());
             resolvedPipelineConfiguration.ifPresent(pipelineConfiguration -> {
@@ -72,7 +72,7 @@ class ElasticsearchPipelineConfigurationResolverTest {
                     .willReturn(okJson(getMockResponseBody("get-ingest-pipeline-(special char pipeline).json"))));
 
             final AtomicReference<Exception> lastException = new AtomicReference<>();
-            final Optional<PipelineConfiguration> resolvedPipelineConfiguration = resolver.resolve("special char pipeline", lastException::set);
+            final Optional<PipelineConfigurationBridge> resolvedPipelineConfiguration = resolver.resolve("special char pipeline", lastException::set);
             assertThat(lastException.get(), is(nullValue()));
             assertThat(resolvedPipelineConfiguration, isPresent());
             resolvedPipelineConfiguration.ifPresent(pipelineConfiguration -> {
@@ -90,7 +90,7 @@ class ElasticsearchPipelineConfigurationResolverTest {
                     .willReturn(aResponse().withStatus(404)));
 
             final AtomicReference<Exception> lastException = new AtomicReference<>();
-            final Optional<PipelineConfiguration> resolvedPipelineConfiguration = resolver.resolve("where-are-you", lastException::set);
+            final Optional<PipelineConfigurationBridge> resolvedPipelineConfiguration = resolver.resolve("where-are-you", lastException::set);
             assertThat(lastException.get(), is(nullValue())); // not found is not an exception
             assertThat(resolvedPipelineConfiguration, isEmpty());
         });
@@ -103,7 +103,7 @@ class ElasticsearchPipelineConfigurationResolverTest {
                     .willReturn(aResponse().withStatus(403)));
 
             final AtomicReference<Exception> lastException = new AtomicReference<>();
-            final Optional<PipelineConfiguration> resolvedPipelineConfiguration = resolver.resolve("who-am-i", lastException::set);
+            final Optional<PipelineConfigurationBridge> resolvedPipelineConfiguration = resolver.resolve("who-am-i", lastException::set);
             assertThat(lastException.get(), both(is(instanceOf(org.elasticsearch.client.ResponseException.class))).and(
                                                  hasToString(containsString("403 Forbidden")))
             );
@@ -128,12 +128,4 @@ class ElasticsearchPipelineConfigurationResolverTest {
     static String getMockResponseBody(final String name) {
         return readResource(ElasticsearchRestClientWireMockTest.class, Path.of("elasticsearch-mock-responses",name).toString());
     }
-//
-//    static <T,R> void assertThat(T actual, Function<T, R> transform, Matcher<? super R> matcher) {
-//        org.hamcrest.MatcherAssert.assertThat(transform.apply(actual), matcher);
-//    }
-//
-//    static <T> void assertThat(T actual, Matcher<? super T> matcher) {
-//        assertThat(actual, Function.identity(), matcher);
-//    }
 }

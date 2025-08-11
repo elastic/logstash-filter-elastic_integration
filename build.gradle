@@ -307,10 +307,6 @@ task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugi
 
     mergeServiceFiles()
 
-    String shadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
-    relocate('com.fasterxml.jackson', "${shadeNamespace}.com.fasterxml.jackson")
-    relocate('com.maxmind',           "${shadeNamespace}.com.maxmind")
-
     exclude '**/module-info.class'
 }
 
@@ -358,14 +354,14 @@ task shadeElasticsearchLogstashBridge(type: com.github.jengelman.gradle.plugins.
     description "Shades the Elasticsearch logstash-bridge jar"
 
     dependsOn buildElasticsearchLogstashBridge
-    
+
     from("${buildDir}/elasticsearch-source/libs/logstash-bridge/build/distributions") {
         include "elasticsearch-logstash-bridge-*.jar"
     }
-    
+
     archiveFileName = "elasticsearch-logstash-bridge-shaded.jar"
     destinationDirectory = file("${buildDir}/shaded")
-    
+
     exclude '**/module-info.class'
 }
 

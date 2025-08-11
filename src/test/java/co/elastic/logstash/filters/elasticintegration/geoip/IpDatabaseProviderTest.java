@@ -6,13 +6,11 @@
  */
 package co.elastic.logstash.filters.elasticintegration.geoip;
 
-
 import co.elastic.logstash.filters.elasticintegration.util.IngestDocumentUtil;
 import co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil;
-import org.elasticsearch.cluster.metadata.ProjectId;
-import org.elasticsearch.ingest.IngestDocument;
-import org.elasticsearch.ingest.Processor;
-import org.elasticsearch.ingest.geoip.GeoIpProcessor;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.geoip.GeoIpProcessorBridge;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -39,14 +37,14 @@ class IpDatabaseProviderTest {
 
         withVendoredGeoIpDatabaseProvider(geoIpDatabaseProvider -> {
             assertAll("Loaded databases all report valid",
-                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-ASN.mmdb"), is(true)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-City.mmdb"), is(true)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-Country.mmdb"), is(true)));
+                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-ASN.mmdb"), is(true)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-City.mmdb"), is(true)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-Country.mmdb"), is(true)));
 
             assertAll("Non-loaded databases all report invalid",
-                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "GeoLite2-Global.mmdb"), is(false)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "Bananas.mmdb"), is(false)),
-                    () -> assertThat(geoIpDatabaseProvider.isValid(ProjectId.DEFAULT, "Intergalactic.mmdb"), is(false)));
+                    () -> assertThat(geoIpDatabaseProvider.isValid("GeoLite2-Global.mmdb"), is(false)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid("Bananas.mmdb"), is(false)),
+                    () -> assertThat(geoIpDatabaseProvider.isValid("Intergalactic.mmdb"), is(false)));
         });
     }
 
@@ -54,9 +52,9 @@ class IpDatabaseProviderTest {
     void basicASNLookup() throws Exception {
         withVendoredGeoIpDatabaseProvider(geoIpDatabaseProvider -> {
             withGeoipProcessor(geoIpDatabaseProvider, makeConfig("database_file", "GeoLite2-ASN.mmdb"), (processor) -> {
-                final IngestDocument input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
+                final IngestDocumentBridge input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
 
-                final IngestDocument result = processIngestDocumentSynchronously(input, processor);
+                final IngestDocumentBridge result = processIngestDocumentSynchronously(input, processor);
 
                 assertAll(
                         () -> assertThat(result.getFieldValue("geoip.ip", String.class), is(equalTo(EXAMPLE_DOT_COM_INET_ADDRESS))),
@@ -74,9 +72,9 @@ class IpDatabaseProviderTest {
             final Map<String, Object> configOverrides = Map.of("database_file", "GeoLite2-City.mmdb",
                     "properties", List.of("location", "timezone"));
             withGeoipProcessor(geoIpDatabaseProvider, makeConfig(configOverrides), (processor) -> {
-                final IngestDocument input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
+                final IngestDocumentBridge input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
 
-                final IngestDocument result = processIngestDocumentSynchronously(input, processor);
+                final IngestDocumentBridge result = processIngestDocumentSynchronously(input, processor);
 
                 assertAll(
                         () -> assertThat(result.getFieldValue("geoip.location.lat", Double.class), is(closeTo(42.1596, 0.1))),
@@ -91,9 +89,9 @@ class IpDatabaseProviderTest {
     void basicCityDBLookupCountryDetails() throws Exception {
         withVendoredGeoIpDatabaseProvider(ipDatabaseProvider -> {
             withGeoipProcessor(ipDatabaseProvider, makeConfig("database_file", "GeoLite2-City.mmdb"), (processor) -> {
-                final IngestDocument input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
+                final IngestDocumentBridge input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
 
-                final IngestDocument result = processIngestDocumentSynchronously(input, processor);
+                final IngestDocumentBridge result = processIngestDocumentSynchronously(input, processor);
 
                 assertThat(result.getFieldValue("geoip.country_iso_code", String.class), is(equalTo("US")));
             });
@@ -104,9 +102,9 @@ class IpDatabaseProviderTest {
     void basicCountryDBLookupCountryDetails() throws Exception {
         withVendoredGeoIpDatabaseProvider(ipDatabaseProvider -> {
             withGeoipProcessor(ipDatabaseProvider, makeConfig("database_file", "GeoLite2-Country.mmdb"), (processor) -> {
-                final IngestDocument input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
+                final IngestDocumentBridge input = IngestDocumentUtil.createIngestDocument(Map.of("input", EXAMPLE_DOT_COM_INET_ADDRESS));
 
-                final IngestDocument result = processIngestDocumentSynchronously(input, processor);
+                final IngestDocumentBridge result = processIngestDocumentSynchronously(input, processor);
 
                 assertThat(result.getFieldValue("geoip.country_iso_code", String.class), is(equalTo("US")));
             });
@@ -132,16 +130,21 @@ class IpDatabaseProviderTest {
         withGeoIpDatabaseProvider(IpDatabaseProviderTest::loadVendoredGeoIpDatabases, geoIpDatabaseProviderConsumer);
     }
 
-    static void withGeoipProcessor(final IpDatabaseProvider geoIpDatabaseProvider, Map<String, Object> config, ExceptionalConsumer<Processor> geoIpProcessorConsumer) throws Exception {
-        Processor processor = new GeoIpProcessor.Factory("geoip", geoIpDatabaseProvider).create(Map.of(), null, null, config, null);
-        geoIpProcessorConsumer.accept(processor);
+    static void withGeoipProcessor(final IpDatabaseProvider geoIpDatabaseProvider, Map<String, Object> config, ExceptionalConsumer<ProcessorBridge> geoIpProcessorConsumer) throws Exception {
+        final ProcessorBridge bridgeProcessor = ProcessorBridge.fromInternal(
+                new GeoIpProcessorBridge.Factory("geoip", geoIpDatabaseProvider.toInternal()).toInternal()
+                        .create(Map.of(), null, null, config, null));
+        geoIpProcessorConsumer.accept(bridgeProcessor);
     }
 
-    static IngestDocument processIngestDocumentSynchronously(final IngestDocument input, final Processor processor) throws Exception {
+    static IngestDocumentBridge processIngestDocumentSynchronously(final IngestDocumentBridge input, final ProcessorBridge processor) throws Exception {
         if (!processor.isAsync()) {
-            return processor.execute(input);
+            return new IngestDocumentBridge(
+                    processor.toInternal().execute(input.toInternal()).getSourceAndMetadata(),
+                    processor.toInternal().execute(input.toInternal()).getIngestMetadata()
+            );
         } else {
-            final CompletableFuture<IngestDocument> future = new CompletableFuture<>();
+            final CompletableFuture<IngestDocumentBridge> future = new CompletableFuture<>();
             processor.execute(input, (id, ex) -> {
                 if (ex != null) {
                     future.completeExceptionally(ex);
