@@ -13,7 +13,6 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.logstashbridge.core.FailProcessorExceptionBridge;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
 import org.elasticsearch.logstashbridge.core.RefCountingRunnableBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
@@ -179,12 +178,11 @@ public class EventProcessor implements Closeable {
             // If no exception, then the original event is to be _replaced_ by the result
             if (Objects.nonNull(ingestPipelineException)) {
                 // If we had an exception in the IngestPipeline, tag and emit the original Event
-                final Throwable unwrappedException = unwrapException(ingestPipelineException);
-                LOGGER.warn(() -> String.format("ingest pipeline `%s` failed", pipelineName), unwrappedException);
+                LOGGER.warn(() -> String.format("ingest pipeline `%s` failed", pipelineName), ingestPipelineException);
                 request.complete(incomingEvent -> {
                     annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of(
-                            "message", unwrappedException.getMessage(),
-                            "exception", unwrappedException.getClass().getName()
+                            "message", ingestPipelineException.getMessage(),
+                            "exception", ingestPipelineException.getClass().getName()
                     ));
                 });
             } else if (Objects.isNull(resultIngestDocument)) {
@@ -254,13 +252,6 @@ public class EventProcessor implements Closeable {
         meta.forEach((metaKey, metaValue) -> {
             event.setField(String.format(METADATA_FAILURE_TEMPLATE, metaKey), metaValue);
         });
-    }
-
-    static private Throwable unwrapException(final Exception exception) {
-        if (FailProcessorExceptionBridge.isInstanceOf(exception.getCause())) {
-            return exception.getCause();
-        }
-        return exception;
     }
 
     static private String diff(final Event original, final Event changed) {

@@ -8,6 +8,7 @@ package co.elastic.logstash.filters.elasticintegration.ingest;
 
 import co.elastic.logstash.filters.elasticintegration.IngestPipeline;
 import co.elastic.logstash.filters.elasticintegration.IngestPipelineResolver;
+import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
 import org.elasticsearch.logstashbridge.ingest.ConfigurationUtilsBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
@@ -86,7 +87,7 @@ public class PipelineProcessor extends ProcessorBridge.AbstractExternal {
     }
 
 
-    public static class Factory implements ProcessorBridge.Factory {
+    public static class Factory extends ProcessorBridge.Factory.AbstractExternal {
 
         private final IngestPipelineResolver pipelineProvider;
         private final ScriptServiceBridge scriptService;
@@ -98,13 +99,15 @@ public class PipelineProcessor extends ProcessorBridge.AbstractExternal {
 
         @Override
         public ProcessorBridge create(Map<String, ProcessorBridge.Factory> registry,
-                                String processorTag,
-                                String description,
-                                Map<String, Object> config) throws Exception {
+                                      String processorTag,
+                                      String description,
+                                      Map<String, Object> config,
+                                      ProjectIdBridge projectIdBridge) throws Exception {
             String pipeline = ConfigurationUtilsBridge.readStringProperty(TYPE, processorTag, config, "name");
             TemplateScriptBridge.Factory pipelineTemplate = ConfigurationUtilsBridge.compileTemplate(TYPE, processorTag, "name", pipeline, scriptService);
             boolean ignoreMissingPipeline = ConfigurationUtilsBridge.readBooleanProperty(TYPE, processorTag, config, "ignore_missing_pipeline", false);
             return new PipelineProcessor(processorTag, description, pipelineTemplate, pipeline, ignoreMissingPipeline, pipelineProvider);
         }
+
     }
 }

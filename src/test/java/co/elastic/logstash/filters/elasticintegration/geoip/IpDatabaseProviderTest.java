@@ -8,6 +8,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import co.elastic.logstash.filters.elasticintegration.util.IngestDocumentUtil;
 import co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil;
+import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
 import org.elasticsearch.logstashbridge.geoip.GeoIpProcessorBridge;
@@ -131,18 +132,14 @@ class IpDatabaseProviderTest {
     }
 
     static void withGeoipProcessor(final IpDatabaseProvider geoIpDatabaseProvider, Map<String, Object> config, ExceptionalConsumer<ProcessorBridge> geoIpProcessorConsumer) throws Exception {
-        final ProcessorBridge bridgeProcessor = ProcessorBridge.fromInternal(
-                new GeoIpProcessorBridge.Factory("geoip", geoIpDatabaseProvider.toInternal()).toInternal()
-                        .create(Map.of(), null, null, config, null));
+        final GeoIpProcessorBridge.Factory factory = GeoIpProcessorBridge.newFactory(geoIpDatabaseProvider);
+        final ProcessorBridge bridgeProcessor = factory.create(Map.of(), null, null, config, ProjectIdBridge.getDefault());
         geoIpProcessorConsumer.accept(bridgeProcessor);
     }
 
     static IngestDocumentBridge processIngestDocumentSynchronously(final IngestDocumentBridge input, final ProcessorBridge processor) throws Exception {
         if (!processor.isAsync()) {
-            return new IngestDocumentBridge(
-                    processor.toInternal().execute(input.toInternal()).getSourceAndMetadata(),
-                    processor.toInternal().execute(input.toInternal()).getIngestMetadata()
-            );
+            return processor.execute(input);
         } else {
             final CompletableFuture<IngestDocumentBridge> future = new CompletableFuture<>();
             processor.execute(input, (id, ex) -> {

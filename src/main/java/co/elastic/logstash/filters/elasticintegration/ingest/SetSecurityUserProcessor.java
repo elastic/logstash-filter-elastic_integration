@@ -6,6 +6,8 @@
  */
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
+import org.elasticsearch.cluster.metadata.ProjectId;
+import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
 
@@ -49,13 +51,14 @@ public class SetSecurityUserProcessor extends ProcessorBridge.AbstractExternal {
         return false;
     }
 
-    public static final class Factory implements ProcessorBridge.Factory {
+    public static class Factory extends ProcessorBridge.Factory.AbstractExternal {
 
         @Override
         public ProcessorBridge create(Map<String, ProcessorBridge.Factory> registry,
                                       String processorTag,
                                       String description,
-                                      Map<String, Object> config) {
+                                      Map<String, Object> config,
+                                      ProjectIdBridge projectId) {
             String[] supportedConfigs = {"field", "properties"};
             for (String cfg : supportedConfigs) {
                 config.remove(cfg);
