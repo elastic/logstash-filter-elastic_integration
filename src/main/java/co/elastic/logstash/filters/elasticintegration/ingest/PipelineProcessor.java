@@ -9,29 +9,27 @@ package co.elastic.logstash.filters.elasticintegration.ingest;
 import co.elastic.logstash.filters.elasticintegration.IngestPipeline;
 import co.elastic.logstash.filters.elasticintegration.IngestPipelineResolver;
 import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
-import org.elasticsearch.logstashbridge.ingest.ConfigurationUtilsBridge;
-import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
-import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.*;
 import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
-import org.elasticsearch.logstashbridge.script.TemplateScriptBridge;
+import org.elasticsearch.logstashbridge.script.TemplateScriptFactoryBridge;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class PipelineProcessor extends ProcessorBridge.AbstractExternal {
+public class PipelineProcessor extends AbstractExternalProcessorBridge {
     public static final String TYPE = "pipeline";
 
     private final String tag;
     private final String description;
     private final String pipelineName;
 
-    private final TemplateScriptBridge.Factory pipelineTemplate;
+    private final TemplateScriptFactoryBridge pipelineTemplate;
     private final IngestPipelineResolver pipelineProvider;
     private final boolean ignoreMissingPipeline;
 
     private PipelineProcessor(String tag,
                               String description,
-                              TemplateScriptBridge.Factory pipelineTemplate,
+                              TemplateScriptFactoryBridge pipelineTemplate,
                               String pipelineName,
                               boolean ignoreMissingPipeline,
                               IngestPipelineResolver pipelineProvider) {
@@ -87,7 +85,7 @@ public class PipelineProcessor extends ProcessorBridge.AbstractExternal {
     }
 
 
-    public static class Factory extends ProcessorBridge.Factory.AbstractExternal {
+    public static class Factory extends AbstractExternalProcessorFactoryBridge {
 
         private final IngestPipelineResolver pipelineProvider;
         private final ScriptServiceBridge scriptService;
@@ -98,13 +96,13 @@ public class PipelineProcessor extends ProcessorBridge.AbstractExternal {
         }
 
         @Override
-        public ProcessorBridge create(Map<String, ProcessorBridge.Factory> registry,
+        public ProcessorBridge create(Map<String, ProcessorFactoryBridge> registry,
                                       String processorTag,
                                       String description,
                                       Map<String, Object> config,
                                       ProjectIdBridge projectIdBridge) throws Exception {
             String pipeline = ConfigurationUtilsBridge.readStringProperty(TYPE, processorTag, config, "name");
-            TemplateScriptBridge.Factory pipelineTemplate = ConfigurationUtilsBridge.compileTemplate(TYPE, processorTag, "name", pipeline, scriptService);
+            TemplateScriptFactoryBridge pipelineTemplate = ConfigurationUtilsBridge.compileTemplate(TYPE, processorTag, "name", pipeline, scriptService);
             boolean ignoreMissingPipeline = ConfigurationUtilsBridge.readBooleanProperty(TYPE, processorTag, config, "ignore_missing_pipeline", false);
             return new PipelineProcessor(processorTag, description, pipelineTemplate, pipeline, ignoreMissingPipeline, pipelineProvider);
         }

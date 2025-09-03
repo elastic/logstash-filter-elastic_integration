@@ -103,7 +103,7 @@ public class IngestDuplexMarshaller {
         final Timestamp eventTimestamp = safeTimestampFrom(event.getField(org.logstash.Event.TIMESTAMP));
         Map<String, Object> ingestMetadata = Map.of(INGEST_METADATA_TIMESTAMP_FIELD, Objects.requireNonNullElseGet(eventTimestamp, Timestamp::now).toString());
 
-        return new IngestDocumentBridge(sourceAndMetadata, ingestMetadata);
+        return IngestDocumentBridge.create(sourceAndMetadata, ingestMetadata);
     }
 
     /**

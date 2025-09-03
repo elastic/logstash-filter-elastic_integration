@@ -6,15 +6,13 @@
  */
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
-import org.elasticsearch.cluster.metadata.ProjectId;
 import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
-import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
-import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.*;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class SetSecurityUserProcessor extends ProcessorBridge.AbstractExternal {
+public class SetSecurityUserProcessor extends AbstractExternalProcessorBridge {
 
     public static final String TYPE = "set_security_user";
     private final String tag;
@@ -51,10 +49,10 @@ public class SetSecurityUserProcessor extends ProcessorBridge.AbstractExternal {
         return false;
     }
 
-    public static class Factory extends ProcessorBridge.Factory.AbstractExternal {
+    public static class Factory extends AbstractExternalProcessorFactoryBridge {
 
         @Override
-        public ProcessorBridge create(Map<String, ProcessorBridge.Factory> registry,
+        public ProcessorBridge create(Map<String, ProcessorFactoryBridge> registry,
                                       String processorTag,
                                       String description,
                                       Map<String, Object> config,

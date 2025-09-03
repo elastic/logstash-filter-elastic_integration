@@ -368,11 +368,11 @@ class LogStash::Filters::ElasticIntegration < LogStash::Filters::Base
 
   def initialize_event_processor!
     java_import('co.elastic.logstash.filters.elasticintegration.EventProcessorBuilder')
-    java_import('org.elasticsearch.logstashbridge.geoip.GeoIpProcessorBridge')
+    java_import('org.elasticsearch.logstashbridge.geoip.GeoIpProcessorFactoryBridge')
 
     @event_processor = EventProcessorBuilder.fromElasticsearch(@elasticsearch_rest_client, extract_immutable_config)
                                             .setFilterMatchListener(method(:filter_matched_java).to_proc)
-                                            .addProcessor("geoip") { GeoIpProcessorBridge::newFactory(@geoip_database_provider) }
+                                            .addProcessor("geoip") { GeoIpProcessorFactoryBridge::create(@geoip_database_provider) }
                                             .build(@plugin_context)
   rescue => exception
     raise_config_error!("configuration did not produce an EventProcessor: #{exception}")

@@ -12,6 +12,7 @@ import org.apache.logging.log4j.Logger;
 import org.elasticsearch.logstashbridge.ingest.PipelineBridge;
 import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
 import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
 
 import java.util.HashMap;
@@ -24,7 +25,7 @@ import java.util.Optional;
  */
 public class IngestPipelineFactory {
     private final ScriptServiceBridge scriptService;
-    private final Map<String, ProcessorBridge.Factory> processorFactories;
+    private final Map<String, ProcessorFactoryBridge> processorFactories;
 
     private static final Logger LOGGER = LogManager.getLogger(IngestPipelineFactory.class);
 
@@ -33,13 +34,13 @@ public class IngestPipelineFactory {
     }
 
     private IngestPipelineFactory(final ScriptServiceBridge scriptService,
-                                  final Map<String, ProcessorBridge.Factory> processorFactories) {
+                                  final Map<String, ProcessorFactoryBridge> processorFactories) {
         this.scriptService = scriptService;
         this.processorFactories = Map.copyOf(processorFactories);
     }
 
-    public IngestPipelineFactory withProcessors(final Map<String, ProcessorBridge.Factory> processorFactories) {
-        final Map<String, ProcessorBridge.Factory> intermediate = new HashMap<>(this.processorFactories);
+    public IngestPipelineFactory withProcessors(final Map<String, ProcessorFactoryBridge> processorFactories) {
+        final Map<String, ProcessorFactoryBridge> intermediate = new HashMap<>(this.processorFactories);
         intermediate.putAll(processorFactories);
         return new IngestPipelineFactory(scriptService, intermediate);
     }
@@ -63,7 +64,7 @@ public class IngestPipelineFactory {
      *         resolve pipelines through the provided {@link IngestPipelineResolver}.
      */
     public IngestPipelineFactory withIngestPipelineResolver(final IngestPipelineResolver ingestPipelineResolver) {
-        final Map<String, ProcessorBridge.Factory> modifiedProcessorFactories = new HashMap<>(this.processorFactories);
+        final Map<String, ProcessorFactoryBridge> modifiedProcessorFactories = new HashMap<>(this.processorFactories);
         modifiedProcessorFactories.put(PipelineProcessor.TYPE, new PipelineProcessor.Factory(ingestPipelineResolver, this.scriptService));
         return new IngestPipelineFactory(scriptService, modifiedProcessorFactories);
     }

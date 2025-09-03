@@ -22,7 +22,8 @@ import org.elasticsearch.client.RestClient;
 import org.elasticsearch.logstashbridge.common.SettingsBridge;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
 import org.elasticsearch.logstashbridge.env.EnvironmentBridge;
-import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorParametersBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestCommonPluginBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestUserAgentPluginBridge;
@@ -196,7 +197,7 @@ public class EventProcessorBuilder {
         return this;
     }
 
-    public EventProcessorBuilder addProcessor(final String type, final Supplier<ProcessorBridge.Factory> processorFactorySupplier) {
+    public EventProcessorBuilder addProcessor(final String type, final Supplier<ProcessorFactoryBridge> processorFactorySupplier) {
         return this.addProcessorsFromPlugin(SingleProcessorIngestPlugin.of(type, processorFactorySupplier));
     }
 
@@ -226,14 +227,14 @@ public class EventProcessorBuilder {
         try {
             final ArrayList<Service> services = new ArrayList<>();
 
-            final ThreadPoolBridge threadPool = new ThreadPoolBridge(settings);
-            resourcesToClose.add(() -> ThreadPoolBridge.terminate(threadPool, 10, TimeUnit.SECONDS));
+            final ThreadPoolBridge threadPool = ThreadPoolBridge.create(settings);
+            resourcesToClose.add(() -> threadPool.terminate(10, TimeUnit.SECONDS));
 
-            final ScriptServiceBridge scriptService = new ScriptServiceBridge(settings, threadPool::absoluteTimeInMillis);
+            final ScriptServiceBridge scriptService = ScriptServiceBridge.create(settings, threadPool::absoluteTimeInMillis);
             resourcesToClose.add(scriptService);
 
-            final EnvironmentBridge env = new EnvironmentBridge(settings, null);
-            final ProcessorBridge.Parameters processorParameters = new ProcessorBridge.Parameters(env, scriptService, threadPool);
+            final EnvironmentBridge env = EnvironmentBridge.create(settings, null);
+            final ProcessorParametersBridge processorParameters = ProcessorParametersBridge.create(env, scriptService, threadPool);
 
             IngestPipelineFactory ingestPipelineFactory = new IngestPipelineFactory(scriptService);
             for (Supplier<IngestPluginBridge> ingestPluginSupplier : ingestPlugins) {
@@ -241,7 +242,7 @@ public class EventProcessorBuilder {
                 if (ingestPlugin instanceof Closeable closeableIngestPlugin) {
                     resourcesToClose.add(closeableIngestPlugin);
                 }
-                final Map<String, ProcessorBridge.Factory> processorFactories = ingestPlugin.getProcessors(processorParameters);
+                final Map<String, ProcessorFactoryBridge> processorFactories = ingestPlugin.getProcessors(processorParameters);
                 ingestPipelineFactory = ingestPipelineFactory.withProcessors(processorFactories);
             }
 

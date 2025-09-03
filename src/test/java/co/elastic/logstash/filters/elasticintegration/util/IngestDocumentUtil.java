@@ -16,6 +16,6 @@ public class IngestDocumentUtil {
         final Map<String, Object> merged_source_and_metadata = new HashMap<>(BASE_SOURCE_AND_METADATA);
         merged_source_and_metadata.putAll(data);
 
-        return new IngestDocumentBridge(merged_source_and_metadata, Map.of("timestamp", Instant.now().toString()));
+        return IngestDocumentBridge.create(merged_source_and_metadata, Map.of("timestamp", Instant.now().toString()));
     }
 }

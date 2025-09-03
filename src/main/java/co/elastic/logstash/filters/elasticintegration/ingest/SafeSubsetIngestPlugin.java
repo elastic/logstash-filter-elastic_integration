@@ -1,7 +1,8 @@
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
-import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorParametersBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
 
 import javax.annotation.Nonnull;
@@ -35,14 +36,14 @@ public class SafeSubsetIngestPlugin implements IngestPluginBridge, Closeable {
     }
 
     @Override
-    public Map<String, ProcessorBridge.Factory> getProcessors(ProcessorBridge.Parameters parameters) {
-        final Map<String, ProcessorBridge.Factory> providedProcessors = this.ingestPlugin.getProcessors(parameters);
+    public Map<String, ProcessorFactoryBridge> getProcessors(ProcessorParametersBridge parameters) {
+        final Map<String, ProcessorFactoryBridge> providedProcessors = this.ingestPlugin.getProcessors(parameters);
 
-        final Map<String, ProcessorBridge.Factory> acceptedProcessors = new HashMap<>();
+        final Map<String, ProcessorFactoryBridge> acceptedProcessors = new HashMap<>();
         final Set<String> missingProcessors = new HashSet<>();
 
         for (String requiredProcessor : this.requiredProcessors) {
-            final ProcessorBridge.Factory processor = providedProcessors.get(requiredProcessor);
+            final ProcessorFactoryBridge processor = providedProcessors.get(requiredProcessor);
             if (!Objects.nonNull(processor)) {
                 missingProcessors.add(requiredProcessor);
             } else {

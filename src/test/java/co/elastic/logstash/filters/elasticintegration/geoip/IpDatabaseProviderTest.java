@@ -11,7 +11,7 @@ import co.elastic.logstash.filters.elasticintegration.util.ResourcesUtil;
 import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
 import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
-import org.elasticsearch.logstashbridge.geoip.GeoIpProcessorBridge;
+import org.elasticsearch.logstashbridge.geoip.GeoIpProcessorFactoryBridge;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -132,7 +132,7 @@ class IpDatabaseProviderTest {
     }
 
     static void withGeoipProcessor(final IpDatabaseProvider geoIpDatabaseProvider, Map<String, Object> config, ExceptionalConsumer<ProcessorBridge> geoIpProcessorConsumer) throws Exception {
-        final GeoIpProcessorBridge.Factory factory = GeoIpProcessorBridge.newFactory(geoIpDatabaseProvider);
+        final GeoIpProcessorFactoryBridge factory = GeoIpProcessorFactoryBridge.create(geoIpDatabaseProvider);
         final ProcessorBridge bridgeProcessor = factory.create(Map.of(), null, null, config, ProjectIdBridge.getDefault());
         geoIpProcessorConsumer.accept(bridgeProcessor);
     }

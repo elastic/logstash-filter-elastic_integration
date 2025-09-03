@@ -9,6 +9,7 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.logstashbridge.core.CheckedBiFunctionBridge;
+import org.elasticsearch.logstashbridge.geoip.AbstractExternalIpDatabaseBridge;
 import org.elasticsearch.logstashbridge.geoip.IpDatabaseBridge;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NoCache;
@@ -20,7 +21,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public class IpDatabaseAdapter extends IpDatabaseBridge.AbstractExternal {
+public class IpDatabaseAdapter extends AbstractExternalIpDatabaseBridge {
     private static final Logger LOGGER = LogManager.getLogger(IpDatabaseAdapter.class);
 
     private final Reader databaseReader;

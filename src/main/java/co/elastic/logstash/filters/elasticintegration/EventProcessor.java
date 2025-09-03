@@ -92,7 +92,7 @@ public class EventProcessor implements Closeable {
         final CountDownLatch latch = new CountDownLatch(1);
         final IntegrationBatch batch = new IntegrationBatch(incomingEvents);
 
-        RefCountingRunnableBridge ref = new RefCountingRunnableBridge(latch::countDown);
+        RefCountingRunnableBridge ref = RefCountingRunnableBridge.create(latch::countDown);
         try {
             batch.eachRequest(ref::acquire, this::processRequest);
         } finally {

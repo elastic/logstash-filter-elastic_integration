@@ -9,8 +9,8 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
+import org.elasticsearch.logstashbridge.geoip.AbstractExternalIpDatabaseProviderBridge;
 import org.elasticsearch.logstashbridge.geoip.IpDatabaseBridge;
-import org.elasticsearch.logstashbridge.geoip.IpDatabaseProviderBridge;
 
 import java.io.Closeable;
 import java.io.File;
@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
-public class IpDatabaseProvider extends IpDatabaseProviderBridge.AbstractExternal implements Closeable {
+public class IpDatabaseProvider extends AbstractExternalIpDatabaseProviderBridge implements Closeable {
 
     private static final Logger LOGGER = LogManager.getLogger(IpDatabaseProvider.class);
 
