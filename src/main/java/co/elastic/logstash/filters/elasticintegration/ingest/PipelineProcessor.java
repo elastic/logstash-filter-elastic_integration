@@ -9,7 +9,12 @@ package co.elastic.logstash.filters.elasticintegration.ingest;
 import co.elastic.logstash.filters.elasticintegration.IngestPipeline;
 import co.elastic.logstash.filters.elasticintegration.IngestPipelineResolver;
 import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
-import org.elasticsearch.logstashbridge.ingest.*;
+import org.elasticsearch.logstashbridge.ingest.AbstractExternalProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.AbstractExternalProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.ingest.ConfigurationUtilsBridge;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
 import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
 import org.elasticsearch.logstashbridge.script.TemplateScriptFactoryBridge;
 

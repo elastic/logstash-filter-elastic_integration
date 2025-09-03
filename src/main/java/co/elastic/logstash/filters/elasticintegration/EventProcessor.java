@@ -92,11 +92,8 @@ public class EventProcessor implements Closeable {
         final CountDownLatch latch = new CountDownLatch(1);
         final IntegrationBatch batch = new IntegrationBatch(incomingEvents);
 
-        RefCountingRunnableBridge ref = RefCountingRunnableBridge.create(latch::countDown);
-        try {
+        try (RefCountingRunnableBridge ref = RefCountingRunnableBridge.create(latch::countDown)) {
             batch.eachRequest(ref::acquire, this::processRequest);
-        } finally {
-            ref.close();
         }
 
         // await on work that has gone async

@@ -7,7 +7,11 @@
 package co.elastic.logstash.filters.elasticintegration.ingest;
 
 import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
-import org.elasticsearch.logstashbridge.ingest.*;
+import org.elasticsearch.logstashbridge.ingest.AbstractExternalProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.AbstractExternalProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
