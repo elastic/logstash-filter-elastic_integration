@@ -46,7 +46,7 @@ public class PipelineConfigurationFactory {
     }
 
     public PipelineConfigurationBridge parseConfigOnly(final String pipelineId, final String jsonEncodedConfig) {
-        return new PipelineConfigurationBridge(pipelineId, jsonEncodedConfig);
+        return PipelineConfigurationBridge.create(pipelineId, jsonEncodedConfig);
     }
 
 
@@ -66,7 +66,7 @@ public class PipelineConfigurationFactory {
         }
 
         private static PipelineConfigurationBridge init(final String id, final String json) {
-            return new PipelineConfigurationBridge(id, json);
+            return PipelineConfigurationBridge.create(id, json);
         }
     }
 }
