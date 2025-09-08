@@ -6,7 +6,7 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
-import org.elasticsearch.ingest.PipelineConfiguration;
+import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -28,7 +28,7 @@ class LocalDirectoryPipelineConfigurationResolverTest {
 
         final PipelineConfigurationResolver pcr = new LocalDirectoryPipelineConfigurationResolver(pipelinesResourcePath);
 
-        final Optional<PipelineConfiguration> resolved = pcr.resolve("simple-mutate");
+        final Optional<PipelineConfigurationBridge> resolved = pcr.resolve("simple-mutate");
         assertThat(resolved.isPresent(), is(true));
         assertThat(resolved.get().getId(), is(equalTo("simple-mutate")));
     }
@@ -39,7 +39,7 @@ class LocalDirectoryPipelineConfigurationResolverTest {
 
         final PipelineConfigurationResolver pcr = new LocalDirectoryPipelineConfigurationResolver(pipelinesResourcePath);
 
-        final Optional<PipelineConfiguration> resolved = pcr.resolve("not-there");
+        final Optional<PipelineConfigurationBridge> resolved = pcr.resolve("not-there");
         assertThat(resolved.isPresent(), is(false));
     }
 
@@ -50,12 +50,12 @@ class LocalDirectoryPipelineConfigurationResolverTest {
 
         final PipelineConfigurationResolver pcr = new LocalDirectoryPipelineConfigurationResolver(pipelinesResourcePath);
 
-        final Optional<PipelineConfiguration> resolved = pcr.resolve("simple-mutate");
+        final Optional<PipelineConfigurationBridge> resolved = pcr.resolve("simple-mutate");
         assertThat(resolved, is(notNullValue()));
         assertThat(resolved.isPresent(), is(false));
 
         final AtomicReference<Exception> lastExceptionObserved = new AtomicReference<>();
-        final Optional<PipelineConfiguration> resolvedObserved = pcr.resolve("simple-mutate", lastExceptionObserved::set);
+        final Optional<PipelineConfigurationBridge> resolvedObserved = pcr.resolve("simple-mutate", lastExceptionObserved::set);
         assertAll("observed resolve", ()-> {
                     assertThat(resolvedObserved.isPresent(), is(false));
                     assertThat(lastExceptionObserved.get(), is(notNullValue()));
@@ -67,7 +67,7 @@ class LocalDirectoryPipelineConfigurationResolverTest {
 
         // recovery
         ensureSetFileReadable(pipelinesResourcePath.resolve("simple-mutate.json").toFile(), true);
-        final Optional<PipelineConfiguration> resolvedRecovered = pcr.resolve("simple-mutate");
+        final Optional<PipelineConfigurationBridge> resolvedRecovered = pcr.resolve("simple-mutate");
         assertAll("recovery", () -> {
             assertThat(resolvedRecovered, is(notNullValue()));
             assertThat(resolvedRecovered.isPresent(), is(true));
@@ -82,12 +82,12 @@ class LocalDirectoryPipelineConfigurationResolverTest {
 
         final PipelineConfigurationResolver pcr = new LocalDirectoryPipelineConfigurationResolver(pipelinesResourcePath);
 
-        final Optional<PipelineConfiguration> resolved = pcr.resolve("not-there");
+        final Optional<PipelineConfigurationBridge> resolved = pcr.resolve("not-there");
         assertThat(resolved, is(notNullValue()));
         assertThat(resolved.isPresent(), is(false));
 
         final AtomicReference<Exception> lastExceptionObserved = new AtomicReference<>();
-        final Optional<PipelineConfiguration> resolvedObserved = pcr.resolve("simple-mutate", lastExceptionObserved::set);
+        final Optional<PipelineConfigurationBridge> resolvedObserved = pcr.resolve("simple-mutate", lastExceptionObserved::set);
         assertAll("observed resolve", ()-> {
             assertThat(resolvedObserved.isPresent(), is(false));
             assertThat(lastExceptionObserved.get(), is(notNullValue()));
@@ -99,7 +99,7 @@ class LocalDirectoryPipelineConfigurationResolverTest {
 
         // recovery
         ensureSetFileWritable(pipelinesResourcePath.resolve("simple-mutate.json").toFile(), false);
-        final Optional<PipelineConfiguration> resolvedRecovered = pcr.resolve("simple-mutate");
+        final Optional<PipelineConfigurationBridge> resolvedRecovered = pcr.resolve("simple-mutate");
         assertAll("recovery", () -> {
             assertThat(resolvedRecovered, is(notNullValue()));
             assertThat(resolvedRecovered.isPresent(), is(true));

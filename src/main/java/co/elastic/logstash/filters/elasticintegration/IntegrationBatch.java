@@ -7,7 +7,7 @@
 package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
-import org.elasticsearch.core.Releasable;
+import org.elasticsearch.logstashbridge.core.ReleasableBridge;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -22,7 +22,7 @@ public class IntegrationBatch {
         this.events = new ArrayList<>(events);
     }
 
-    void eachRequest(Supplier<Releasable> releasableSupplier, Consumer<IntegrationRequest> consumer) {
+    void eachRequest(Supplier<ReleasableBridge> releasableSupplier, Consumer<IntegrationRequest> consumer) {
         for (int i = 0; i < this.events.size(); i++) {
             consumer.accept(new Request(i, releasableSupplier.get()));
         }
@@ -30,9 +30,9 @@ public class IntegrationBatch {
 
     private class Request implements IntegrationRequest {
         private final int idx;
-        private final Releasable handle;
+        private final ReleasableBridge handle;
 
-        public Request(final int idx, final Releasable releasable) {
+        public Request(final int idx, final ReleasableBridge releasable) {
             this.idx = idx;
             this.handle = releasable;
         }

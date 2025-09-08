@@ -9,17 +9,16 @@ package co.elastic.logstash.filters.elasticintegration;
 import co.elastic.logstash.filters.elasticintegration.resolver.AbstractSimpleResolver;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.ingest.PipelineConfiguration;
+import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Optional;
-import java.util.function.Consumer;
 
 public class LocalDirectoryPipelineConfigurationResolver
-        extends AbstractSimpleResolver<String,PipelineConfiguration>
+        extends AbstractSimpleResolver<String,PipelineConfigurationBridge>
         implements PipelineConfigurationResolver {
 
     private static final Logger LOGGER = LogManager.getLogger(LocalDirectoryPipelineConfigurationResolver.class);
@@ -32,7 +31,7 @@ public class LocalDirectoryPipelineConfigurationResolver
     }
 
     @Override
-    public Optional<PipelineConfiguration> resolveSafely(final String pipelineName) throws Exception {
+    public Optional<PipelineConfigurationBridge> resolveSafely(final String pipelineName) throws Exception {
         final Path pipelinePath = localDirectory.resolve(sanitizePath(pipelineName) + ".json");
         LOGGER.trace(() -> String.format("RESOLVING `%s` -> `%s`", pipelineName, pipelinePath));
         final File pipelineFile = pipelinePath.toFile();

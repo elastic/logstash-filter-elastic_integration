@@ -165,6 +165,14 @@ def _requiredLogstashJar(pathPrefix, jarSpec, flavorSpec = null) {
     }
 }
 
+static OutputStreamFunneler outputStreamFunneler(File logFile) {
+    logFile.parentFile.mkdirs()
+    logFile.delete()
+    logFile.createNewFile()
+
+    return new OutputStreamFunneler(new LazyFileOutputStream(logFile))
+}
+
 // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
 String githubArchivePath(repo, treeish="main", archiveFormat="zip") {
     def pathFragment = {
@@ -203,8 +211,10 @@ task downloadElasticsearchSourceZip(type: Download) {
 task unzipDownloadedElasticsearchSourceZip(dependsOn: downloadElasticsearchSourceZip, type: Copy) {
     description "extracts Elasticsearch source from a downloaded zip file"
 
+    ext.location = "${buildDir}/elasticsearch-source/"
+
     from zipTree(downloadElasticsearchSourceZip.dest)
-    into "${buildDir}/elasticsearch-source/"
+    into ext.location
     eachFile {
         // strip top-level directory
         path = path.replaceFirst(/^.+?\//, "")
@@ -216,15 +226,14 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
 
     def logFile = project.file("${buildDir}/elasticsearch-build.log")
     doFirst {
-        def funneler = new OutputStreamFunneler(new LazyFileOutputStream(logFile))
+        def funneler = outputStreamFunneler(logFile)
         standardOutput = funneler.funnelInstance
         errorOutput = funneler.funnelInstance
     }
 
-    def esSource = "${buildDir}/elasticsearch-source/"
+    def esSource = "${unzipDownloadedElasticsearchSourceZip.outputs.files.singleFile}"
     def esBuildDir = "${esSource}/build"
 
-    inputs.dir esSource
     outputs.dir esBuildDir
 
     ext.buildRoot = esBuildDir
@@ -238,7 +247,7 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
     ext.module = { moduleName -> localDistroResult.map { "${it}/modules/${moduleName}"} }
 
     workingDir esSource
-    commandLine "./gradlew", "localDistro"
+    commandLine "./gradlew", "--stacktrace", "localDistro"
 
     ignoreExitValue true // handled in doLast
     doLast {
@@ -260,20 +269,22 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
 task buildElasticsearchLogstashBridge(type: Exec) {
     description "builds logstash-bridge lib module"
 
-    dependsOn buildElasticsearchLocalDistro
+    dependsOn unzipDownloadedElasticsearchSourceZip
+    dependsOn buildElasticsearchLocalDistro // mustRunAfter?
 
     def logFile = project.file("${buildDir}/logstash-bridge-build.log")
     doFirst {
-        def funneler = new OutputStreamFunneler(new LazyFileOutputStream(logFile))
+        def funneler = outputStreamFunneler(logFile)
         standardOutput = funneler.funnelInstance
         errorOutput = funneler.funnelInstance
     }
 
-    def esSource = "${buildDir}/elasticsearch-source/"
+    def esSource = "${unzipDownloadedElasticsearchSourceZip.outputs.files.singleFile}"
     def esBuildDir = "${esSource}/build"
 
-    inputs.dir esSource
-    outputs.dir "${esBuildDir}/libs/logstash-bridge"
+    inputs.dir "${esSource}/libs/logstash-bridge"
+
+    outputs.dir("${esSource}/libs/logstash-bridge/build/distributions")
 
     ext.buildRoot = esBuildDir
     workingDir esSource
@@ -295,6 +306,28 @@ task buildElasticsearchLogstashBridge(type: Exec) {
     }
 }
 
+def ingestGeoipPluginShadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
+
+/**
+ * The StableBridge exposes GeoIP plugin internals, so it needs to relocate references to
+ * its bundled dependencies to match the shaded locations in our import of that plugin.
+ */
+task shadeElasticsearchStableBridge(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades Maxmind dependencies"
+
+    dependsOn buildElasticsearchLogstashBridge
+
+    from(buildElasticsearchLogstashBridge)
+
+    archiveFileName = "logstash-stable-bridge-shaded.jar"
+    destinationDirectory = file("${buildDir}/shaded")
+
+    relocate('com.fasterxml.jackson', "${ingestGeoipPluginShadeNamespace}.com.fasterxml.jackson")
+    relocate('com.maxmind',           "${ingestGeoipPluginShadeNamespace}.com.maxmind")
+
+    mergeServiceFiles()
+}
+
 task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades embedded dependencies of the Elasticsearch Ingest GeoIP module"
 
@@ -305,14 +338,15 @@ task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugi
     archiveFileName = 'ingest-geoip-shaded.jar'
     destinationDirectory = file("${buildDir}/shaded")
 
-    mergeServiceFiles()
+    relocate('com.fasterxml.jackson', "${ingestGeoipPluginShadeNamespace}.com.fasterxml.jackson")
+    relocate('com.maxmind',           "${ingestGeoipPluginShadeNamespace}.com.maxmind")
 
-    String shadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
-    relocate('com.fasterxml.jackson', "${shadeNamespace}.com.fasterxml.jackson")
-    relocate('com.maxmind',           "${shadeNamespace}.com.maxmind")
+    mergeServiceFiles()
 
     exclude '**/module-info.class'
 }
+
+def ingestGrokPluginShadeNamespace = "org.elasticsearch.grok.shaded"
 
 task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades embedded dependencies of the Elasticsearch Grok implementation"
@@ -329,13 +363,16 @@ task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plug
     destinationDirectory = file("${buildDir}/shaded")
 
     mergeServiceFiles()
-    String shadeNamespace = "org.elasticsearch.grok.shaded"
-    relocate('org.joni', "${shadeNamespace}.org.joni")
-    relocate('org.jcodings', "${shadeNamespace}.org.jcodings")
+    relocate('org.joni', "${ingestGrokPluginShadeNamespace}.org.joni")
+    relocate('org.jcodings', "${ingestGrokPluginShadeNamespace}.org.jcodings")
 
     exclude '**/module-info.class'
 }
 
+/**
+ * The x-pack redact plugin reaches into the grok plugin's implementation, so
+ * they both need to point to the same relocated shaded components.
+ */
 task shadeElasticsearchRedactPlugin(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades Elasticsearch Redact plugin to reference Grok's shaded dependencies"
     dependsOn buildElasticsearchLocalDistro
@@ -347,25 +384,9 @@ task shadeElasticsearchRedactPlugin(type: com.github.jengelman.gradle.plugins.sh
     destinationDirectory = file("${buildDir}/shaded")
 
     // relocate elasticsearch-grok's dependencies to match
-    String shadeNamespace = "org.elasticsearch.grok.shaded"
-    relocate('org.joni', "${shadeNamespace}.org.joni")
-    relocate('org.jcodings', "${shadeNamespace}.org.jcodings")
+    relocate('org.joni', "${ingestGrokPluginShadeNamespace}.org.joni")
+    relocate('org.jcodings', "${ingestGrokPluginShadeNamespace}.org.jcodings")
 
-    exclude '**/module-info.class'
-}
-
-task shadeElasticsearchLogstashBridge(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
-    description "Shades the Elasticsearch logstash-bridge jar"
-
-    dependsOn buildElasticsearchLogstashBridge
-    
-    from("${buildDir}/elasticsearch-source/libs/logstash-bridge/build/distributions") {
-        include "elasticsearch-logstash-bridge-*.jar"
-    }
-    
-    archiveFileName = "elasticsearch-logstash-bridge-shaded.jar"
-    destinationDirectory = file("${buildDir}/shaded")
-    
     exclude '**/module-info.class'
 }
 
@@ -373,11 +394,10 @@ task importMinimalElasticsearch() {
     description "Imports minimal portions of Elasticsearch localDistro"
 
     dependsOn buildElasticsearchLocalDistro
-    dependsOn buildElasticsearchLogstashBridge
+    dependsOn shadeElasticsearchStableBridge
     dependsOn shadeElasticsearchIngestGeoIpModule
     dependsOn shadeElasticsearchGrokImplementation
     dependsOn shadeElasticsearchRedactPlugin
-    dependsOn shadeElasticsearchLogstashBridge
 
     ext.jars = "${buildDir}/elasticsearch-minimal-jars"
 
@@ -396,7 +416,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
             }
-            from(shadeElasticsearchLogstashBridge)
+            from(shadeElasticsearchStableBridge.outputs.files.singleFile)
             from(shadeElasticsearchGrokImplementation)
             from(buildElasticsearchLocalDistro.module("x-pack-core"))
 

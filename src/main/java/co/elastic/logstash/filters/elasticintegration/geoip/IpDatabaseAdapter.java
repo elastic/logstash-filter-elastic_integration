@@ -8,9 +8,9 @@ package co.elastic.logstash.filters.elasticintegration.geoip;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.ExceptionsHelper;
-import org.elasticsearch.common.CheckedBiFunction;
-import org.elasticsearch.ingest.geoip.IpDatabase;
+import org.elasticsearch.logstashbridge.core.CheckedBiFunctionBridge;
+import org.elasticsearch.logstashbridge.geoip.AbstractExternalIpDatabaseBridge;
+import org.elasticsearch.logstashbridge.geoip.IpDatabaseBridge;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NoCache;
 import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
@@ -21,7 +21,7 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Optional;
 
-public class IpDatabaseAdapter implements IpDatabase {
+public class IpDatabaseAdapter extends AbstractExternalIpDatabaseBridge {
     private static final Logger LOGGER = LogManager.getLogger(IpDatabaseAdapter.class);
 
     private final Reader databaseReader;
@@ -40,12 +40,19 @@ public class IpDatabaseAdapter implements IpDatabase {
     }
 
     @Override
-    public <RESPONSE> RESPONSE getResponse(String ipAddress, CheckedBiFunction<Reader, String, RESPONSE, Exception> responseProvider) {
+    public <RESPONSE> RESPONSE getResponse(String ipAddress, CheckedBiFunctionBridge<Reader, String, RESPONSE, Exception> responseProvider) {
         try {
             return responseProvider.apply(this.databaseReader, ipAddress);
         } catch (Exception e) {
-            throw ExceptionsHelper.convertToRuntime(e);
+            throw convertToRuntime(e);
         }
+    }
+
+    private static RuntimeException convertToRuntime(final Exception e) {
+        if (e instanceof RuntimeException re) {
+            return re;
+        }
+        return new RuntimeException(e);
     }
 
     @Override
@@ -74,7 +81,7 @@ public class IpDatabaseAdapter implements IpDatabase {
         private File databasePath;
         private NodeCache nodeCache;
 
-        public Builder(File databasePath) {
+        public Builder(final File databasePath) {
             this.databasePath = databasePath;
         }
 

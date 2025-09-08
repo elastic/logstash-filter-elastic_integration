@@ -6,28 +6,28 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
-import org.elasticsearch.ingest.IngestDocument;
-import org.elasticsearch.ingest.Pipeline;
-import org.elasticsearch.ingest.PipelineConfiguration;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
+import org.elasticsearch.logstashbridge.ingest.PipelineBridge;
+import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
- * An {@link IngestPipeline} is a Logstash-internal wrapper for an Elasticsearch Ingest {@link Pipeline}.
+ * An {@link IngestPipeline} is a Logstash-internal wrapper for an Elasticsearch Ingest {@link PipelineBridge}.
  */
 public class IngestPipeline {
-    private final PipelineConfiguration pipelineConfiguration;
-    private final Pipeline innerPipeline;
+    private final PipelineConfigurationBridge pipelineConfiguration;
+    private final PipelineBridge innerPipeline;
 
     /**
-     * @see IngestPipelineFactory#create(PipelineConfiguration)
+     * @see IngestPipelineFactory#create(PipelineConfigurationBridge)
      *
      * @param pipelineConfiguration the source ingest pipeline configuration
      * @param innerPipeline an instantiated ingest pipeline
      */
-    IngestPipeline(final PipelineConfiguration pipelineConfiguration,
-                   final Pipeline innerPipeline) {
+    IngestPipeline(final PipelineConfigurationBridge pipelineConfiguration,
+                   final PipelineBridge innerPipeline) {
         this.pipelineConfiguration = pipelineConfiguration;
         this.innerPipeline = innerPipeline;
     }
@@ -37,13 +37,13 @@ public class IngestPipeline {
     }
 
     /**
-     * This method "quacks like" its counterpart in {@link Pipeline#execute(IngestDocument, BiConsumer)}.
+     * This method "quacks like" its counterpart in {@link PipelineBridge#execute(IngestDocumentBridge, BiConsumer)}.
      *
-     * @param ingestDocument the Elasticsearch {@link IngestDocument} to execute
+     * @param ingestDocument the Elasticsearch {@link IngestDocumentBridge} to execute
      * @param handler a {@link BiConsumer} that handles the result XOR an exception
      */
-    public void execute(final IngestDocument ingestDocument,
-                        final BiConsumer<IngestDocument, Exception> handler) {
+    public void execute(final IngestDocumentBridge ingestDocument,
+                        final BiConsumer<IngestDocumentBridge, Exception> handler) {
         // IngestDocument#executePipeline includes cyclic reference handling
         ingestDocument.executePipeline(this.innerPipeline, handler);
     }

@@ -8,37 +8,38 @@ package co.elastic.logstash.filters.elasticintegration.ingest;
 
 import co.elastic.logstash.filters.elasticintegration.IngestPipeline;
 import co.elastic.logstash.filters.elasticintegration.IngestPipelineResolver;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.elasticsearch.cluster.metadata.ProjectId;
-import org.elasticsearch.ingest.AbstractProcessor;
-import org.elasticsearch.ingest.ConfigurationUtils;
-import org.elasticsearch.ingest.IngestDocument;
-import org.elasticsearch.ingest.Processor;
-import org.elasticsearch.script.ScriptService;
-import org.elasticsearch.script.TemplateScript;
+import org.elasticsearch.logstashbridge.common.ProjectIdBridge;
+import org.elasticsearch.logstashbridge.ingest.AbstractExternalProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.AbstractExternalProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.ingest.ConfigurationUtilsBridge;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
+import org.elasticsearch.logstashbridge.script.TemplateScriptFactoryBridge;
 
 import java.util.Map;
 import java.util.function.BiConsumer;
 
-public class PipelineProcessor extends AbstractProcessor {
+public class PipelineProcessor extends AbstractExternalProcessorBridge {
     public static final String TYPE = "pipeline";
 
+    private final String tag;
+    private final String description;
     private final String pipelineName;
 
-    private final TemplateScript.Factory pipelineTemplate;
+    private final TemplateScriptFactoryBridge pipelineTemplate;
     private final IngestPipelineResolver pipelineProvider;
     private final boolean ignoreMissingPipeline;
 
-    private static final Logger LOGGER = LogManager.getLogger(PipelineProcessor.class);
-
     private PipelineProcessor(String tag,
                               String description,
-                              TemplateScript.Factory pipelineTemplate,
+                              TemplateScriptFactoryBridge pipelineTemplate,
                               String pipelineName,
                               boolean ignoreMissingPipeline,
                               IngestPipelineResolver pipelineProvider) {
-        super(tag, description);
+        this.tag = tag;
+        this.description = description;
         this.pipelineTemplate = pipelineTemplate;
         this.pipelineName = pipelineName;
         this.pipelineProvider = pipelineProvider;
@@ -55,13 +56,23 @@ public class PipelineProcessor extends AbstractProcessor {
     }
 
     @Override
+    public String getTag() {
+        return this.tag;
+    }
+
+    @Override
+    public String getDescription() {
+        return this.description;
+    }
+
+    @Override
     public boolean isAsync() {
         // the pipeline processor always presents itself as async
         return true;
     }
 
     @Override
-    public void execute(IngestDocument ingestDocument, BiConsumer<IngestDocument, Exception> handler) {
+    public void execute(IngestDocumentBridge ingestDocument, BiConsumer<IngestDocumentBridge, Exception> handler) {
         String pipelineName = ingestDocument.renderTemplate(this.pipelineTemplate);
         IngestPipeline pipeline = pipelineProvider.resolve(pipelineName).orElse(null);
         if (pipeline != null) {
@@ -78,26 +89,28 @@ public class PipelineProcessor extends AbstractProcessor {
         }
     }
 
-    public static class Factory implements Processor.Factory {
+
+    public static class Factory extends AbstractExternalProcessorFactoryBridge {
 
         private final IngestPipelineResolver pipelineProvider;
-        private final ScriptService scriptService;
+        private final ScriptServiceBridge scriptService;
 
-        public Factory(IngestPipelineResolver pipelineProvider, ScriptService scriptService) {
+        public Factory(IngestPipelineResolver pipelineProvider, ScriptServiceBridge scriptService) {
             this.pipelineProvider = pipelineProvider;
             this.scriptService = scriptService;
         }
 
         @Override
-        public Processor create(Map<String, Processor.Factory> registry,
-                                String processorTag,
-                                String description,
-                                Map<String, Object> config,
-                                ProjectId projectId) throws Exception {
-            String pipeline = ConfigurationUtils.readStringProperty(TYPE, processorTag, config, "name");
-            TemplateScript.Factory pipelineTemplate = ConfigurationUtils.compileTemplate(TYPE, processorTag, "name", pipeline, scriptService);
-            boolean ignoreMissingPipeline = ConfigurationUtils.readBooleanProperty(TYPE, processorTag, config, "ignore_missing_pipeline", false);
+        public ProcessorBridge create(Map<String, ProcessorFactoryBridge> registry,
+                                      String processorTag,
+                                      String description,
+                                      Map<String, Object> config,
+                                      ProjectIdBridge projectIdBridge) throws Exception {
+            String pipeline = ConfigurationUtilsBridge.readStringProperty(TYPE, processorTag, config, "name");
+            TemplateScriptFactoryBridge pipelineTemplate = ConfigurationUtilsBridge.compileTemplate(TYPE, processorTag, "name", pipeline, scriptService);
+            boolean ignoreMissingPipeline = ConfigurationUtilsBridge.readBooleanProperty(TYPE, processorTag, config, "ignore_missing_pipeline", false);
             return new PipelineProcessor(processorTag, description, pipelineTemplate, pipeline, ignoreMissingPipeline, pipelineProvider);
         }
+
     }
 }

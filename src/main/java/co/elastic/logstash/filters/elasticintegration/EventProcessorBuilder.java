@@ -8,7 +8,6 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
-import co.elastic.logstash.filters.elasticintegration.ingest.RedactPlugin;
 import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
@@ -17,41 +16,24 @@ import co.elastic.logstash.filters.elasticintegration.resolver.SimpleResolverCac
 import co.elastic.logstash.filters.elasticintegration.resolver.ResolverCache;
 import co.elastic.logstash.filters.elasticintegration.util.Exceptions;
 import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
-import co.elastic.logstash.filters.elasticintegration.util.PluginProjectResolver;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
-import org.elasticsearch.common.settings.Settings;
-import org.elasticsearch.core.IOUtils;
-import org.elasticsearch.core.TimeValue;
-import org.elasticsearch.env.Environment;
-import org.elasticsearch.ingest.IngestService;
-import org.elasticsearch.ingest.LogstashInternalBridge;
-import org.elasticsearch.ingest.Processor;
-import org.elasticsearch.ingest.common.IngestCommonPlugin;
-import org.elasticsearch.ingest.common.ProcessorsWhitelistExtension;
-import org.elasticsearch.ingest.useragent.IngestUserAgentPlugin;
-import org.elasticsearch.painless.PainlessPlugin;
-import org.elasticsearch.painless.PainlessScriptEngine;
-import org.elasticsearch.painless.spi.PainlessExtension;
-import org.elasticsearch.plugins.ExtensiblePlugin;
-import org.elasticsearch.plugins.IngestPlugin;
-import org.elasticsearch.script.IngestConditionalScript;
-import org.elasticsearch.script.IngestScript;
-import org.elasticsearch.script.ScriptEngine;
-import org.elasticsearch.script.ScriptModule;
-import org.elasticsearch.script.ScriptService;
-import org.elasticsearch.script.mustache.MustacheScriptEngine;
-import org.elasticsearch.threadpool.ThreadPool;
-import org.elasticsearch.xpack.constantkeyword.ConstantKeywordPainlessExtension;
-import org.elasticsearch.xpack.spatial.SpatialPainlessExtension;
-import org.elasticsearch.xpack.wildcard.WildcardPainlessExtension;
+import org.elasticsearch.logstashbridge.common.SettingsBridge;
+import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
+import org.elasticsearch.logstashbridge.env.EnvironmentBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
+import org.elasticsearch.logstashbridge.ingest.ProcessorParametersBridge;
+import org.elasticsearch.logstashbridge.plugins.IngestCommonPluginBridge;
+import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
+import org.elasticsearch.logstashbridge.plugins.IngestUserAgentPluginBridge;
+import org.elasticsearch.logstashbridge.plugins.RedactPluginBridge;
+import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
+import org.elasticsearch.logstashbridge.threadpool.ThreadPoolBridge;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -91,44 +73,44 @@ public class EventProcessorBuilder {
     }
 
     public EventProcessorBuilder() {
-        this.addProcessorsFromPlugin(IngestCommonPlugin::new, Set.of(
-                org.elasticsearch.ingest.common.AppendProcessor.TYPE,
-                org.elasticsearch.ingest.common.BytesProcessor.TYPE,
-                org.elasticsearch.ingest.common.CommunityIdProcessor.TYPE,
-                org.elasticsearch.ingest.common.ConvertProcessor.TYPE,
-                org.elasticsearch.ingest.common.CsvProcessor.TYPE,
-                org.elasticsearch.ingest.common.DateIndexNameProcessor.TYPE,
-                org.elasticsearch.ingest.common.DateProcessor.TYPE,
-                org.elasticsearch.ingest.common.DissectProcessor.TYPE,
+        this.addProcessorsFromPlugin(IngestCommonPluginBridge::new, Set.of(
+                IngestCommonPluginBridge.APPEND_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.BYTES_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.COMMUNITY_ID_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.CONVERT_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.CSV_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.DATE_INDEX_NAME_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.DATE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.DISSECT_PROCESSOR_TYPE,
                 "dot_expander", // note: upstream constant is package-private
-                org.elasticsearch.ingest.DropProcessor.TYPE, // note: not in ingest-common
-                org.elasticsearch.ingest.common.FailProcessor.TYPE,
-                org.elasticsearch.ingest.common.FingerprintProcessor.TYPE,
-                org.elasticsearch.ingest.common.ForEachProcessor.TYPE,
-                org.elasticsearch.ingest.common.GrokProcessor.TYPE,
-                org.elasticsearch.ingest.common.GsubProcessor.TYPE,
-                org.elasticsearch.ingest.common.HtmlStripProcessor.TYPE,
-                org.elasticsearch.ingest.common.JoinProcessor.TYPE,
-                org.elasticsearch.ingest.common.JsonProcessor.TYPE,
-                org.elasticsearch.ingest.common.KeyValueProcessor.TYPE,
-                org.elasticsearch.ingest.common.LowercaseProcessor.TYPE,
-                org.elasticsearch.ingest.common.NetworkDirectionProcessor.TYPE,
+                IngestCommonPluginBridge.DROP_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.FAIL_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.FINGERPRINT_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.FOR_EACH_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.GROK_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.GSUB_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.HTML_STRIP_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.JOIN_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.JSON_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.KEY_VALUE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.LOWERCASE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.NETWORK_DIRECTION_PROCESSOR_TYPE,
                 // note: no `pipeline` processor, as we provide our own
-                org.elasticsearch.ingest.common.RegisteredDomainProcessor.TYPE,
-                org.elasticsearch.ingest.common.RemoveProcessor.TYPE,
-                org.elasticsearch.ingest.common.RenameProcessor.TYPE,
-                org.elasticsearch.ingest.common.RerouteProcessor.TYPE,
-                org.elasticsearch.ingest.common.ScriptProcessor.TYPE,
-                org.elasticsearch.ingest.common.SetProcessor.TYPE,
-                org.elasticsearch.ingest.common.SortProcessor.TYPE,
-                org.elasticsearch.ingest.common.SplitProcessor.TYPE,
+                IngestCommonPluginBridge.REGISTERED_DOMAIN_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.REMOVE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.RENAME_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.REROUTE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.SCRIPT_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.SET_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.SORT_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.SPLIT_PROCESSOR_TYPE,
                 "terminate", // note: upstream constant is package-private
-                org.elasticsearch.ingest.common.TrimProcessor.TYPE,
-                org.elasticsearch.ingest.common.URLDecodeProcessor.TYPE,
-                org.elasticsearch.ingest.common.UppercaseProcessor.TYPE,
-                org.elasticsearch.ingest.common.UriPartsProcessor.TYPE));
-        this.addProcessorsFromPlugin(IngestUserAgentPlugin::new);
-        this.addProcessorsFromPlugin(RedactPlugin::new);
+                IngestCommonPluginBridge.TRIM_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.URL_DECODE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.UPPERCASE_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.URI_PARTS_PROCESSOR_TYPE));
+        this.addProcessorsFromPlugin(IngestUserAgentPluginBridge::new);
+        this.addProcessorsFromPlugin(RedactPluginBridge::new);
         this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
@@ -150,7 +132,7 @@ public class EventProcessorBuilder {
     // filer match listener
     private FilterMatchListener filterMatchListener;
 
-    private final List<Supplier<IngestPlugin>> ingestPlugins = new ArrayList<>();
+    private final List<Supplier<IngestPluginBridge>> ingestPlugins = new ArrayList<>();
 
     public synchronized EventProcessorBuilder setPipelineConfigurationResolver(final PipelineConfigurationResolver pipelineConfigurationResolver) {
         if (Objects.nonNull(this.pipelineConfigurationResolver)) {
@@ -215,15 +197,15 @@ public class EventProcessorBuilder {
         return this;
     }
 
-    public EventProcessorBuilder addProcessor(final String type, final Supplier<Processor.Factory> processorFactorySupplier) {
+    public EventProcessorBuilder addProcessor(final String type, final Supplier<ProcessorFactoryBridge> processorFactorySupplier) {
         return this.addProcessorsFromPlugin(SingleProcessorIngestPlugin.of(type, processorFactorySupplier));
     }
 
-    public EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPlugin> pluginSupplier, Set<String> requiredProcessors) {
+    public EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPluginBridge> pluginSupplier, Set<String> requiredProcessors) {
         return this.addProcessorsFromPlugin(safeSubset(pluginSupplier, requiredProcessors));
     }
 
-    public synchronized EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPlugin> pluginSupplier) {
+    public synchronized EventProcessorBuilder addProcessorsFromPlugin(Supplier<IngestPluginBridge> pluginSupplier) {
         this.ingestPlugins.add(pluginSupplier);
         return this;
     }
@@ -233,7 +215,7 @@ public class EventProcessorBuilder {
         Objects.requireNonNull(this.eventToIndexNameResolver, "event index name resolver is REQUIRED");
         Objects.requireNonNull(this.indexNameToPipelineNameResolver, "pipeline name resolver is REQUIRED");
 
-        final Settings settings = Settings.builder()
+        final SettingsBridge settings = SettingsBridge.builder()
                 .put("path.home", "/")
                 .put("node.name", "logstash.filter.elastic_integration." + pluginContext.pluginId())
                 .put("ingest.grok.watchdog.interval", "1s")
@@ -245,33 +227,22 @@ public class EventProcessorBuilder {
         try {
             final ArrayList<Service> services = new ArrayList<>();
 
-            final ThreadPool threadPool = LogstashInternalBridge.createThreadPool(settings);
-            resourcesToClose.add(() -> ThreadPool.terminate(threadPool, 10, TimeUnit.SECONDS));
+            final ThreadPoolBridge threadPool = ThreadPoolBridge.create(settings);
+            resourcesToClose.add(() -> threadPool.terminate(10, TimeUnit.SECONDS));
 
-            final ScriptService scriptService = initScriptService(settings, threadPool);
+            final ScriptServiceBridge scriptService = ScriptServiceBridge.create(settings, threadPool::absoluteTimeInMillis);
             resourcesToClose.add(scriptService);
 
-            final Environment env = new Environment(settings, null);
-            final Processor.Parameters processorParameters = new Processor.Parameters(
-                    env,
-                    scriptService,
-                    null,
-                    threadPool.getThreadContext(),
-                    threadPool::relativeTimeInMillis,
-                    (delay, command) -> threadPool.schedule(command, TimeValue.timeValueMillis(delay), threadPool.generic()),
-                    null,
-                    null,
-                    threadPool.generic()::execute,
-                    IngestService.createGrokThreadWatchdog(env, threadPool)
-            );
+            final EnvironmentBridge env = EnvironmentBridge.create(settings, null);
+            final ProcessorParametersBridge processorParameters = ProcessorParametersBridge.create(env, scriptService, threadPool);
 
             IngestPipelineFactory ingestPipelineFactory = new IngestPipelineFactory(scriptService);
-            for (Supplier<IngestPlugin> ingestPluginSupplier : ingestPlugins) {
-                final IngestPlugin ingestPlugin = ingestPluginSupplier.get();
+            for (Supplier<IngestPluginBridge> ingestPluginSupplier : ingestPlugins) {
+                final IngestPluginBridge ingestPlugin = ingestPluginSupplier.get();
                 if (ingestPlugin instanceof Closeable closeableIngestPlugin) {
                     resourcesToClose.add(closeableIngestPlugin);
                 }
-                final Map<String, Processor.Factory> processorFactories = ingestPlugin.getProcessors(processorParameters);
+                final Map<String, ProcessorFactoryBridge> processorFactories = ingestPlugin.getProcessors(processorParameters);
                 ingestPipelineFactory = ingestPipelineFactory.withProcessors(processorFactories);
             }
 
@@ -309,53 +280,8 @@ public class EventProcessorBuilder {
                                       indexNameToPipelineNameResolver,
                                       resourcesToClose);
         } catch (Exception e) {
-            IOUtils.closeWhileHandlingException(resourcesToClose);
+            IOUtilsBridge.closeWhileHandlingException(resourcesToClose);
             throw Exceptions.wrap(e, "Failed to build EventProcessor");
-        }
-    }
-
-    private static ScriptService initScriptService(final Settings settings, final ThreadPool threadPool) throws IOException {
-        Map<String, ScriptEngine> engines = new HashMap<>();
-        engines.put(PainlessScriptEngine.NAME, getPainlessScriptEngine(settings));
-        engines.put(MustacheScriptEngine.NAME, new MustacheScriptEngine(settings));
-
-        return new ScriptService(
-                settings,
-                engines,
-                ScriptModule.CORE_CONTEXTS,
-                threadPool::absoluteTimeInMillis,
-                new PluginProjectResolver());
-    }
-
-    /**
-     * @param settings the Elasticsearch settings object
-     * @return a {@link ScriptEngine} for painless scripts for use in {@link IngestScript} and
-     *         {@link IngestConditionalScript} contexts, including all available {@link PainlessExtension}s.
-     * @throws IOException when the underlying script engine cannot be created
-     */
-    private static ScriptEngine getPainlessScriptEngine(final Settings settings) throws IOException {
-        try (final PainlessPlugin painlessPlugin = new PainlessPlugin()) {
-
-            painlessPlugin.loadExtensions(new ExtensiblePlugin.ExtensionLoader() {
-                @Override
-                @SuppressWarnings("unchecked")
-                public <T> List<T> loadExtensions(Class<T> extensionPointType) {
-                    if (extensionPointType.isAssignableFrom(PainlessExtension.class)) {
-                        final List<PainlessExtension> extensions = new ArrayList<>();
-
-                        extensions.add(new ConstantKeywordPainlessExtension()); // module: constant-keyword
-                        extensions.add(new ProcessorsWhitelistExtension());     // module: ingest-common
-                        extensions.add(new SpatialPainlessExtension());         // module: spatial
-                        extensions.add(new WildcardPainlessExtension());        // module: wildcard
-
-                        return (List<T>) extensions;
-                    } else {
-                        return List.of();
-                    }
-                }
-            });
-
-            return painlessPlugin.getScriptEngine(settings, Set.of(IngestScript.CONTEXT, IngestConditionalScript.CONTEXT));
         }
     }
 }

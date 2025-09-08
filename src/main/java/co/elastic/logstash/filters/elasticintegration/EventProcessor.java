@@ -13,16 +13,15 @@ import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.elasticsearch.action.support.RefCountingRunnable;
-import org.elasticsearch.core.IOUtils;
-import org.elasticsearch.ingest.IngestDocument;
-import org.elasticsearch.ingest.LogstashInternalBridge;
-import org.elasticsearch.ingest.common.FailProcessorException;
+import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
+import org.elasticsearch.logstashbridge.core.RefCountingRunnableBridge;
+import org.elasticsearch.logstashbridge.ingest.IngestDocumentBridge;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -32,7 +31,6 @@ import java.util.concurrent.TimeoutException;
 
 import static co.elastic.logstash.filters.elasticintegration.util.EventUtil.eventAsMap;
 import static co.elastic.logstash.filters.elasticintegration.util.EventUtil.serializeEventForLog;
-import static org.elasticsearch.core.Strings.format;
 
 /**
  * An {@link EventProcessor} processes {@link Event}s by:
@@ -94,7 +92,7 @@ public class EventProcessor implements Closeable {
         final CountDownLatch latch = new CountDownLatch(1);
         final IntegrationBatch batch = new IntegrationBatch(incomingEvents);
 
-        try (RefCountingRunnable ref = new RefCountingRunnable(latch::countDown)) {
+        try (RefCountingRunnableBridge ref = RefCountingRunnableBridge.create(latch::countDown)) {
             batch.eachRequest(ref::acquire, this::processRequest);
         }
 
@@ -151,7 +149,7 @@ public class EventProcessor implements Closeable {
 
             final IngestPipeline ingestPipeline = loadedPipeline.get();
             LOGGER.trace(() -> String.format("Using loaded pipeline `%s` (%s)", pipelineName, System.identityHashCode(ingestPipeline)));
-            final IngestDocument ingestDocument = eventMarshaller.toIngestDocument(request.event());
+            final IngestDocumentBridge ingestDocument = eventMarshaller.toIngestDocument(request.event());
 
             resolvedIndexName.ifPresent(indexName -> {
                 ingestDocument.getMetadata().setIndex(indexName);
@@ -170,19 +168,18 @@ public class EventProcessor implements Closeable {
         }
     }
 
-    private void executePipeline(final IngestDocument ingestDocument, final IngestPipeline ingestPipeline, final IntegrationRequest request) {
+    private void executePipeline(final IngestDocumentBridge ingestDocument, final IngestPipeline ingestPipeline, final IntegrationRequest request) {
         final String pipelineName = ingestPipeline.getId();
         final String originalIndex = ingestDocument.getMetadata().getIndex();
         ingestPipeline.execute(ingestDocument, (resultIngestDocument, ingestPipelineException) -> {
             // If no exception, then the original event is to be _replaced_ by the result
             if (Objects.nonNull(ingestPipelineException)) {
                 // If we had an exception in the IngestPipeline, tag and emit the original Event
-                final Throwable unwrappedException = unwrapException(ingestPipelineException);
-                LOGGER.warn(() -> String.format("ingest pipeline `%s` failed", pipelineName), unwrappedException);
+                LOGGER.warn(() -> String.format("ingest pipeline `%s` failed", pipelineName), ingestPipelineException);
                 request.complete(incomingEvent -> {
                     annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of(
-                            "message", unwrappedException.getMessage(),
-                            "exception", unwrappedException.getClass().getName()
+                            "message", ingestPipelineException.getMessage(),
+                            "exception", ingestPipelineException.getClass().getName()
                     ));
                 });
             } else if (Objects.isNull(resultIngestDocument)) {
@@ -193,17 +190,17 @@ public class EventProcessor implements Closeable {
             } else {
 
                 final String newIndex = resultIngestDocument.getMetadata().getIndex();
-                if (!Objects.equals(originalIndex, newIndex) && LogstashInternalBridge.isReroute(resultIngestDocument)) {
-                    LogstashInternalBridge.resetReroute(resultIngestDocument);
+                if (!Objects.equals(originalIndex, newIndex) && ingestDocument.isReroute()) {
+                    ingestDocument.resetReroute();
                     boolean cycle = !resultIngestDocument.updateIndexHistory(newIndex);
                     if (cycle) {
                         request.complete(incomingEvent -> {
-                            annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message", format(
-                                    "index cycle detected while processing pipeline [%s]: %s + %s",
-                                    pipelineName,
-                                    resultIngestDocument.getIndexHistory(),
-                                    newIndex
-                            )));
+                            annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message",
+                                    String.format(Locale.ROOT, "index cycle detected while processing pipeline [%s]: %s + %s",
+                                        pipelineName,
+                                        resultIngestDocument.getIndexHistory(),
+                                        newIndex)
+                            ));
                         });
                         return;
                     }
@@ -214,12 +211,14 @@ public class EventProcessor implements Closeable {
                         final Optional<IngestPipeline> reroutePipeline = resolve(reroutePipelineName.get(), internalPipelineProvider);
                         if (reroutePipeline.isEmpty()) {
                             request.complete(incomingEvent -> {
-                                annotateIngestPipelineFailure(incomingEvent, pipelineName, Map.of("message", format(
-                                        "reroute failed to load next pipeline [%s]: %s -> %s",
+                                annotateIngestPipelineFailure(
+                                        incomingEvent,
                                         pipelineName,
-                                        resultIngestDocument.getIndexHistory(),
-                                        reroutePipelineName.get()
-                                )));
+                                        Map.of("message",
+                                                String.format(Locale.ROOT, "reroute failed to load next pipeline [%s]: %s -> %s",
+                                                        pipelineName,
+                                                        resultIngestDocument.getIndexHistory(),
+                                                        reroutePipelineName.get())));
                             });
                         } else {
                             executePipeline(resultIngestDocument, reroutePipeline.get(), request);
@@ -252,11 +251,6 @@ public class EventProcessor implements Closeable {
         });
     }
 
-    static private Throwable unwrapException(final Exception exception) {
-        if (exception.getCause() instanceof FailProcessorException) { return exception.getCause(); }
-        return exception;
-    }
-
     static private String diff(final Event original, final Event changed) {
         if (LOGGER.isTraceEnabled()) {
             // dot notation less than ideal for LS-internal, but better than re-writing it ourselves.
@@ -277,6 +271,6 @@ public class EventProcessor implements Closeable {
 
     @Override
     public void close() throws IOException {
-        IOUtils.closeWhileHandlingException(this.resourcesToClose);
+        IOUtilsBridge.closeWhileHandlingException(this.resourcesToClose);
     }
 }

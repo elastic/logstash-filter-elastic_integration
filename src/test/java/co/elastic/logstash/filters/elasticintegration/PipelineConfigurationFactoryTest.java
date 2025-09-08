@@ -8,7 +8,7 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.filters.elasticintegration.util.LocalPipelinesUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.elasticsearch.ingest.PipelineConfiguration;
+import org.elasticsearch.logstashbridge.ingest.PipelineConfigurationBridge;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -41,7 +41,7 @@ class PipelineConfigurationFactoryTest {
     @Test
     public void testParseNamedObjectWithOnePipeline() throws Exception {
         final String json = elasticsearchApiFormattedJson("one-pipeline");
-        final PipelineConfiguration loaded = PipelineConfigurationFactory.getInstance().parseNamedObject(json);
+        final PipelineConfigurationBridge loaded = PipelineConfigurationFactory.getInstance().parseNamedObject(json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded.getId(), is(equalTo("pipeline-id-one")));
         assertThat(loaded.getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
@@ -68,7 +68,7 @@ class PipelineConfigurationFactoryTest {
     @Test
     public void testParseNamedObjectsWithOnePipeline() throws Exception {
         final String json = elasticsearchApiFormattedJson("one-pipeline");
-        final List<PipelineConfiguration> loaded = PipelineConfigurationFactory.getInstance().parseNamedObjects(json);
+        final List<PipelineConfigurationBridge> loaded = PipelineConfigurationFactory.getInstance().parseNamedObjects(json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded, hasSize(1));
 
@@ -80,7 +80,7 @@ class PipelineConfigurationFactoryTest {
     @Test
     public void testParseNamedObjectWithTwoPipelines() throws Exception {
         final String json = elasticsearchApiFormattedJson("two-pipelines");
-        final List<PipelineConfiguration> loaded = PipelineConfigurationFactory.getInstance().parseNamedObjects(json);
+        final List<PipelineConfigurationBridge> loaded = PipelineConfigurationFactory.getInstance().parseNamedObjects(json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded, hasSize(2));
 
@@ -97,7 +97,7 @@ class PipelineConfigurationFactoryTest {
     @Test
     public void testParseNamedObjectWithZeroPipelines() throws Exception {
         final String json = "{}";
-        final List<PipelineConfiguration> loaded = PipelineConfigurationFactory.getInstance().parseNamedObjects(json);
+        final List<PipelineConfigurationBridge> loaded = PipelineConfigurationFactory.getInstance().parseNamedObjects(json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded, hasSize(0));
     }
@@ -106,7 +106,7 @@ class PipelineConfigurationFactoryTest {
     public void testParseConfigOnly() throws Exception {
         final ObjectMapper objectMapper = new ObjectMapper();
         final String json = objectMapper.writeValueAsString(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP);
-        final PipelineConfiguration loaded = PipelineConfigurationFactory.getInstance().parseConfigOnly("bananas" , json);
+        final PipelineConfigurationBridge loaded = PipelineConfigurationFactory.getInstance().parseConfigOnly("bananas" , json);
         assertThat(loaded, is(notNullValue()));
         assertThat(loaded.getId(), is(equalTo("bananas")));
         assertThat(loaded.getConfig(), is(equalTo(EXPECTED_PIPELINE_ID_ONE_CONFIG_MAP)));
