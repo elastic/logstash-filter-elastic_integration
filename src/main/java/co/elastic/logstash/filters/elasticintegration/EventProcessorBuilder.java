@@ -19,6 +19,7 @@ import co.elastic.logstash.filters.elasticintegration.util.PluginContext;
 import com.google.common.util.concurrent.Service;
 import com.google.common.util.concurrent.ServiceManager;
 import org.elasticsearch.client.RestClient;
+import org.elasticsearch.common.logging.LogConfigurator;
 import org.elasticsearch.logstashbridge.common.SettingsBridge;
 import org.elasticsearch.logstashbridge.core.IOUtilsBridge;
 import org.elasticsearch.logstashbridge.env.EnvironmentBridge;
@@ -48,6 +49,11 @@ import static com.google.common.util.concurrent.AbstractScheduledService.Schedul
 
 @SuppressWarnings("UnusedReturnValue")
 public class EventProcessorBuilder {
+
+    static {
+        // wires through to log4j under the hood
+        LogConfigurator.configureESLogging();
+    }
 
     static final Duration CACHE_MAXIMUM_AGE = Duration.ofHours(24);
     static final Duration CACHE_RELOAD_FREQUENCY = Duration.ofSeconds(60);
