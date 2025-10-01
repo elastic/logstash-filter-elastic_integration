@@ -1,3 +1,7 @@
+## UNRELEASED
+  - Utilizes Elasticsearch interfaces via Elasticsearch logstash-bridge [#336](https://github.com/elastic/logstash-filter-elastic_integration/pull/336)
+  - No functional change.
+
 ## 9.1.1
   - Add `terminate` processor support [#345](https://github.com/elastic/logstash-filter-elastic_integration/pull/345)
 
