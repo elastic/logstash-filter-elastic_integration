@@ -411,6 +411,7 @@ task importMinimalElasticsearch() {
             from(buildElasticsearchLocalDistro.lib) {
                 include jarPackageNamed("elasticsearch")
                 include jarPackageNamed("elasticsearch-core")
+                include jarPackageNamed("elasticsearch-logging")
                 include jarPackageNamed("elasticsearch-x-content")
                 include jarPackageNamed("elasticsearch-geo")
                 include jarPackageNamed("lucene-core")
