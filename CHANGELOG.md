@@ -1,3 +1,6 @@
+## 9.2.0
+  - Logging compatability with Elasticsearch 9.2 [#373](https://github.com/elastic/logstash-filter-elastic_integration/pull/373)
+  - Utilizes Elasticsearch interfaces via Elasticsearch logstash-bridge [#336](https://github.com/elastic/logstash-filter-elastic_integration/pull/336)
 ## 9.1.1
   - Add `terminate` processor support [#345](https://github.com/elastic/logstash-filter-elastic_integration/pull/345)
 
