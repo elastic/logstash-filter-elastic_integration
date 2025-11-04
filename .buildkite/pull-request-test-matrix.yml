@@ -3,13 +3,9 @@
 #  and they do not break CI which jobs generator validates the release/snapshot when generating the CI steps
 8.x:
   releases:
-    - 8.previous
     - 8.current
   snapshots:
-    - 8.previous
     - 8.current
-    - 8.next
-    - 8.future
 9.x:
   releases:
     - 9.previous
