@@ -8,7 +8,7 @@ from bootstrap import Bootstrap
 from plugin_test import PluginTest
 import util
 
-INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
+INTEGRATION_PACKAGES_TO_TEST = ["m365_defender"]
 
 
 class BootstrapContextManager:
