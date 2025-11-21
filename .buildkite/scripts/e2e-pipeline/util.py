@@ -18,14 +18,18 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
     session.mount(schema, HTTPAdapter(max_retries=retries))
     return session.get(url)
 
-def show_container_logs(container_prefix: str):
+def show_containers_logs(container_prefixes):
     client = docker.from_env()
     containers = client.containers.list(all=True)
     print(f"Available container names: {[c.name for c in containers]}")
-    matching_containers = [c for c in containers if container_prefix in c.name]
-
+    matching_containers = []
+    for container in containers:
+        if any(prefix in container.name for prefix in container_prefixes):
+            matching_containers.append(container)
+    
     if not matching_containers:
-        print(f"No containers found with prefix '{container_prefix}'")
+        prefixes_str = ", ".join(container_prefixes)
+        print(f"No containers found with prefixes: {prefixes_str}")
         return
 
     for container in matching_containers:

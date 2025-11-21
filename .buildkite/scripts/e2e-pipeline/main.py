@@ -42,9 +42,7 @@ def main(skip_setup=False, integrations=[]):
         working_dir = os.getcwd()
         test_plugin = PluginTest()
 
-        util.show_container_logs("logstash-")
-        util.show_container_logs("elasticsearch-")
-        util.show_container_logs("elastic-agent-")
+        util.show_containers_logs(["logstash-", "elasticsearch-", "elastic-agent-"])
 
         packages = integrations or INTEGRATION_PACKAGES_TO_TEST
         for package in packages:
@@ -55,9 +53,7 @@ def main(skip_setup=False, integrations=[]):
                 print(f"Test failed for {package} with {e}.")
                 failed_packages.append(package)
 
-    util.show_container_logs("logstash-")
-    util.show_container_logs("elasticsearch-")
-    util.show_container_logs("elastic-agent-")
+        util.show_containers_logs(["logstash-", "elasticsearch-", "elastic-agent-"])
 
     if len(failed_packages) > 0:
         raise Exception(f"Following packages failed: {failed_packages}")
