@@ -50,13 +50,9 @@ def main(skip_setup=False, integrations=[]):
                 print(f"Test failed for {package} with {e}.")
                 failed_packages.append(package)
 
-        container = util.get_logstash_container()
-
-        # pretty printing
-        print(f"Logstash docker container logs..")
-        ls_container_logs = container.logs().decode('utf-8')
-        for log_line in ls_container_logs.splitlines():
-            print(log_line)
+    util.show_container_logs("elastic-package-stack-e2e-logstash-1")
+    util.show_container_logs("elastic-package-stack-e2e-elasticsearch-1")
+    util.show_container_logs("elastic-package-stack-e2e-elastic-agent-1")
 
     if len(failed_packages) > 0:
         raise Exception(f"Following packages failed: {failed_packages}")

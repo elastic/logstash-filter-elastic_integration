@@ -18,11 +18,15 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
     session.mount(schema, HTTPAdapter(max_retries=retries))
     return session.get(url)
 
-
-def get_logstash_container() -> Container:
+def show_container_logs(container_name: str):
     client = docker.from_env()
-    return client.containers.get("elastic-package-stack-e2e-logstash-1")
+    container = client.containers.get(container_name)
 
+    # pretty printing
+    print(f"{container_name} docker container logs..")
+    container_logs = container.logs().decode('utf-8')
+    for log_line in container_logs.splitlines():
+        print(log_line)
 
 def run_or_raise_error(commands: list, error_message):
     result = subprocess.run(commands, universal_newlines=True, stdout=subprocess.PIPE)
