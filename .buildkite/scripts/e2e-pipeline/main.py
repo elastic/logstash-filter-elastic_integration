@@ -41,6 +41,11 @@ def main(skip_setup=False, integrations=[]):
     with BootstrapContextManager(skip_setup) as bootstrap:
         working_dir = os.getcwd()
         test_plugin = PluginTest()
+
+        util.show_container_logs("logstash-")
+        util.show_container_logs("elasticsearch-")
+        util.show_container_logs("elastic-agent-")
+
         packages = integrations or INTEGRATION_PACKAGES_TO_TEST
         for package in packages:
             try:
@@ -50,9 +55,9 @@ def main(skip_setup=False, integrations=[]):
                 print(f"Test failed for {package} with {e}.")
                 failed_packages.append(package)
 
-    util.show_container_logs("elastic-package-stack-e2e-logstash-1")
-    util.show_container_logs("elastic-package-stack-e2e-elasticsearch-1")
-    util.show_container_logs("elastic-package-stack-e2e-elastic-agent-1")
+    util.show_container_logs("logstash-")
+    util.show_container_logs("elasticsearch-")
+    util.show_container_logs("elastic-agent-")
 
     if len(failed_packages) > 0:
         raise Exception(f"Following packages failed: {failed_packages}")
