@@ -222,8 +222,8 @@ class Bootstrap:
             self.__scan_for_unsupported_processors()
             self.__setup_elastic_package_profile()
         self.__spin_stack()
-        #self.__install_plugin()
-        #self.__reload_container()
+        self.__install_plugin()
+        self.__reload_container()
         self.__update_pipeline_config()
 
     def stop_elastic_stack(self) -> None:
