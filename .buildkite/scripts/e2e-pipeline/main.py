@@ -42,8 +42,6 @@ def main(skip_setup=False, integrations=[]):
         working_dir = os.getcwd()
         test_plugin = PluginTest()
 
-        util.show_containers_logs(["logstash-", "elasticsearch-", "elastic-agent-"])
-
         packages = integrations or INTEGRATION_PACKAGES_TO_TEST
         for package in packages:
             try:
