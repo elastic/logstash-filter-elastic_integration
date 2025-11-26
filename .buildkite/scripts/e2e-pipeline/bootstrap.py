@@ -161,33 +161,9 @@ class Bootstrap:
                                 "Error occurred while reloading Logstash container, see logs for details.")
         time.sleep(20)  # give a time Logstash pipeline to fully start
 
-    def __is_version_gte(self, version: str, target_major: int, target_minor: int) -> bool:
-        # Remove -SNAPSHOT suffix if present
-        clean_version = version.replace("-SNAPSHOT", "")
-        parts = clean_version.split(".")
-        if len(parts) < 2:
-            return False
-        
-        try:
-            major = int(parts[0])
-            minor = int(parts[1])
-            if major > target_major:
-                return True
-            elif major == target_major:
-                return minor >= target_minor
-            else:
-                return False
-        except ValueError:
-            return False
-
     def __update_pipeline_config(self) -> None:
         local_config_file_path = ".buildkite/scripts/e2e-pipeline/config/"
-        if self.__is_version_gte(self.stack_version, 9, 3):
-            config_file = "pipeline-ea-without-ssl.conf"
-        elif self.project_type == "serverless":
-            config_file = "serverless_pipeline.conf"
-        else:
-            config_file = "pipeline.conf"
+        config_file = "serverless_pipeline.conf" if self.project_type == "serverless" else "pipeline.conf"
         local_config_file = local_config_file_path + config_file
         container_config_file_path = "/usr/share/logstash/pipeline/logstash.conf"
         # python docker client (internally uses subprocess) requires special TAR header with tar operations
