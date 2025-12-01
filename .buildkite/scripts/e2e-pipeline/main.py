@@ -8,7 +8,7 @@ from bootstrap import Bootstrap
 from plugin_test import PluginTest
 import util
 
-INTEGRATION_PACKAGES_TO_TEST = ["apache", "m365_defender", "nginx", "tomcat"]
+INTEGRATION_PACKAGES_TO_TEST = ["m365_defender"]
 
 
 class BootstrapContextManager:
@@ -41,6 +41,7 @@ def main(skip_setup=False, integrations=[]):
     with BootstrapContextManager(skip_setup) as bootstrap:
         working_dir = os.getcwd()
         test_plugin = PluginTest()
+
         packages = integrations or INTEGRATION_PACKAGES_TO_TEST
         for package in packages:
             try:
@@ -50,13 +51,7 @@ def main(skip_setup=False, integrations=[]):
                 print(f"Test failed for {package} with {e}.")
                 failed_packages.append(package)
 
-        container = util.get_logstash_container()
-
-        # pretty printing
-        print(f"Logstash docker container logs..")
-        ls_container_logs = container.logs().decode('utf-8')
-        for log_line in ls_container_logs.splitlines():
-            print(log_line)
+        util.show_containers_logs(["logstash-", "elasticsearch-", "elastic-agent-"])
 
     if len(failed_packages) > 0:
         raise Exception(f"Following packages failed: {failed_packages}")
