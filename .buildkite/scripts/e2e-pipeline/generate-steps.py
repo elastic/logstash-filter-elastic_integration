@@ -59,7 +59,7 @@ if __name__ == "__main__":
     structure = {
         "agents": {
             "provider": "gcp",
-            "machineType": "n2-standard-4",
+            "machineType": "n2-standard-16",
             "imageProject": "elastic-images-prod",
             "image": "family/platform-ingest-logstash-multi-jdk-ubuntu-2204",
             "diskSizeGb": 120
