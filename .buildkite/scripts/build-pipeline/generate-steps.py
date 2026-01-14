@@ -25,6 +25,7 @@ def generate_unit_and_integration_test_steps(stack_version, snapshot) -> list[ty
         }
     })
 
+<<<<<<< HEAD
     # step-2, integration tests
     label_integration_test: typing.final = f"Integration test for {stack_version}, snapshot: {snapshot}"
     test_steps.append({
@@ -48,6 +49,52 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
     retries = Retry(total=max_retries, backoff_factor=delay, status_forcelist=[408, 502, 503, 504])
     session.mount(schema, HTTPAdapter(max_retries=retries))
     return session.get(url)
+=======
+def generate_test_step(stack_version, branch, snapshot, test_type) -> dict:
+    test_type_label = "Integration" if test_type == "integration" else "Unit"
+    label_test: typing.final = f"{test_type_label} test for {stack_version}, snapshot: {snapshot}"
+    step_environment = {
+        "SNAPSHOT": snapshot,
+        "ELASTIC_STACK_VERSION": stack_version,
+        "LOG_LEVEL": "info"
+    }
+    if test_type == "integration":
+        step_environment["INTEGRATION"] = "true"
+        step_environment["SECURE_INTEGRATION"] = "true"
+
+    step: dict = {
+        "label": label_test,
+        "command": TEST_COMMAND,
+        "env": step_environment
+    }
+    # we are not going to set branch if job kicked of through webhook (PR merge or manual PR run)
+    if branch is not None:
+        step["env"]["TARGET_BRANCH"] = branch
+    return step
+
+
+def generate_steps_for_scheduler(versions) -> list:
+    steps: list = []
+    snapshots = versions["snapshots"]
+    for snapshot_version in snapshots:
+        if snapshots[snapshot_version] is None or snapshots[snapshot_version].startswith("7."):
+            continue
+        full_stack_version = snapshots[snapshot_version]
+        version_parts = snapshots[snapshot_version].split(".")
+        major_minor_versions = snapshot_version if snapshot_version == "main" else f"{version_parts[0]}.{version_parts[1]}"
+        branch = f"{version_parts[0]}.x" if snapshot_version.find("future") > -1 else major_minor_versions
+        steps.append(generate_test_step(full_stack_version, branch, "true", "integration"))
+        steps.append(generate_test_step(full_stack_version, branch, "true", "unit"))
+    return steps
+
+
+def generate_steps_for_main_branch(versions) -> list:
+    steps: list = []
+    full_stack_version: typing.final = versions["snapshots"]["main"]
+    steps.append(generate_test_step(full_stack_version, None, "true", "integration"))
+    steps.append(generate_test_step(full_stack_version, None, "true", "unit"))
+    return steps
+>>>>>>> 603e6b2 (Include required hppc package, fix String.format issue and forwardport branch changelogs (#380))
 
 
 if __name__ == "__main__":
