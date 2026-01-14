@@ -19,18 +19,21 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
     return session.get(url)
 
 
-def generate_test_step(stack_version, branch, snapshot) -> dict:
+def generate_test_step(stack_version, branch, snapshot, mark_integration_test = True) -> dict:
     label_integration_test: typing.final = f"Integration test for {stack_version}, snapshot: {snapshot}"
+    step_environment = {
+        "SNAPSHOT": snapshot,
+        "ELASTIC_STACK_VERSION": stack_version,
+        "LOG_LEVEL": "info"
+    }
+    if mark_integration_test:
+        step_environment["INTEGRATION"] = "true"
+        step_environment["SECURE_INTEGRATION"] = "true"
+
     step: dict = {
         "label": label_integration_test,
         "command": TEST_COMMAND,
-        "env": {
-            "SNAPSHOT": snapshot,
-            "ELASTIC_STACK_VERSION": stack_version,
-            "INTEGRATION": "true",
-            "SECURE_INTEGRATION": "true",
-            "LOG_LEVEL": "info"
-        }
+        "env": step_environment
     }
     # we are not going to set branch if job kicked of through webhook (PR merge or manual PR run)
     if branch is not None:
@@ -48,14 +51,16 @@ def generate_steps_for_scheduler(versions) -> list:
         version_parts = snapshots[snapshot_version].split(".")
         major_minor_versions = snapshot_version if snapshot_version == "main" else f"{version_parts[0]}.{version_parts[1]}"
         branch = f"{version_parts[0]}.x" if snapshot_version.find("future") > -1 else major_minor_versions
-        steps.append(generate_test_step(full_stack_version, branch, "true"))
+        steps.append(generate_test_step(full_stack_version, branch, "true", True))
+        steps.append(generate_test_step(full_stack_version, branch, "true", False))
     return steps
 
 
 def generate_steps_for_main_branch(versions) -> list:
     steps: list = []
     full_stack_version: typing.final = versions["snapshots"]["main"]
-    steps.append(generate_test_step(full_stack_version, None, "true"))
+    steps.append(generate_test_step(full_stack_version, None, "true", True))
+    steps.append(generate_test_step(full_stack_version, None, "true", False))
     return steps
 
 
