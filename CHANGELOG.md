@@ -1,6 +1,19 @@
+<<<<<<< HEAD
 ## 9.2.0
   - Logging compatability with Elasticsearch 9.2 [#373](https://github.com/elastic/logstash-filter-elastic_integration/pull/373)
   - Utilizes Elasticsearch interfaces via Elasticsearch logstash-bridge [#336](https://github.com/elastic/logstash-filter-elastic_integration/pull/336)
+=======
+## UNRELEASED
+  - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#380](https://github.com/elastic/logstash-filter-elastic_integration/pull/380)
+
+## 9.3.0
+  - Embeds Ingest Node components from Elasticsearch 9.3 [#378](https://github.com/elastic/logstash-filter-elastic_integration/pull/378)
+
+## 9.2.0
+  - Logging compatability with Elasticsearch 9.2 [#373](https://github.com/elastic/logstash-filter-elastic_integration/pull/373)
+  - Utilizes Elasticsearch interfaces via Elasticsearch logstash-bridge [#336](https://github.com/elastic/logstash-filter-elastic_integration/pull/336)
+
+>>>>>>> 603e6b2 (Include required hppc package, fix String.format issue and forwardport branch changelogs (#380))
 ## 9.1.1
   - Add `terminate` processor support [#345](https://github.com/elastic/logstash-filter-elastic_integration/pull/345)
 

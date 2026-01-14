@@ -416,6 +416,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch-geo")
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
+                include jarPackageNamed("hppc")
             }
             from(shadeElasticsearchStableBridge.outputs.files.singleFile)
             from(shadeElasticsearchGrokImplementation)
