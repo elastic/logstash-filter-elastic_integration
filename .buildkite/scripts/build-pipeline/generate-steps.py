@@ -20,7 +20,8 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
 
 
 def generate_test_step(stack_version, branch, snapshot, mark_integration_test = True) -> dict:
-    label_integration_test: typing.final = f"Integration test for {stack_version}, snapshot: {snapshot}"
+    test_type = "Integration" if mark_integration_test else "Unit"
+    label_test: typing.final = f"{test_type} test for {stack_version}, snapshot: {snapshot}"
     step_environment = {
         "SNAPSHOT": snapshot,
         "ELASTIC_STACK_VERSION": stack_version,
@@ -31,7 +32,7 @@ def generate_test_step(stack_version, branch, snapshot, mark_integration_test = 
         step_environment["SECURE_INTEGRATION"] = "true"
 
     step: dict = {
-        "label": label_integration_test,
+        "label": label_test,
         "command": TEST_COMMAND,
         "env": step_environment
     }
