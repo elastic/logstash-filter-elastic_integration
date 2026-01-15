@@ -2,8 +2,8 @@
 A class to validate the Integration Plugin with a given integration package
 """
 import subprocess
+import time
 from logstash_stats import LogstashStats
-
 
 class PluginTest:
     logstash_stats_api = LogstashStats()
@@ -58,4 +58,5 @@ class PluginTest:
                 for result_line in result.stdout.splitlines(): print(f"{result_line}")
 
         # although there was an error, le's check how LS performed and make sure errors weren't because of Logstash
+        time.sleep(2) # make sure LS processes the event way to downstream ES
         self.__analyze_logstash_throughput(package, result)

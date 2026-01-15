@@ -27,6 +27,7 @@ class Bootstrap:
         Returns:
             Validates and sets stack version, project type and resolves elastic package distro based on running OS (sys.platform)
         """
+        print(f"Stack version: {stack_version}")
         self.stack_version = stack_version
         self.__validate_and_set_project_type(project_type)
         self.__resolve_distro()

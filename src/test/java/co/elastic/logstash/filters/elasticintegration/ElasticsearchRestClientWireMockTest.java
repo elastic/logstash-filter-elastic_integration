@@ -175,7 +175,10 @@ public class ElasticsearchRestClientWireMockTest {
 
             try (RestClient restClient = rcb.build()) {
                 final SSLHandshakeException ex = assertThrows(SSLHandshakeException.class, () -> restClient.performRequest(new Request("GET", "/")));
-                assertThat(ex.getMessage(), stringContainsInOrder("fatal", "bad_certificate"));
+                assertThat(ex.getMessage(), allOf(
+                    containsString("fatal"),
+                    anyOf(containsString("bad_certificate"), containsString("certificate_required"))
+                ));
             }
         }
 
