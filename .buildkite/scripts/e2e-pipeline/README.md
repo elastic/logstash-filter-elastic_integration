@@ -41,21 +41,15 @@ Make sure you have python installed on you local
 pip install -r .buildkite/scripts/e2e-pipeline/requirements.txt
 ```
 
-### Run
+### Run on local
 Run the following command from the repo dir:
 ```bash
-<<<<<<< HEAD
-python3 .buildkite/scripts/e2e-pipeline/main.py
-```
-
-=======
 python3 .buildkite/scripts/e2e-pipeline/main.py --skip-setup --integrations='apache','nginx'
 ```
 
 This will run entire ELK docker containers.
 Do not use `--skip-setup` if you are running the script for the first time, where it needs to set up elastic-package and integrations. 
 
->>>>>>> 06db793 (Play around with E2E tests to improve. (#377))
 ## Troubleshooting
 - The project retries on some operations to overcome timeout issues, uses [`retry` tool](https://formulae.brew.sh/formula/retry). If you get `retry` undefined error, make sure to install it.
 ```
