@@ -103,7 +103,7 @@ dependencies {
     testImplementation 'org.mockito:mockito-junit-jupiter:5.14.1'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
     testImplementation "com.github.seregamorph:hamcrest-more-matchers:0.1"
-    testImplementation 'com.github.tomakehurst:wiremock-jre8:2.35.1'
+    testImplementation 'org.wiremock:wiremock:3.12.0'
     testRuntimeOnly requiredLogstashCoreJar("log4j-core")
 
     geolite2('org.elasticsearch:geolite2-databases:20191119') {
@@ -155,7 +155,7 @@ def _requiredLogstashJar(pathPrefix, jarSpec, flavorSpec = null) {
     assert logstashPath != null : "The property LOGSTASH_PATH must be defined, and be path to logstash directory"
     file("${logstashPath}").with { logstashDir ->
         assert logstashDir.exists() : "LOGSTASH_PATH does not exist: ${logstashDir}"
-        assert logstashDir.directory : "LOGSTASH_PATH is not a direcrtory: ${logstashDir}"
+        assert logstashDir.directory : "LOGSTASH_PATH is not a directory: ${logstashDir}"
         file("${logstashDir.path}/${pathPrefix}/").with { jarSourceDir ->
             fileTree(jarSourceDir) { include jarPackageNamed(jarSpec, flavorSpec) }.tap { jarSource ->
                 assert !jarSource.empty : "LOGSTASH_PATH's ${pathPrefix} does not provide any ${jarSpec} jars: ${jarSourceDir}"
