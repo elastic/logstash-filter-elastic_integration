@@ -1,5 +1,6 @@
 ## UNRELEASED
   - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#380](https://github.com/elastic/logstash-filter-elastic_integration/pull/380)
+  - Plugin tags even with `_ingest_pipeline_failure` when unsupported `set_security_user` processor appeared [#269](https://github.com/elastic/logstash-filter-elastic_integration/pull/269)
 
 ## 9.3.0
   - Embeds Ingest Node components from Elasticsearch 9.3 [#378](https://github.com/elastic/logstash-filter-elastic_integration/pull/378)
