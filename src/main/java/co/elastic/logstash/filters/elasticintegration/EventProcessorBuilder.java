@@ -117,7 +117,6 @@ public class EventProcessorBuilder {
                 IngestCommonPluginBridge.URI_PARTS_PROCESSOR_TYPE));
         this.addProcessorsFromPlugin(IngestUserAgentPluginBridge::new);
         this.addProcessorsFromPlugin(RedactPluginBridge::new);
-        this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
     // event -> pipeline name
