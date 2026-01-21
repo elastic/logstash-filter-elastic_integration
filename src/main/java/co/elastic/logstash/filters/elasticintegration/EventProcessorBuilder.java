@@ -8,7 +8,6 @@ package co.elastic.logstash.filters.elasticintegration;
 
 import co.elastic.logstash.api.Event;
 import co.elastic.logstash.api.FilterMatchListener;
-import co.elastic.logstash.filters.elasticintegration.ingest.SetSecurityUserProcessor;
 import co.elastic.logstash.filters.elasticintegration.ingest.SingleProcessorIngestPlugin;
 import co.elastic.logstash.filters.elasticintegration.resolver.CacheReloadService;
 import co.elastic.logstash.filters.elasticintegration.resolver.CachingResolver;
@@ -117,7 +116,6 @@ public class EventProcessorBuilder {
                 IngestCommonPluginBridge.URI_PARTS_PROCESSOR_TYPE));
         this.addProcessorsFromPlugin(IngestUserAgentPluginBridge::new);
         this.addProcessorsFromPlugin(RedactPluginBridge::new);
-        this.addProcessor(SetSecurityUserProcessor.TYPE, SetSecurityUserProcessor.Factory::new);
     }
 
     // event -> pipeline name
