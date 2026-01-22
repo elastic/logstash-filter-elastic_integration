@@ -469,8 +469,16 @@ task importMinimalElasticsearch() {
 }
 
 /**
- * Verifies imported JAR files for dependency safety.
- * It collects class names from the JARs, whitelists Logstash provided classes and default JDK packages.
+ * Verifies that imported Elasticsearch JARs have all required dependencies available.
+ *
+ * Scans class files for references and checks they can be resolved from:
+ * - Classes within the imported JAR set
+ * - JDK standard library (java.*, javax.*, etc.)
+ * - Packages provided by Logstash at runtime (log4j, jackson, guava, etc.)
+ *
+ * Missing classes not in the above categories will fail the build to prevent
+ * ClassNotFoundException at runtime. Optional/unused packages can be added to
+ * the exclusion list if they are known to be safe (dead code paths, reflection-loaded, etc.)
  */
 task verifyImportedJars() {
     description "Verifies imported JARs for dependency safety"
@@ -678,149 +686,65 @@ task verifyImportedJars() {
     }
 }
 
+/**
+ * Extracts class references from a Java class file by parsing its constant pool.
+ */
 def extractClassReferences(byte[] classBytes) {
     def references = [] as Set
-
     try {
         def dis = new DataInputStream(new ByteArrayInputStream(classBytes))
-
-        // Skip magic number (4 bytes) and version (4 bytes)
-        dis.skipBytes(8)
-
-        // Read constant pool count
+        dis.skipBytes(8) // magic + version
         int cpCount = dis.readUnsignedShort()
 
-        // Store UTF8 strings for later lookup
         def utf8Strings = [:]
-        // Store class info indices
-        def classInfoIndices = []
+        def classIndices = []
 
-        int i = 1
-        while (i < cpCount) {
+        for (int i = 1; i < cpCount; i++) {
             int tag = dis.readUnsignedByte()
-
             switch (tag) {
-                case 1: // CONSTANT_Utf8
-                    int length = dis.readUnsignedShort()
-                    byte[] bytes = new byte[length]
+                case 1: // UTF8
+                    int len = dis.readUnsignedShort()
+                    byte[] bytes = new byte[len]
                     dis.readFully(bytes)
                     utf8Strings[i] = new String(bytes, "UTF-8")
                     break
-                case 7: // CONSTANT_Class
-                    int nameIndex = dis.readUnsignedShort()
-                    classInfoIndices << nameIndex
+                case 7: // Class
+                    classIndices << dis.readUnsignedShort()
                     break
-                case 8: // CONSTANT_String
+                case 8: case 16: case 19: case 20: // String, MethodType, Module, Package
                     dis.skipBytes(2)
                     break
-                case 3: // CONSTANT_Integer
-                case 4: // CONSTANT_Float
+                case 3: case 4: // Integer, Float
                     dis.skipBytes(4)
                     break
-                case 5: // CONSTANT_Long
-                case 6: // CONSTANT_Double
+                case 5: case 6: // Long, Double (take 2 slots)
                     dis.skipBytes(8)
-                    i++ // Long and Double take two entries
+                    i++
                     break
-                case 9:  // CONSTANT_Fieldref
-                case 10: // CONSTANT_Methodref
-                case 11: // CONSTANT_InterfaceMethodref
-                case 12: // CONSTANT_NameAndType
+                case 9: case 10: case 11: case 12: case 17: case 18: // Refs, NameAndType, Dynamic, InvokeDynamic
                     dis.skipBytes(4)
                     break
-                case 15: // CONSTANT_MethodHandle
+                case 15: // MethodHandle
                     dis.skipBytes(3)
                     break
-                case 16: // CONSTANT_MethodType
-                    dis.skipBytes(2)
-                    break
-                case 17: // CONSTANT_Dynamic
-                case 18: // CONSTANT_InvokeDynamic
-                    dis.skipBytes(4)
-                    break
-                case 19: // CONSTANT_Module
-                case 20: // CONSTANT_Package
-                    dis.skipBytes(2)
-                    break
-                default:
-                    // Unknown tag, try to continue
-                    break
             }
-            i++
         }
 
-        // Resolve class names
-        classInfoIndices.each { idx ->
-            def className = utf8Strings[idx]
-            if (className) {
-                // Convert internal format (com/example/Class) to dot notation
-                className = className.replace("/", ".")
-                // Handle array types
-                if (className.startsWith("[")) {
-                    // Extract the element type from array descriptors
-                    def match = className =~ /\[+L(.+);/
-                    if (match) {
-                        className = match[0][1]
-                    }
-                }
-                if (!className.startsWith("[") && className.contains(".")) {
+        classIndices.each { idx ->
+            def name = utf8Strings[idx]
+            if (name && !name.startsWith("[")) {
+                def className = name.replace("/", ".")
+                if (className.contains(".")) {
                     references << className
                 }
             }
         }
     } catch (Exception e) {
-        // Ignore parsing errors
+        // Skip malformed class files
     }
-
     return references
 }
 
-task analyzeJarDependencies() {
-    description "Analyzes JAR dependencies and generates detailed reports"
-
-    dependsOn importMinimalElasticsearch
-
-    def jarsDir = importMinimalElasticsearch.jars
-    def reportDir = "${buildDir}/reports/jdeps"
-
-    inputs.dir jarsDir
-    outputs.dir reportDir
-
-    doLast {
-        file(reportDir).mkdirs()
-
-        def jarFiles = fileTree(jarsDir).matching { include "*.jar" }.files
-        if (jarFiles.isEmpty()) {
-            logger.warn("No JAR files found in ${jarsDir}, skipping analysis")
-            return
-        }
-
-        def classPath = jarFiles.collect { it.absolutePath }.join(File.pathSeparator)
-        def packageReport = file("${reportDir}/package-dependencies.txt")
-
-        logger.lifecycle("Analyzing package dependencies for ${jarFiles.size()} JARs...")
-
-        exec {
-            commandLine "jdeps",
-                    "--multi-release", "21",
-                    "-summary",
-                    "--class-path", classPath,
-                    *jarFiles.collect { it.absolutePath }
-
-            standardOutput = new FileOutputStream(packageReport)
-            errorOutput = new FileOutputStream(packageReport, true)
-            ignoreExitValue = true
-        }
-
-        logger.lifecycle("Package dependency report: ${packageReport.absolutePath}")
-    }
-}
-
-task verifyAllJars {
-    description "Verifies JARs to make sure their dependencies are present"
-    dependsOn verifyImportedJars
-    dependsOn analyzeJarDependencies
-}
 compileJava.dependsOn(importMinimalElasticsearch)
 shadowJar.dependsOn(importMinimalElasticsearch)
 
@@ -966,7 +890,7 @@ task rubyAssemble {
 
     dependsOn vendorShadowJar
     dependsOn generateGemJarRequiresFile
-
+    dependsOn verifyImportedJars
     dependsOn generateGemVersionFile
 }
 
