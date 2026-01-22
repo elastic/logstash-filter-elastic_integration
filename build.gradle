@@ -467,6 +467,360 @@ task importMinimalElasticsearch() {
         }
     }
 }
+
+/**
+ * Verifies imported JAR files for dependency safety.
+ * It collects class names from the JARs, whitelists Logstash provided classes and default JDK packages.
+ */
+task verifyImportedJars() {
+    description "Verifies imported JARs for dependency safety"
+
+    dependsOn importMinimalElasticsearch
+
+    def jarsDir = importMinimalElasticsearch.jars
+    def reportDir = "${buildDir}/verify-dependencies"
+
+    inputs.dir jarsDir
+    outputs.dir reportDir
+
+    // Should fail the build (default: true)
+    ext.failOnMissingDeps = project.findProperty('jdeps.failOnMissingDeps') != 'false'
+
+    // Logstash provided packages
+    ext.providedPackages = [
+        'org.apache.logging.log4j',
+        'org.apache.log4j',
+        'org.slf4j',
+        'org.yaml.snakeyaml',
+        'com.fasterxml.jackson.core',
+        'com.fasterxml.jackson.databind',
+        'com.fasterxml.jackson.annotation',
+        'com.fasterxml.jackson.dataformat',
+        'com.google.common'
+    ]
+
+    // TODO: folowing packages fail the build.
+    // And we don't know if they, expect coming through logstash-bridge, are truly dependencies and need to be added.
+    // Let's address them later.
+    ext.optionalPackages = [
+        // logstash-bridge includes
+        'org.elasticsearch.xcontent',
+        'co.elastic.logging',
+
+        // Legacy logging fallbacks in commons-logging
+        'org.apache.avalon.framework',
+        'org.apache.log',
+
+        // Optional compression/TLS in HTTP clients
+        'org.brotli',
+        'org.conscrypt',
+
+        // ES internal packages not used in Logstash context
+        'org.elasticsearch.cli',                    // CLI tools
+        'org.elasticsearch.entitlement',            // Entitlement system
+        'org.elasticsearch.nativeaccess',           // Native access
+        'org.elasticsearch.plugin.analysis',        // Analysis plugins
+        'org.elasticsearch.plugin.settings',        // Plugin settings
+        'org.elasticsearch.plugin.Inject',          // Plugin injection
+
+        // Lucene modules not needed for ingest processing
+        'org.apache.lucene.backward_codecs',        // Old index format support
+        'org.apache.lucene.queries.intervals',      // Interval queries
+        'org.apache.lucene.queries.spans',          // Span queries
+        'org.apache.lucene.queryparser',            // Query parsing
+        'org.apache.lucene.sandbox',                // Sandbox features
+        'org.apache.lucene.search.grouping',        // Grouping
+        'org.apache.lucene.search.highlight',       // Highlighting
+        'org.apache.lucene.search.join',            // Join queries
+        'org.apache.lucene.search.spell',           // Spell checking
+        'org.apache.lucene.search.suggest',         // Suggestions
+        'org.apache.lucene.search.uhighlight',      // Unified highlighter
+        'org.apache.lucene.search.vectorhighlight', // Vector highlighter
+        'org.apache.lucene.misc',                   // Misc utilities
+        'org.apache.lucene.index.memory',           // Memory index
+        'org.apache.lucene.spatial3d',              // Spatial 3D
+        'org.apache.lucene.queries.function',       // Function queries
+
+        // ES features not used in Logstash ingest
+        'org.elasticsearch.exponentialhistogram',   // Histogram aggregations
+        'org.elasticsearch.simdvec',                // SIMD vectors
+        'org.elasticsearch.tdigest',                // T-Digest aggregations
+        'org.elasticsearch.h3',                     // H3 geo
+        'org.elasticsearch.legacygeo',              // Legacy geo
+        'org.elasticsearch.lz4',                    // LZ4 compression lib
+        'org.HdrHistogram',                         // HDR Histogram
+        'net.jpountz.lz4',                          // LZ4 Java
+        'net.jpountz.util',
+        'joptsimple',                               // CLI option parsing
+
+        // ASM tree analysis (only needed for bytecode verification, not runtime)
+        'org.objectweb.asm.tree.analysis',
+    ]
+
+    doLast {
+        file(reportDir).mkdirs()
+
+        def jarFiles = fileTree(jarsDir).matching { include "*.jar" }.files
+        if (jarFiles.isEmpty()) {
+            throw new GradleException("No JAR files found in ${jarsDir}")
+        }
+
+        logger.lifecycle("Verifying ${jarFiles.size()} JAR files")
+        logger.lifecycle("JARs directory: ${jarsDir}")
+
+        // Collect all available classes from JARs
+        def availableClasses = [] as Set
+
+        jarFiles.each { jarFile ->
+            try {
+                def zipFile = new java.util.zip.ZipFile(jarFile)
+                zipFile.entries().each { entry ->
+                    if (entry.name.endsWith(".class") && !entry.name.contains("module-info")) {
+                        def className = entry.name
+                                .replaceAll(/\.class$/, "")
+                                .replace("/", ".")
+                        availableClasses << className
+                    }
+                }
+                zipFile.close()
+            } catch (Exception e) {
+                logger.warn("Could not scan ${jarFile.name}: ${e.message}")
+            }
+        }
+
+        // Scan for missing dependencies
+        logger.lifecycle("\nChecking for missing dependencies")
+        def missingDeps = [:].withDefault { [] as Set }
+
+        // JDK packages safe to ignore
+        def jdkPackagePrefixes = [
+            "java.", "javax.", "jdk.", "sun.", "com.sun.", "org.w3c.", "org.xml.",
+            "org.ietf.", "netscape."
+        ]
+
+        jarFiles.each { jarFile ->
+            try {
+                def zipFile = new java.util.zip.ZipFile(jarFile)
+                zipFile.entries().each { entry ->
+                    if (entry.name.endsWith(".class") && !entry.name.contains("module-info")) {
+                        def classBytes = zipFile.getInputStream(entry).bytes
+                        def referencedClasses = extractClassReferences(classBytes)
+
+                        referencedClasses.each { refClass ->
+                            // Skip JDK classes
+                            if (jdkPackagePrefixes.any { refClass.startsWith(it) }) {
+                                return
+                            }
+
+                            // Skip if already available
+                            if (availableClasses.contains(refClass)) {
+                                return
+                            }
+
+                            // Skip provided packages (available from Logstash at runtime)
+                            if (ext.providedPackages.any { refClass.startsWith(it) }) {
+                                return
+                            }
+
+                            // Skip optional packages
+                            if (ext.optionalPackages.any { refClass.startsWith(it) }) {
+                                return
+                            }
+
+                            // This is a missing dependency!
+                            missingDeps[jarFile.name] << refClass
+                        }
+                    }
+                }
+                zipFile.close()
+            } catch (Exception e) {
+                logger.warn("Could not analyze ${jarFile.name}: ${e.message}")
+            }
+        }
+
+        // Generate Report
+        def missingDepsReport = file("${reportDir}/missing-dependencies.txt")
+
+        def allMissingClasses = missingDeps.values().flatten() as Set
+
+        // Group missing by package
+        def missingByPackage = allMissingClasses.groupBy { cls ->
+            def parts = cls.split('\\.')
+            parts.take(Math.min(3, parts.length - 1)).join('.')
+        }
+
+        missingDepsReport.withWriter { w ->
+            if (missingDeps.isEmpty()) {
+                w << "No missing dependencies found.\n"
+            } else {
+                missingByPackage.sort().each { pkg, classes ->
+                    w << "${pkg} (${classes.size()} classes):\n"
+                    classes.sort().each { cls ->
+                        w << "  -> ${cls}\n"
+                    }
+                    w << "\n"
+                }
+            }
+        }
+
+        // Fail build if missing deps found
+        if (!missingDeps.isEmpty() && ext.failOnMissingDeps) {
+            throw new GradleException(
+                    "JAR verification failed:\n" +
+                    "  - ${allMissingClasses.size()} classes missing from ${missingByPackage.size()} packages\n" +
+                    "\nMissing packages: ${missingByPackage.keySet().sort().take(5).join(', ')}" +
+                    (missingByPackage.size() > 5 ? "..." : "") +
+                    "\n\nReview: ${missingDepsReport.absolutePath}"
+            )
+        }
+
+        logger.lifecycle("JAR verification finished.")
+    }
+}
+
+def extractClassReferences(byte[] classBytes) {
+    def references = [] as Set
+
+    try {
+        def dis = new DataInputStream(new ByteArrayInputStream(classBytes))
+
+        // Skip magic number (4 bytes) and version (4 bytes)
+        dis.skipBytes(8)
+
+        // Read constant pool count
+        int cpCount = dis.readUnsignedShort()
+
+        // Store UTF8 strings for later lookup
+        def utf8Strings = [:]
+        // Store class info indices
+        def classInfoIndices = []
+
+        int i = 1
+        while (i < cpCount) {
+            int tag = dis.readUnsignedByte()
+
+            switch (tag) {
+                case 1: // CONSTANT_Utf8
+                    int length = dis.readUnsignedShort()
+                    byte[] bytes = new byte[length]
+                    dis.readFully(bytes)
+                    utf8Strings[i] = new String(bytes, "UTF-8")
+                    break
+                case 7: // CONSTANT_Class
+                    int nameIndex = dis.readUnsignedShort()
+                    classInfoIndices << nameIndex
+                    break
+                case 8: // CONSTANT_String
+                    dis.skipBytes(2)
+                    break
+                case 3: // CONSTANT_Integer
+                case 4: // CONSTANT_Float
+                    dis.skipBytes(4)
+                    break
+                case 5: // CONSTANT_Long
+                case 6: // CONSTANT_Double
+                    dis.skipBytes(8)
+                    i++ // Long and Double take two entries
+                    break
+                case 9:  // CONSTANT_Fieldref
+                case 10: // CONSTANT_Methodref
+                case 11: // CONSTANT_InterfaceMethodref
+                case 12: // CONSTANT_NameAndType
+                    dis.skipBytes(4)
+                    break
+                case 15: // CONSTANT_MethodHandle
+                    dis.skipBytes(3)
+                    break
+                case 16: // CONSTANT_MethodType
+                    dis.skipBytes(2)
+                    break
+                case 17: // CONSTANT_Dynamic
+                case 18: // CONSTANT_InvokeDynamic
+                    dis.skipBytes(4)
+                    break
+                case 19: // CONSTANT_Module
+                case 20: // CONSTANT_Package
+                    dis.skipBytes(2)
+                    break
+                default:
+                    // Unknown tag, try to continue
+                    break
+            }
+            i++
+        }
+
+        // Resolve class names
+        classInfoIndices.each { idx ->
+            def className = utf8Strings[idx]
+            if (className) {
+                // Convert internal format (com/example/Class) to dot notation
+                className = className.replace("/", ".")
+                // Handle array types
+                if (className.startsWith("[")) {
+                    // Extract the element type from array descriptors
+                    def match = className =~ /\[+L(.+);/
+                    if (match) {
+                        className = match[0][1]
+                    }
+                }
+                if (!className.startsWith("[") && className.contains(".")) {
+                    references << className
+                }
+            }
+        }
+    } catch (Exception e) {
+        // Ignore parsing errors
+    }
+
+    return references
+}
+
+task analyzeJarDependencies() {
+    description "Analyzes JAR dependencies and generates detailed reports"
+
+    dependsOn importMinimalElasticsearch
+
+    def jarsDir = importMinimalElasticsearch.jars
+    def reportDir = "${buildDir}/reports/jdeps"
+
+    inputs.dir jarsDir
+    outputs.dir reportDir
+
+    doLast {
+        file(reportDir).mkdirs()
+
+        def jarFiles = fileTree(jarsDir).matching { include "*.jar" }.files
+        if (jarFiles.isEmpty()) {
+            logger.warn("No JAR files found in ${jarsDir}, skipping analysis")
+            return
+        }
+
+        def classPath = jarFiles.collect { it.absolutePath }.join(File.pathSeparator)
+        def packageReport = file("${reportDir}/package-dependencies.txt")
+
+        logger.lifecycle("Analyzing package dependencies for ${jarFiles.size()} JARs...")
+
+        exec {
+            commandLine "jdeps",
+                    "--multi-release", "21",
+                    "-summary",
+                    "--class-path", classPath,
+                    *jarFiles.collect { it.absolutePath }
+
+            standardOutput = new FileOutputStream(packageReport)
+            errorOutput = new FileOutputStream(packageReport, true)
+            ignoreExitValue = true
+        }
+
+        logger.lifecycle("Package dependency report: ${packageReport.absolutePath}")
+    }
+}
+
+task verifyAllJars {
+    description "Verifies JARs to make sure their dependencies are present"
+    dependsOn verifyImportedJars
+    dependsOn analyzeJarDependencies
+}
 compileJava.dependsOn(importMinimalElasticsearch)
 shadowJar.dependsOn(importMinimalElasticsearch)
 
@@ -583,6 +937,7 @@ task generateGemJarRequiresFile() {
         }
     }
 }
+
 task generateGemVersionFile() {
     description "Generates a ruby script including version information"
 
