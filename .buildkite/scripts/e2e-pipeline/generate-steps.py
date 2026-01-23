@@ -3,7 +3,6 @@ import requests
 import sys
 import typing
 from requests.adapters import HTTPAdapter, Retry
-
 from ruamel.yaml import YAML
 
 RELEASES_URL = "https://raw.githubusercontent.com/logstash-plugins/.ci/refs/heads/1.x/logstash-versions.yml"
@@ -19,17 +18,41 @@ def call_url_with_retry(url: str, max_retries: int = 5, delay: int = 1) -> reque
     return session.get(url)
 
 
-def generate_test_step(stack_version, es_treeish, snapshot) -> dict:
+def generate_test_step(stack_version, branch, snapshot) -> dict:
     label_integration_test: typing.final = f"E2E tests for {stack_version}, snapshot: {snapshot}"
-    return {
+    step: dict = {
         "label": label_integration_test,
         "command": TEST_COMMAND,
         "env": {
             "SNAPSHOT": snapshot,
             "ELASTIC_STACK_VERSION": stack_version,
-            "ELASTICSEARCH_TREEISH": es_treeish
         }
     }
+    # we are not going to set branch if job kicked of through webhook (PR merge or manual PR run)
+    if branch is not None:
+        step["env"]["TARGET_BRANCH"] = branch
+    return step
+
+
+def generate_steps_for_scheduler(versions) -> list:
+    steps: list = []
+    snapshots = versions["snapshots"]
+    for snapshot_version in snapshots:
+        if snapshots[snapshot_version] is None or snapshots[snapshot_version].startswith("7.") or snapshot_version == "8.previous":
+            continue
+        full_stack_version = snapshots[snapshot_version]
+        version_parts = snapshots[snapshot_version].split(".")
+        major_minor_versions = snapshot_version if snapshot_version == "main" else f"{version_parts[0]}.{version_parts[1]}"
+        branch = f"{version_parts[0]}.x" if snapshot_version.find("future") > -1 else major_minor_versions
+        steps.append(generate_test_step(full_stack_version, branch, "true"))
+    return steps
+
+
+def generate_steps_for_main_branch(versions) -> list:
+    steps: list = []
+    full_stack_version: typing.final = versions["snapshots"]["main"]
+    steps.append(generate_test_step(full_stack_version, None, "true"))
+    return steps
 
 
 if __name__ == "__main__":
@@ -43,42 +66,27 @@ if __name__ == "__main__":
         },
         "steps": []}
 
-    steps = []
     response = call_url_with_retry(RELEASES_URL)
     yaml = YAML(typ='safe')
     versions_yaml: typing.final = yaml.load(response.text)
 
-    # there are situations to manually run CIs with PR change,
-    # set MANUAL_TARGET_BRANCH with upstream target branch and run
-    manually_set_target_branch: typing.final = os.getenv("MANUAL_TARGET_BRANCH")
-    target_branch: typing.final = manually_set_target_branch if manually_set_target_branch else os.getenv("TARGET_BRANCH")
-    print(f"Running with target_branch: {target_branch}")
-    if target_branch == '8.x':
-        full_stack_version: typing.final = versions_yaml["snapshots"]["8.future"]
-        steps.append(generate_test_step(full_stack_version, target_branch, "true"))
-    elif target_branch == 'main':
-        full_stack_version: typing.final = versions_yaml["snapshots"][target_branch]
-        steps.append(generate_test_step(full_stack_version, target_branch, "true"))
-    else:
-        # generate steps for the version if released
-        releases = versions_yaml["releases"]
-        for release_version in releases:
-            if releases[release_version].startswith(target_branch):
-                steps.append(generate_test_step(releases[release_version], target_branch, "false"))
-                break
-        # steps for snapshot version
-        snapshots = versions_yaml["snapshots"]
-        for snapshot_version in snapshots:
-            if snapshots[snapshot_version].startswith(target_branch):
-                steps.append(generate_test_step(snapshots[snapshot_version], target_branch, "false"))
-                break
+    # Use BUILDKITE_SOURCE to figure out PR merge or schedule.
+    # If PR merge, no need to run builds on all branches, target branch will be good
+    #   - webhook when PR gets merged
+    #   - schedule when daily schedule starts
+    #   - ui when manually kicking job from BK UI
+    #       - manual kick off will be on PR or entire main branch, can be decided with BUILDKITE_BRANCH
+    bk_source = os.getenv("BUILDKITE_SOURCE")
+    bk_branch = os.getenv("BUILDKITE_BRANCH")
+    steps = generate_steps_for_scheduler(versions_yaml) if (bk_source == "schedule" or bk_branch == "main") \
+        else generate_steps_for_main_branch(versions_yaml)
 
-    group_desc = f"{target_branch} branch E2E steps"
+    group_desc = f"E2E steps"
     key_desc = "e2e-steps"
     structure["steps"].append({
         "group": group_desc,
         "key": key_desc,
-        "steps": steps
+        "steps": steps,
     })
 
     print(

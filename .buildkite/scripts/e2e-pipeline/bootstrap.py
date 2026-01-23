@@ -5,16 +5,27 @@ E2E bootstrapping with Python script
     - Clone integrations repo and prepare packages
     - When E2E finishes, teardown the stack
 """
+import glob
 import os
 import sys
 import time
 import util
+import ruamel.yaml
+
+YAML = ruamel.yaml.YAML()
 
 
 class Bootstrap:
     ELASTIC_PACKAGE_DISTRO_URL = "https://api.github.com/repos/elastic/elastic-package/releases/latest"
     LOGSTASH_CONTAINER_NAME = "elastic-package-stack-e2e-logstash-1"
     PLUGIN_NAME = "logstash-filter-elastic_integration"
+
+    SUPPORTED_PROCESSORS: list = [
+        "append", "bytes", "community_id", "convert", "csv", "date", "date_index_name", "dissect", "dot_expander",
+        "drop", "fail", "fingerprint", "foreach", "grok", "gsub", "html_strip", "join", "json", "kv", "lowercase",
+        "network_direction", "pipeline", "registered_domain", "remove", "rename", "reroute", "script", "set",
+        "sort", "split", "terminate", "trim", "uppercase", "uri_parts", "urldecode", "user_agent", "redact", "geoip"
+    ]
 
     def __init__(self, stack_version: str, project_type: str) -> None:
         f"""
@@ -32,7 +43,7 @@ class Bootstrap:
         self.__validate_and_set_project_type(project_type)
         self.__resolve_distro()
 
-    def __validate_and_set_project_type(self, project_type: str) -> None:
+    def __validate_and_set_project_type(self, project_type: str):
         project_types = ["on_prems", "serverless"]
         if project_type not in project_types:
             raise ValueError(f"project_type accepts {project_types} only")
@@ -73,6 +84,34 @@ class Bootstrap:
         util.run_or_raise_error(["retry", "-t", "3", "--", "git", "clone", "--single-branch",
                                  "https://github.com/elastic/integrations.git"],
                                 "Error occurred while cloning an integrations repo. Check logs for details.")
+
+    def __scan_for_unsupported_processors(self) -> None:
+        curr_dir = os.getcwd()
+        pipeline_definition_file_path = "integrations/packages/**/data_stream/**/elasticsearch/ingest_pipeline/*.yml"
+        files = glob.glob(os.path.join(curr_dir, pipeline_definition_file_path))
+        unsupported_processors: dict[list] = {}  # {processor_type: list<file>}
+
+        for file in files:
+            try:
+                with open(file, "r") as f:
+                    yaml_content = YAML.load(f)
+                    processors = yaml_content.get("processors", [])
+
+                    for processor in processors:
+                        for processor_type, _ in processor.items():
+                            if processor_type not in self.SUPPORTED_PROCESSORS:
+                                if processor_type not in unsupported_processors:
+                                    unsupported_processors[processor_type]: list = []
+                                if file not in unsupported_processors[processor_type]:
+                                    unsupported_processors[processor_type].append(file)
+            except Exception as e:
+                # Intentionally failing CI for better visibility
+                # For the long term, creating a whitelist of unsupported processors (assuming _really_ cannot support)
+                #   and skipping them by warning would be ideal approach.
+                print(f"Failed to parse file: {file}. Error: {e}")
+
+        if len(unsupported_processors) > 0:
+            raise Exception(f"Unsupported processors found: {unsupported_processors}")
 
     def __get_profile_path(self) -> str:
         return os.path.join(util.get_home_path(), ".elastic-package/profiles/e2e")
@@ -148,14 +187,16 @@ class Bootstrap:
         util.run_or_raise_error(["elastic-package", "stack", "down"],
                                 "Error occurred while stopping stacks with elastic-package. Check logs for details.")
 
-    def run_elastic_stack(self) -> None:
+    def run_elastic_stack(self, skip_setup=False) -> None:
         """
         Downloads elastic-package, creates a profile and runs ELK, Fleet, ERP and elastic-agent
         """
-        self.__download_elastic_package()
-        self.__make_elastic_package_global()
-        self.__clone_integrations_repo()
-        self.__setup_elastic_package_profile()
+        if not skip_setup:
+            self.__download_elastic_package()
+            self.__make_elastic_package_global()
+            self.__clone_integrations_repo()
+            self.__scan_for_unsupported_processors()
+            self.__setup_elastic_package_profile()
         self.__spin_stack()
         self.__install_plugin()
         self.__reload_container()
