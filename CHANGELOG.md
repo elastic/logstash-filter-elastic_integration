@@ -1,3 +1,6 @@
+## 8.19.2
+  - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#391](https://github.com/elastic/logstash-filter-elastic_integration/pull/391)
+
 ## 8.19.1
   - Add `terminate` processor support [#345](https://github.com/elastic/logstash-filter-elastic_integration/pull/345)
 
