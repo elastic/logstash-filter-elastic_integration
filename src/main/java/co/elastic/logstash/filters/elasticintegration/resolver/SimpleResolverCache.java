@@ -98,7 +98,7 @@ public class SimpleResolverCache<K, V> implements ResolverCache<K, V> {
                     LOGGER.trace(() -> String.format("uncached-load(%s){ %s -> %s }", type, resolveKey, retrieved.getCachedValue()));
                     return (retrieved.isHit() || !retrieved.isExpired()) ? retrieved : null;
                 } catch (Exception e) {
-                    LOGGER.debug(() -> String.format("uncached-load-exception(%s){ %s !> %s }", type, resolveKey), e);
+                    LOGGER.debug(() -> String.format("uncached-load-exception(%s){ %s !> %s }", type, resolveKey, e.getMessage()), e);
                     throw e;
                 }
             });
