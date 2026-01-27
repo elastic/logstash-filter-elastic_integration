@@ -1,3 +1,6 @@
+## 9.3.1
+  - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#393](https://github.com/elastic/logstash-filter-elastic_integration/pull/393)
+
 ## 9.3.0
   - Embeds Ingest Node components from Elasticsearch 9.3 [#378](https://github.com/elastic/logstash-filter-elastic_integration/pull/378)
 
