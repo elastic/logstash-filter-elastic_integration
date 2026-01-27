@@ -389,6 +389,284 @@ task importMinimalElasticsearch() {
         }
     }
 }
+
+/**
+ * Verifies that imported Elasticsearch JARs have all required dependencies available.
+ *
+ * Scans class files for references and checks they can be resolved from:
+ * - Classes within the imported JAR set
+ * - JDK standard library (java.*, javax.*, etc.)
+ * - Packages provided by Logstash at runtime (log4j, jackson, guava, etc.)
+ *
+ * Missing classes not in the above categories will fail the build to prevent
+ * ClassNotFoundException at runtime. Optional/unused packages can be added to
+ * the exclusion list if they are known to be safe (dead code paths, reflection-loaded, etc.)
+ */
+task verifyImportedJars() {
+    description "Verifies imported JARs for dependency safety"
+
+    dependsOn importMinimalElasticsearch
+
+    def jarsDir = importMinimalElasticsearch.jars
+    def reportDir = "${buildDir}/verify-dependencies"
+
+    inputs.dir jarsDir
+    outputs.dir reportDir
+
+    // Should fail the build (default: true)
+    ext.failOnMissingDeps = project.findProperty('jdeps.failOnMissingDeps') != 'false'
+
+    // Logstash provided packages
+    ext.providedPackages = [
+        'org.apache.logging.log4j',
+        'org.apache.log4j',
+        'org.slf4j',
+        'org.yaml.snakeyaml',
+        'com.fasterxml.jackson.core',
+        'com.fasterxml.jackson.databind',
+        'com.fasterxml.jackson.annotation',
+        'com.fasterxml.jackson.dataformat',
+        'com.google.common'
+    ]
+
+    // TODO: folowing packages fail the build.
+    // And we don't know if they, expect coming through logstash-bridge, are truly dependencies and need to be added.
+    // Let's address them later.
+    ext.optionalPackages = [
+        // logstash-bridge includes
+        'org.elasticsearch.xcontent',
+        'co.elastic.logging',
+
+        // Legacy logging fallbacks in commons-logging
+        'org.apache.avalon.framework',
+        'org.apache.log',
+
+        // Optional compression/TLS in HTTP clients
+        'org.brotli',
+        'org.conscrypt',
+
+        // ES internal packages not used in Logstash context
+        'org.elasticsearch.cli',                    // CLI tools
+        'org.elasticsearch.entitlement',            // Entitlement system
+        'org.elasticsearch.nativeaccess',           // Native access
+        'org.elasticsearch.plugin.analysis',        // Analysis plugins
+        'org.elasticsearch.plugin.settings',        // Plugin settings
+        'org.elasticsearch.plugin.Inject',          // Plugin injection
+
+        // Lucene modules not needed for ingest processing
+        'org.apache.lucene.backward_codecs',        // Old index format support
+        'org.apache.lucene.queries.intervals',      // Interval queries
+        'org.apache.lucene.queries.spans',          // Span queries
+        'org.apache.lucene.queryparser',            // Query parsing
+        'org.apache.lucene.sandbox',                // Sandbox features
+        'org.apache.lucene.search.grouping',        // Grouping
+        'org.apache.lucene.search.highlight',       // Highlighting
+        'org.apache.lucene.search.join',            // Join queries
+        'org.apache.lucene.search.spell',           // Spell checking
+        'org.apache.lucene.search.suggest',         // Suggestions
+        'org.apache.lucene.search.uhighlight',      // Unified highlighter
+        'org.apache.lucene.search.vectorhighlight', // Vector highlighter
+        'org.apache.lucene.misc',                   // Misc utilities
+        'org.apache.lucene.index.memory',           // Memory index
+        'org.apache.lucene.spatial3d',              // Spatial 3D
+        'org.apache.lucene.queries.function',       // Function queries
+
+        // ES features not used in Logstash ingest
+        'org.elasticsearch.exponentialhistogram',   // Histogram aggregations
+        'org.elasticsearch.simdvec',                // SIMD vectors
+        'org.elasticsearch.tdigest',                // T-Digest aggregations
+        'org.elasticsearch.h3',                     // H3 geo
+        'org.elasticsearch.legacygeo',              // Legacy geo
+        'org.elasticsearch.lz4',                    // LZ4 compression lib
+        'org.HdrHistogram',                         // HDR Histogram
+        'net.jpountz.lz4',                          // LZ4 Java
+        'net.jpountz.util',
+        'joptsimple',                               // CLI option parsing
+
+        // ASM tree analysis (only needed for bytecode verification, not runtime)
+        'org.objectweb.asm.tree.analysis',
+    ]
+
+    doLast {
+        file(reportDir).mkdirs()
+
+        def jarFiles = fileTree(jarsDir).matching { include "*.jar" }.files
+        if (jarFiles.isEmpty()) {
+            throw new GradleException("No JAR files found in ${jarsDir}")
+        }
+
+        logger.lifecycle("Verifying ${jarFiles.size()} JAR files")
+        logger.lifecycle("JARs directory: ${jarsDir}")
+
+        // Collect all available classes from JARs
+        def availableClasses = [] as Set
+
+        jarFiles.each { jarFile ->
+            try {
+                def zipFile = new java.util.zip.ZipFile(jarFile)
+                zipFile.entries().each { entry ->
+                    if (entry.name.endsWith(".class") && !entry.name.contains("module-info")) {
+                        def className = entry.name
+                                .replaceAll(/\.class$/, "")
+                                .replace("/", ".")
+                        availableClasses << className
+                    }
+                }
+                zipFile.close()
+            } catch (Exception e) {
+                logger.warn("Could not scan ${jarFile.name}: ${e.message}")
+            }
+        }
+
+        // Scan for missing dependencies
+        logger.lifecycle("\nChecking for missing dependencies")
+        def missingDeps = [:].withDefault { [] as Set }
+
+        // JDK packages safe to ignore
+        def jdkPackagePrefixes = [
+            "java.", "javax.", "jdk.", "sun.", "com.sun.", "org.w3c.", "org.xml.",
+            "org.ietf.", "netscape."
+        ]
+
+        jarFiles.each { jarFile ->
+            try {
+                def zipFile = new java.util.zip.ZipFile(jarFile)
+                zipFile.entries().each { entry ->
+                    if (entry.name.endsWith(".class") && !entry.name.contains("module-info")) {
+                        def classBytes = zipFile.getInputStream(entry).bytes
+                        def referencedClasses = extractClassReferences(classBytes)
+
+                        referencedClasses.each { refClass ->
+                            // Skip JDK classes
+                            if (jdkPackagePrefixes.any { refClass.startsWith(it) }) {
+                                return
+                            }
+
+                            // Skip if already available
+                            if (availableClasses.contains(refClass)) {
+                                return
+                            }
+
+                            // Skip provided packages (available from Logstash at runtime)
+                            if (ext.providedPackages.any { refClass.startsWith(it) }) {
+                                return
+                            }
+
+                            // Skip optional packages
+                            if (ext.optionalPackages.any { refClass.startsWith(it) }) {
+                                return
+                            }
+
+                            // This is a missing dependency!
+                            missingDeps[jarFile.name] << refClass
+                        }
+                    }
+                }
+                zipFile.close()
+            } catch (Exception e) {
+                logger.warn("Could not analyze ${jarFile.name}: ${e.message}")
+            }
+        }
+
+        // Generate Report
+        def missingDepsReport = file("${reportDir}/missing-dependencies.txt")
+
+        def allMissingClasses = missingDeps.values().flatten() as Set
+
+        // Group missing by package
+        def missingByPackage = allMissingClasses.groupBy { cls ->
+            def parts = cls.split('\\.')
+            parts.take(Math.min(3, parts.length - 1)).join('.')
+        }
+
+        missingDepsReport.withWriter { w ->
+            if (missingDeps.isEmpty()) {
+                w << "No missing dependencies found.\n"
+            } else {
+                missingByPackage.sort().each { pkg, classes ->
+                    w << "${pkg} (${classes.size()} classes):\n"
+                    classes.sort().each { cls ->
+                        w << "  -> ${cls}\n"
+                    }
+                    w << "\n"
+                }
+            }
+        }
+
+        // Fail build if missing deps found
+        if (!missingDeps.isEmpty() && ext.failOnMissingDeps) {
+            throw new GradleException(
+                    "JAR verification failed:\n" +
+                    "  - ${allMissingClasses.size()} classes missing from ${missingByPackage.size()} packages\n" +
+                    "\nMissing packages: ${missingByPackage.keySet().sort().take(5).join(', ')}" +
+                    (missingByPackage.size() > 5 ? "..." : "") +
+                    "\n\nReview: ${missingDepsReport.absolutePath}"
+            )
+        }
+
+        logger.lifecycle("JAR verification finished.")
+    }
+}
+
+/**
+ * Extracts class references from a Java class file by parsing its constant pool.
+ */
+def extractClassReferences(byte[] classBytes) {
+    def references = [] as Set
+    try {
+        def dis = new DataInputStream(new ByteArrayInputStream(classBytes))
+        dis.skipBytes(8) // magic + version
+        int cpCount = dis.readUnsignedShort()
+
+        def utf8Strings = [:]
+        def classIndices = []
+
+        for (int i = 1; i < cpCount; i++) {
+            int tag = dis.readUnsignedByte()
+            switch (tag) {
+                case 1: // UTF8
+                    int len = dis.readUnsignedShort()
+                    byte[] bytes = new byte[len]
+                    dis.readFully(bytes)
+                    utf8Strings[i] = new String(bytes, "UTF-8")
+                    break
+                case 7: // Class
+                    classIndices << dis.readUnsignedShort()
+                    break
+                case 8: case 16: case 19: case 20: // String, MethodType, Module, Package
+                    dis.skipBytes(2)
+                    break
+                case 3: case 4: // Integer, Float
+                    dis.skipBytes(4)
+                    break
+                case 5: case 6: // Long, Double (take 2 slots)
+                    dis.skipBytes(8)
+                    i++
+                    break
+                case 9: case 10: case 11: case 12: case 17: case 18: // Refs, NameAndType, Dynamic, InvokeDynamic
+                    dis.skipBytes(4)
+                    break
+                case 15: // MethodHandle
+                    dis.skipBytes(3)
+                    break
+            }
+        }
+
+        classIndices.each { idx ->
+            def name = utf8Strings[idx]
+            if (name && !name.startsWith("[")) {
+                def className = name.replace("/", ".")
+                if (className.contains(".")) {
+                    references << className
+                }
+            }
+        }
+    } catch (Exception e) {
+        // Skip malformed class files
+    }
+    return references
+}
+
 compileJava.dependsOn(importMinimalElasticsearch)
 shadowJar.dependsOn(importMinimalElasticsearch)
 
@@ -505,6 +783,7 @@ task generateGemJarRequiresFile() {
         }
     }
 }
+
 task generateGemVersionFile() {
     description "Generates a ruby script including version information"
 
@@ -533,7 +812,7 @@ task rubyAssemble {
 
     dependsOn vendorShadowJar
     dependsOn generateGemJarRequiresFile
-
+    dependsOn verifyImportedJars
     dependsOn generateGemVersionFile
 }
 
