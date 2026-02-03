@@ -507,17 +507,19 @@ task verifyImportedJars() {
         'com.google.common'
     ]
 
-    // TODO: folowing packages fail the build.
-    // And we don't know if they, expect coming through logstash-bridge, are truly dependencies and need to be added.
-    // Let's address them later.
+    // TODO: following packages fail the build.
+    // And we don't know if they (except coming through logstash-bridge) are truly dependencies and need to be added.
+    // Let's address them later with
     ext.optionalPackages = [
         // logstash-bridge includes
         'org.elasticsearch.xcontent',
-        'co.elastic.logging',
+        'co.elastic.logging', // 9.x
+        'org.elasticsearch.logging', // 8.x
 
         // Legacy logging fallbacks in commons-logging
         'org.apache.avalon.framework',
         'org.apache.log',
+        'org.apache.lucene',
 
         // Optional compression/TLS in HTTP clients
         'org.brotli',
