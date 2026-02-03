@@ -519,7 +519,6 @@ task verifyImportedJars() {
         // Legacy logging fallbacks in commons-logging
         'org.apache.avalon.framework',
         'org.apache.log',
-        'org.apache.lucene',
 
         // Optional compression/TLS in HTTP clients
         'org.brotli',
@@ -534,6 +533,7 @@ task verifyImportedJars() {
         'org.elasticsearch.plugin.Inject',          // Plugin injection
 
         // Lucene modules not needed for ingest processing
+        'org.apache.lucene.internal.vectorization', // Vectorization
         'org.apache.lucene.backward_codecs',        // Old index format support
         'org.apache.lucene.queries.intervals',      // Interval queries
         'org.apache.lucene.queries.spans',          // Span queries
@@ -549,6 +549,7 @@ task verifyImportedJars() {
         'org.apache.lucene.misc',                   // Misc utilities
         'org.apache.lucene.index.memory',           // Memory index
         'org.apache.lucene.spatial3d',              // Spatial 3D
+        'org.apache.lucene.store',                  // Store
         'org.apache.lucene.queries.function',       // Function queries
 
         // ES features not used in Logstash ingest
