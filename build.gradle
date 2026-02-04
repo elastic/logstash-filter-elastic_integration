@@ -491,9 +491,6 @@ task verifyImportedJars() {
     inputs.dir jarsDir
     outputs.dir reportDir
 
-    // Should fail the build (default: true)
-    ext.failOnMissingDeps = project.findProperty('jdeps.failOnMissingDeps') != 'false'
-
     // Logstash provided packages
     ext.providedPackages = [
         'org.apache.logging.log4j',
@@ -654,6 +651,14 @@ task verifyImportedJars() {
 
         def allMissingClasses = missingDeps.values().flatten() as Set
 
+        // class to JARs mapping
+        def classToJars = [:].withDefault { [] as Set }
+        missingDeps.each { jarName, classes ->
+            classes.each { cls ->
+                classToJars[cls] << jarName
+            }
+        }
+
         // Group missing by package
         def missingByPackage = allMissingClasses.groupBy { cls ->
             def parts = cls.split('\\.')
@@ -667,7 +672,9 @@ task verifyImportedJars() {
                 missingByPackage.sort().each { pkg, classes ->
                     w << "${pkg} (${classes.size()} classes):\n"
                     classes.sort().each { cls ->
+                        def jars = classToJars[cls].sort().join(', ')
                         w << "  -> ${cls}\n"
+                        w << "     referenced by: ${jars}\n"
                     }
                     w << "\n"
                 }
@@ -675,7 +682,7 @@ task verifyImportedJars() {
         }
 
         // Fail build if missing deps found
-        if (!missingDeps.isEmpty() && ext.failOnMissingDeps) {
+        if (!missingDeps.isEmpty()) {
             throw new GradleException(
                     "JAR verification failed:\n" +
                     "  - ${allMissingClasses.size()} classes missing from ${missingByPackage.size()} packages\n" +
