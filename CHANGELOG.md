@@ -1,4 +1,5 @@
 ## UNRELEASED
+  - Include Elasticsearch web-utils JAR into the plugin to keep `registered_domain` processor dependencies [#397](https://github.com/elastic/logstash-filter-elastic_integration/pull/397)
   - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#380](https://github.com/elastic/logstash-filter-elastic_integration/pull/380)
   - Fixed `set_security_user` processor to behave consistently with other unsupported processors (`inference`, `enrich`) by tagging events with `_ingest_pipeline_failure` [#269](https://github.com/elastic/logstash-filter-elastic_integration/pull/269)
 
