@@ -433,6 +433,8 @@ task importMinimalElasticsearch() {
 
             from(shadeElasticsearchIngestGeoIpModule)
             from(shadeElasticsearchRedactPlugin)
+            // registered_domain processor: web-utils is already built by localDistro
+            from("${unzipDownloadedElasticsearchSourceZip.outputs.files.singleFile}/libs/web-utils/build/distributions")
 
             from(buildElasticsearchLocalDistro.module("lang-mustache")) {
                 include jarPackageNamed("lang-mustache")
@@ -957,4 +959,5 @@ task unitSpecs(dependsOn: bundleInstall) {
 
 clean {
     delete "${projectDir}/*.gem"
+    delete "build"
 }
