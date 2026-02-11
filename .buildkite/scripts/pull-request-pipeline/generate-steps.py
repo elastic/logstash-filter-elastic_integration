@@ -23,7 +23,8 @@ def generate_unit_and_integration_test_steps(stack_version, snapshot) -> list[ty
         "env": {
             "SNAPSHOT": snapshot,
             "ELASTIC_STACK_VERSION": stack_version,
-            "INTEGRATION": "false"
+            "INTEGRATION": "false",
+            "ELASTICSEARCH_TREEISH": ".".join(stack_version.split(".")[:2])
         }
     })
 
