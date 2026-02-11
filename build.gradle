@@ -491,9 +491,6 @@ task verifyImportedJars() {
     inputs.dir jarsDir
     outputs.dir reportDir
 
-    // Should fail the build (default: true)
-    ext.failOnMissingDeps = project.findProperty('jdeps.failOnMissingDeps') != 'false'
-
     // Logstash provided packages
     ext.providedPackages = [
         'org.apache.logging.log4j',
@@ -507,13 +504,14 @@ task verifyImportedJars() {
         'com.google.common'
     ]
 
-    // TODO: folowing packages fail the build.
-    // And we don't know if they, expect coming through logstash-bridge, are truly dependencies and need to be added.
-    // Let's address them later.
+    // TODO: following packages fail the build.
+    // And we don't know if they (except coming through logstash-bridge) are truly dependencies and need to be added.
+    // Let's address them later with
     ext.optionalPackages = [
         // logstash-bridge includes
         'org.elasticsearch.xcontent',
-        'co.elastic.logging',
+        'co.elastic.logging', // 9.x
+        'org.elasticsearch.logging', // 8.x
 
         // Legacy logging fallbacks in commons-logging
         'org.apache.avalon.framework',
@@ -532,6 +530,7 @@ task verifyImportedJars() {
         'org.elasticsearch.plugin.Inject',          // Plugin injection
 
         // Lucene modules not needed for ingest processing
+        'org.apache.lucene.internal.vectorization', // Vectorization
         'org.apache.lucene.backward_codecs',        // Old index format support
         'org.apache.lucene.queries.intervals',      // Interval queries
         'org.apache.lucene.queries.spans',          // Span queries
@@ -547,6 +546,7 @@ task verifyImportedJars() {
         'org.apache.lucene.misc',                   // Misc utilities
         'org.apache.lucene.index.memory',           // Memory index
         'org.apache.lucene.spatial3d',              // Spatial 3D
+        'org.apache.lucene.store',                  // Store
         'org.apache.lucene.queries.function',       // Function queries
 
         // ES features not used in Logstash ingest
@@ -651,6 +651,14 @@ task verifyImportedJars() {
 
         def allMissingClasses = missingDeps.values().flatten() as Set
 
+        // class to JARs mapping
+        def classToJars = [:].withDefault { [] as Set }
+        missingDeps.each { jarName, classes ->
+            classes.each { cls ->
+                classToJars[cls] << jarName
+            }
+        }
+
         // Group missing by package
         def missingByPackage = allMissingClasses.groupBy { cls ->
             def parts = cls.split('\\.')
@@ -664,7 +672,9 @@ task verifyImportedJars() {
                 missingByPackage.sort().each { pkg, classes ->
                     w << "${pkg} (${classes.size()} classes):\n"
                     classes.sort().each { cls ->
+                        def jars = classToJars[cls].sort().join(', ')
                         w << "  -> ${cls}\n"
+                        w << "     referenced by: ${jars}\n"
                     }
                     w << "\n"
                 }
@@ -672,7 +682,7 @@ task verifyImportedJars() {
         }
 
         // Fail build if missing deps found
-        if (!missingDeps.isEmpty() && ext.failOnMissingDeps) {
+        if (!missingDeps.isEmpty()) {
             throw new GradleException(
                     "JAR verification failed:\n" +
                     "  - ${allMissingClasses.size()} classes missing from ${missingByPackage.size()} packages\n" +
