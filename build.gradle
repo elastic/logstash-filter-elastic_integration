@@ -794,6 +794,7 @@ task generateGemJarRequiresFile() {
         }
     }
 }
+
 task generateGemVersionFile() {
     description "Generates a ruby script including version information"
 
@@ -822,7 +823,7 @@ task rubyAssemble {
 
     dependsOn vendorShadowJar
     dependsOn generateGemJarRequiresFile
-
+    dependsOn verifyImportedJars
     dependsOn generateGemVersionFile
 }
 
