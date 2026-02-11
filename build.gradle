@@ -425,6 +425,7 @@ task importMinimalElasticsearch() {
             from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
                 include jarPackageNamed("elasticsearch-dissect")
+                include jarPackageNamed("elasticsearch-web-utils")
             }
 
             from(buildElasticsearchLocalDistro.module("ingest-user-agent")) {
@@ -433,8 +434,6 @@ task importMinimalElasticsearch() {
 
             from(shadeElasticsearchIngestGeoIpModule)
             from(shadeElasticsearchRedactPlugin)
-            // registered_domain processor: web-utils is already built by localDistro
-            from("${unzipDownloadedElasticsearchSourceZip.outputs.files.singleFile}/libs/web-utils/build/distributions")
 
             from(buildElasticsearchLocalDistro.module("lang-mustache")) {
                 include jarPackageNamed("lang-mustache")
