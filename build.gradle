@@ -425,6 +425,7 @@ task importMinimalElasticsearch() {
             from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
                 include jarPackageNamed("elasticsearch-dissect")
+                include jarPackageNamed("elasticsearch-web-utils")
             }
 
             from(buildElasticsearchLocalDistro.module("ingest-user-agent")) {
@@ -967,4 +968,5 @@ task unitSpecs(dependsOn: bundleInstall) {
 
 clean {
     delete "${projectDir}/*.gem"
+    delete "build"
 }
