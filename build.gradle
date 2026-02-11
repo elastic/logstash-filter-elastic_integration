@@ -390,8 +390,6 @@ task importMinimalElasticsearch() {
         }
     }
 }
-<<<<<<< HEAD
-=======
 
 /**
  * Verifies that imported Elasticsearch JARs have all required dependencies available.
@@ -680,7 +678,6 @@ def extractClassReferences(byte[] classBytes) {
     return references
 }
 
->>>>>>> 011bc51 (Add extra optional packages (#395))
 compileJava.dependsOn(importMinimalElasticsearch)
 shadowJar.dependsOn(importMinimalElasticsearch)
 
