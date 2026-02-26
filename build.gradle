@@ -247,6 +247,7 @@ task buildElasticsearchLocalDistro(type: Exec) {
     doFirst {
         if (useLocalElasticsearch) {
             def esDir = project.file(elasticsearchPath)
+            println "Using local Elasticsearch repo: ${esDir.absolutePath}"
             assert esDir.exists() : "ELASTICSEARCH_PATH does not exist: ${esDir}"
             assert esDir.directory : "ELASTICSEARCH_PATH is not a directory: ${esDir}"
         }
