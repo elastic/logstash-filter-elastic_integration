@@ -245,6 +245,7 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
     })
     ext.lib = localDistroResult.map { "${it}/lib" }
     ext.module = { moduleName -> localDistroResult.map { "${it}/modules/${moduleName}"} }
+    ext.libBuildDir = { libName -> "${esSource}/libs/${libName}/build/distributions" }
 
     workingDir esSource
     commandLine "./gradlew", "--stacktrace", "localDistro"
@@ -370,6 +371,25 @@ task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plug
 }
 
 /**
+ * Shades the Elasticsearch user-agent-api lib (built as part of localDistro).
+ */
+task shadeElasticsearchUserAgentApi(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades the Elasticsearch user-agent-api library"
+
+    dependsOn buildElasticsearchLocalDistro
+
+    def userAgentApiLibDir = buildElasticsearchLocalDistro.libBuildDir("user-agent-api")
+    inputs.dir userAgentApiLibDir
+    from(fileTree(dir: userAgentApiLibDir, include: ["*.jar"]))
+
+    archiveFileName = "user-agent-api-shaded.jar"
+    destinationDirectory = file("${buildDir}/shaded")
+
+    mergeServiceFiles()
+    exclude '**/module-info.class'
+}
+
+/**
  * The x-pack redact plugin reaches into the grok plugin's implementation, so
  * they both need to point to the same relocated shaded components.
  */
@@ -414,6 +434,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch-logging")
                 include jarPackageNamed("elasticsearch-x-content")
                 include jarPackageNamed("elasticsearch-geo")
+                include jarPackageNamed("elasticsearch-user-agent-api")
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
                 include jarPackageNamed("hppc")
