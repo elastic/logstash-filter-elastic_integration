@@ -325,7 +325,7 @@ For further guidance, we recommend exploring {fleet-guide}/integrations.html[Man
 
 - version compatibility
 
-Since this plugin embeds {es} ingest node components, there are situations where {es} introduces breaking changes that affect older plugin versions.
+Since {plugin} plugin embeds {es} ingest node components, there are situations where {es} introduces breaking changes that affect older plugin versions.
 A notable example is {es} 9.2, which added new fields (`created_date_millis`, `modified_date_millis`) to the ingest pipeline model.
 When a plugin version built for {es} <9.2 (e.g. v8.19.1 or v9.1.0) connects to {es} 9.2 or later, pipelines fetched from {es} may include these new parameters that the embedded ingest components do not recognize, causing pipeline creation to fail.
 
@@ -339,7 +339,7 @@ When a plugin version built for {es} <9.2 (e.g. v8.19.1 or v9.1.0) connects to {
   	at java.util.Optional.flatMap(Optional.java:289) ~[?:?]
   ----
 
-*Resolution:* When connecting to {es} 9.2 or newer, update this plugin to at least v9.2 to ensure compatibility with the updated ingest pipeline model.
+*Resolution:* When connecting to {es} 9.2 or newer, update {plugin} plugin to at least v9.2 to ensure compatibility with the updated ingest pipeline model.
 For more details, see https://github.com/elastic/logstash-filter-elastic_integration/issues/409[GitHub issue #409] and the related {es} change in https://github.com/elastic/elasticsearch/pull/130847[elastic/elasticsearch#130847].
 
 [ingest-pipeline-execution-errors]
