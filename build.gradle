@@ -165,6 +165,21 @@ def _requiredLogstashJar(pathPrefix, jarSpec, flavorSpec = null) {
     }
 }
 
+<<<<<<< HEAD
+=======
+static OutputStreamFunneler outputStreamFunneler(File logFile) {
+    logFile.parentFile.mkdirs()
+    logFile.delete()
+    logFile.createNewFile()
+
+    return new OutputStreamFunneler(new LazyFileOutputStream(logFile))
+}
+
+// Support for local Elasticsearch repo: set ELASTICSEARCH_PATH to use a local checkout instead of downloading
+def elasticsearchPath = envOrPropertyValue("ELASTICSEARCH_PATH")
+def useLocalElasticsearch = elasticsearchPath != null
+
+>>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
 // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
 String githubArchivePath(repo, treeish="main", archiveFormat="zip") {
     def pathFragment = {
@@ -180,15 +195,18 @@ String githubArchivePath(repo, treeish="main", archiveFormat="zip") {
 }
 
 task downloadElasticsearchSourceZip(type: Download) {
+    onlyIf { !useLocalElasticsearch }
+
     def esTreeish = envOrPropertyValue("ELASTICSEARCH_TREEISH")
     inputs.property("ELASTICSEARCH_TREEISH", esTreeish)
 
-    if (!esTreeish) {
-        throw new StopActionException("""
-            The property ELASTICSEARCH_TREEISH must be defined, and be a tree-ish (branch, commit hash, or tag)
-            available on the github repository for elastic/elasticsearch (e.g., `v8.7.0`, `8.7`, `main`,
-            `ff1caebad1dea`, `refs/heads/branch-name`, `refs/tags/tag-name`)
-        """)
+    if (!useLocalElasticsearch && !esTreeish) {
+        throw new StopActionException('''
+            Either ELASTICSEARCH_PATH (for local repo) or ELASTICSEARCH_TREEISH must be defined.
+            ELASTICSEARCH_TREEISH: a tree-ish (branch, commit hash, or tag) available on the github
+            repository for elastic/elasticsearch (e.g., v8.7.0, 8.7, main, ff1caebad1dea,
+            refs/heads/branch-name, refs/tags/tag-name)
+        ''')
     }
 
     def esRepo = envOrPropertyValue("ELASTICSEARCH_REPO") ?: "elastic/elasticsearch"
@@ -203,6 +221,13 @@ task downloadElasticsearchSourceZip(type: Download) {
 task unzipDownloadedElasticsearchSourceZip(dependsOn: downloadElasticsearchSourceZip, type: Copy) {
     description "extracts Elasticsearch source from a downloaded zip file"
 
+<<<<<<< HEAD
+=======
+    onlyIf { !useLocalElasticsearch }
+
+    ext.location = "${buildDir}/elasticsearch-source/"
+
+>>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
     from zipTree(downloadElasticsearchSourceZip.dest)
     into "${buildDir}/elasticsearch-source/"
     eachFile {
@@ -211,17 +236,41 @@ task unzipDownloadedElasticsearchSourceZip(dependsOn: downloadElasticsearchSourc
     }
 }
 
-task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSourceZip, type: Exec) {
+def getElasticsearchSourceDir = {
+    useLocalElasticsearch ? project.file(elasticsearchPath).absolutePath : unzipDownloadedElasticsearchSourceZip.ext.location
+}
+
+task buildElasticsearchLocalDistro(type: Exec) {
     description "builds Elasticsearch localDistro"
+
+    if (!useLocalElasticsearch) {
+        dependsOn unzipDownloadedElasticsearchSourceZip
+    } else {
+        inputs.property("ELASTICSEARCH_PATH", elasticsearchPath)
+    }
 
     def logFile = project.file("${buildDir}/elasticsearch-build.log")
     doFirst {
+<<<<<<< HEAD
         def funneler = new OutputStreamFunneler(new LazyFileOutputStream(logFile))
+=======
+        if (useLocalElasticsearch) {
+            def esDir = project.file(elasticsearchPath)
+            println "Using local Elasticsearch repo: ${esDir.absolutePath}"
+            assert esDir.exists() : "ELASTICSEARCH_PATH does not exist: ${esDir}"
+            assert esDir.directory : "ELASTICSEARCH_PATH is not a directory: ${esDir}"
+        }
+        def funneler = outputStreamFunneler(logFile)
+>>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
         standardOutput = funneler.funnelInstance
         errorOutput = funneler.funnelInstance
     }
 
+<<<<<<< HEAD
     def esSource = "${buildDir}/elasticsearch-source/"
+=======
+    def esSource = getElasticsearchSourceDir()
+>>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
     def esBuildDir = "${esSource}/build"
 
     inputs.dir esSource
@@ -257,6 +306,75 @@ task buildElasticsearchLocalDistro(dependsOn: unzipDownloadedElasticsearchSource
     }
 }
 
+<<<<<<< HEAD
+=======
+task buildElasticsearchLogstashBridge(type: Exec) {
+    description "builds logstash-bridge lib module"
+
+    dependsOn buildElasticsearchLocalDistro
+    if (!useLocalElasticsearch) {
+        dependsOn unzipDownloadedElasticsearchSourceZip
+    } else {
+        inputs.property("ELASTICSEARCH_PATH", elasticsearchPath)
+    }
+
+    def logFile = project.file("${buildDir}/logstash-bridge-build.log")
+    doFirst {
+        def funneler = outputStreamFunneler(logFile)
+        standardOutput = funneler.funnelInstance
+        errorOutput = funneler.funnelInstance
+    }
+
+    def esSource = getElasticsearchSourceDir()
+    def esBuildDir = "${esSource}/build"
+
+    inputs.dir "${esSource}/libs/logstash-bridge"
+
+    outputs.dir("${esSource}/libs/logstash-bridge/build/distributions")
+
+    ext.buildRoot = esBuildDir
+    workingDir esSource
+    commandLine "./gradlew", ":lib:logstash-bridge:build"
+
+    ignoreExitValue true // handled in doLast
+    doLast {
+        def exitValue = executionResult.get().exitValue
+        if (exitValue != 0) {
+            if (logFile.exists()) {
+                println "\n===== Elasticsearch logstash-bridge build Log ====="
+                println logFile.text
+                println "===== End of Elasticsearch logstash-bridge build Log =====\n"
+            } else {
+                "Elasticsearch logstash-bridge build failed and ${logFile.path} log does not exist"
+            }
+            throw new GradleException("Elasticsearch logstash-bridge build failed, see the logs for details.")
+        }
+    }
+}
+
+def ingestGeoipPluginShadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
+
+/**
+ * The StableBridge exposes GeoIP plugin internals, so it needs to relocate references to
+ * its bundled dependencies to match the shaded locations in our import of that plugin.
+ */
+task shadeElasticsearchStableBridge(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades Maxmind dependencies"
+
+    dependsOn buildElasticsearchLogstashBridge
+
+    from(buildElasticsearchLogstashBridge)
+
+    archiveFileName = "logstash-stable-bridge-shaded.jar"
+    destinationDirectory = file("${buildDir}/shaded")
+
+    relocate('com.fasterxml.jackson', "${ingestGeoipPluginShadeNamespace}.com.fasterxml.jackson")
+    relocate('com.maxmind',           "${ingestGeoipPluginShadeNamespace}.com.maxmind")
+
+    mergeServiceFiles()
+}
+
+>>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
 task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades embedded dependencies of the Elasticsearch Ingest GeoIP module"
 

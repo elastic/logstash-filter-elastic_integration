@@ -16,15 +16,22 @@ All plugin documentation are placed under one [central location](http://www.elas
   - Note that, `8.series` branches require JDK17 and `9.series`/`main` requires JDK21.
 - Set the Logstash source path in the `gradle.properties` file. Open the file and update the `LOGSTASH_PATH`.
 - Make sure Logstash is compiled.
-- Point to the Elasticsearch branch/version to build the plugin with. Open the `gradle.properties` file and update `ELASTICSEARCH_TREEISH`.
+- Point to the Elasticsearch branch/version to build the plugin with. Either:
+  - **Local repo**: Set `ELASTICSEARCH_PATH` (in `gradle.properties` or as an env var) to the path of your local Elasticsearch checkout.
+  - **Remote**: Open the `gradle.properties` file and update `ELASTICSEARCH_TREEISH` to a branch, tag, or commit (e.g. `8.17`, `main`).
 
 ### Build
-We use Gradle tool to build this plugin. Gradle is configured to load the Logstash core jars from the `LOGSTASH_PATH` path, download the Elasticsearch version defined with `ELASTICSEARCH_TREEISH` and build the plugin.
+We use Gradle tool to build this plugin. Gradle is configured to load the Logstash core jars from the `LOGSTASH_PATH` path. For Elasticsearch, it either uses your local checkout when `ELASTICSEARCH_PATH` is set, or downloads the version defined with `ELASTICSEARCH_TREEISH` and builds the plugin.
 The build process may fail if the Elasticsearch interfaces the plugin is using have changed.
 
 The following command builds plugin and generates the jar file, can be locally installed in Logstash core and verified:
 ```shell
 ./gradlew clean vendor localGem
+```
+
+When using a local Elasticsearch repo:
+```shell
+ELASTICSEARCH_PATH=/path/to/elasticsearch ./gradlew clean vendor localGem
 ```
 
 ### Plugin test
