@@ -428,8 +428,8 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch-web-utils")
             }
 
-            from(buildElasticsearchLocalDistro.module("ingest-user-agent")) {
-                include jarPackageNamed("ingest-user-agent")
+            from(buildElasticsearchLocalDistro.module("user-agent")) {
+                include jarPackageNamed("user-agent")
             }
 
             from(shadeElasticsearchIngestGeoIpModule)
