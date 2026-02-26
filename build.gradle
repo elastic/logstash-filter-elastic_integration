@@ -165,8 +165,6 @@ def _requiredLogstashJar(pathPrefix, jarSpec, flavorSpec = null) {
     }
 }
 
-<<<<<<< HEAD
-=======
 static OutputStreamFunneler outputStreamFunneler(File logFile) {
     logFile.parentFile.mkdirs()
     logFile.delete()
@@ -179,7 +177,6 @@ static OutputStreamFunneler outputStreamFunneler(File logFile) {
 def elasticsearchPath = envOrPropertyValue("ELASTICSEARCH_PATH")
 def useLocalElasticsearch = elasticsearchPath != null
 
->>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
 // https://docs.github.com/en/repositories/working-with-files/using-files/downloading-source-code-archives#source-code-archive-urls
 String githubArchivePath(repo, treeish="main", archiveFormat="zip") {
     def pathFragment = {
@@ -221,15 +218,12 @@ task downloadElasticsearchSourceZip(type: Download) {
 task unzipDownloadedElasticsearchSourceZip(dependsOn: downloadElasticsearchSourceZip, type: Copy) {
     description "extracts Elasticsearch source from a downloaded zip file"
 
-<<<<<<< HEAD
-=======
     onlyIf { !useLocalElasticsearch }
 
     ext.location = "${buildDir}/elasticsearch-source/"
 
->>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
     from zipTree(downloadElasticsearchSourceZip.dest)
-    into "${buildDir}/elasticsearch-source/"
+    into ext.location
     eachFile {
         // strip top-level directory
         path = path.replaceFirst(/^.+?\//, "")
@@ -251,9 +245,6 @@ task buildElasticsearchLocalDistro(type: Exec) {
 
     def logFile = project.file("${buildDir}/elasticsearch-build.log")
     doFirst {
-<<<<<<< HEAD
-        def funneler = new OutputStreamFunneler(new LazyFileOutputStream(logFile))
-=======
         if (useLocalElasticsearch) {
             def esDir = project.file(elasticsearchPath)
             println "Using local Elasticsearch repo: ${esDir.absolutePath}"
@@ -261,19 +252,13 @@ task buildElasticsearchLocalDistro(type: Exec) {
             assert esDir.directory : "ELASTICSEARCH_PATH is not a directory: ${esDir}"
         }
         def funneler = outputStreamFunneler(logFile)
->>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
         standardOutput = funneler.funnelInstance
         errorOutput = funneler.funnelInstance
     }
 
-<<<<<<< HEAD
-    def esSource = "${buildDir}/elasticsearch-source/"
-=======
     def esSource = getElasticsearchSourceDir()
->>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
     def esBuildDir = "${esSource}/build"
 
-    inputs.dir esSource
     outputs.dir esBuildDir
 
     ext.buildRoot = esBuildDir
@@ -287,7 +272,7 @@ task buildElasticsearchLocalDistro(type: Exec) {
     ext.module = { moduleName -> localDistroResult.map { "${it}/modules/${moduleName}"} }
 
     workingDir esSource
-    commandLine "./gradlew", "localDistro"
+    commandLine "./gradlew", "--stacktrace", "localDistro"
 
     ignoreExitValue true // handled in doLast
     doLast {
@@ -306,8 +291,6 @@ task buildElasticsearchLocalDistro(type: Exec) {
     }
 }
 
-<<<<<<< HEAD
-=======
 task buildElasticsearchLogstashBridge(type: Exec) {
     description "builds logstash-bridge lib module"
 
@@ -374,7 +357,6 @@ task shadeElasticsearchStableBridge(type: com.github.jengelman.gradle.plugins.sh
     mergeServiceFiles()
 }
 
->>>>>>> 2c2ac10 (Support local elasticsearch repo (#407))
 task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
     description "Shades embedded dependencies of the Elasticsearch Ingest GeoIP module"
 
