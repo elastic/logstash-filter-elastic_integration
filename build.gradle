@@ -272,7 +272,7 @@ task buildElasticsearchLocalDistro(type: Exec) {
     ext.module = { moduleName -> localDistroResult.map { "${it}/modules/${moduleName}"} }
 
     workingDir esSource
-    commandLine "./gradlew", "--stacktrace", "localDistro"
+    commandLine "./gradlew", "localDistro"
 
     ignoreExitValue true // handled in doLast
     doLast {
