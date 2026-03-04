@@ -1,3 +1,6 @@
+## 8.19.3
+  - Upgrades `tools.jackson` transient dependency to 3.1.0 [#419](https://github.com/elastic/logstash-filter-elastic_integration/pull/419)
+
 ## 8.19.2
   - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#391](https://github.com/elastic/logstash-filter-elastic_integration/pull/391)
 
