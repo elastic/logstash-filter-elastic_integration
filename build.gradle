@@ -56,6 +56,7 @@ configurations {
     implementation.extendsFrom(logstashCore, elasticsearchMinimalCore, elasticsearchClient)
 }
 
+// TODO: remove this once elasticsearch-java 9.x starts consuming tools.jackson 3.1
 configurations.all {
     resolutionStrategy {
         force 'tools.jackson.core:jackson-core:3.1.0'
