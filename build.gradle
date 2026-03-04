@@ -56,6 +56,14 @@ configurations {
     implementation.extendsFrom(logstashCore, elasticsearchMinimalCore, elasticsearchClient)
 }
 
+// TODO: remove this once elasticsearch-java 9.x starts consuming tools.jackson 3.1
+configurations.all {
+    resolutionStrategy {
+        force 'tools.jackson.core:jackson-core:3.1.0'
+        force 'tools.jackson.core:jackson-databind:3.1.0'
+    }
+}
+
 wrapper {
     gradleVersion = '8.7'
     distributionUrl = distributionUrl.replace("bin", "all")
@@ -69,10 +77,11 @@ shadowJar {
 }
 
 dependencies {
-    elasticsearchClient('co.elastic.clients:elasticsearch-java') {
-        // brings latest version available for 8.x branch
-        version {
-            strictly('[8.0, 9.0[')
+    // consume latest elasticsearch-java 9.x
+    // elasticsearch-rest-client required for low-level RestClient usage, elasticsearch-java 9.x doesn't provide it
+    ['co.elastic.clients:elasticsearch-java', 'org.elasticsearch.client:elasticsearch-rest-client'].each { dep ->
+        elasticsearchClient(dep) {
+            version { strictly('[9.0, 10.0[') }
         }
     }
     elasticsearchMinimalCore fileTree(dir: { importMinimalElasticsearch.jars }, include: ["*.jar"])
