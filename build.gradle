@@ -69,10 +69,11 @@ shadowJar {
 }
 
 dependencies {
-    elasticsearchClient('co.elastic.clients:elasticsearch-java') {
-        // brings latest version available 9.x
-        version {
-            strictly('[9.0, 10.0[')
+    // consume latest elasticsearch-java 9.x
+    // elasticsearch-rest-client required for low-level RestClient usage, elasticsearch-java 9.x doesn't provide it
+    ['co.elastic.clients:elasticsearch-java', 'org.elasticsearch.client:elasticsearch-rest-client'].each { dep ->
+        elasticsearchClient(dep) {
+            version { strictly('[9.0, 10.0[') }
         }
     }
     elasticsearchMinimalCore fileTree(dir: { importMinimalElasticsearch.jars }, include: ["*.jar"])
