@@ -1,3 +1,7 @@
+## 9.3.2
+  - Upgrades `elasticsearch-java` and `elasticsearch-rest-client` dependencies to 9.latest [#418](https://github.com/elastic/logstash-filter-elastic_integration/pull/418)
+  - Upgrades transient `tools.jackson.core` dependency to 3.1.0
+
 ## 9.3.1
   - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#393](https://github.com/elastic/logstash-filter-elastic_integration/pull/393)
 
