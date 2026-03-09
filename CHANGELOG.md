@@ -1,10 +1,23 @@
 ## UNRELEASED
   - Include Elasticsearch web-utils JAR into the plugin to keep `registered_domain` processor dependencies [#397](https://github.com/elastic/logstash-filter-elastic_integration/pull/397)
-  - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#380](https://github.com/elastic/logstash-filter-elastic_integration/pull/380)
   - Fixed `set_security_user` processor to behave consistently with other unsupported processors (`inference`, `enrich`) by tagging events with `_ingest_pipeline_failure` [#269](https://github.com/elastic/logstash-filter-elastic_integration/pull/269)
+
+## 9.3.2
+  - Upgrades `elasticsearch-java` and `elasticsearch-rest-client` dependencies to 9.latest [#418](https://github.com/elastic/logstash-filter-elastic_integration/pull/418)
+  - Upgrades transient `tools.jackson.core` dependency to 3.1.0
+
+## 9.3.1
+  - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#393](https://github.com/elastic/logstash-filter-elastic_integration/pull/393)
 
 ## 9.3.0
   - Embeds Ingest Node components from Elasticsearch 9.3 [#378](https://github.com/elastic/logstash-filter-elastic_integration/pull/378)
+
+## 9.2.2
+  - Upgrades `elasticsearch-java` and `elasticsearch-rest-client` dependencies to 9.latest [#418](https://github.com/elastic/logstash-filter-elastic_integration/pull/418)
+  - Upgrades transient `tools.jackson.core` dependency to 3.1.0
+
+## 9.2.1
+  - Fixes the `MissingFormatArgumentException` potentially `String.format` may cause in the `SimpleResolverCache` [#392](https://github.com/elastic/logstash-filter-elastic_integration/pull/392)
 
 ## 9.2.0
   - Logging compatability with Elasticsearch 9.2 [#373](https://github.com/elastic/logstash-filter-elastic_integration/pull/373)
