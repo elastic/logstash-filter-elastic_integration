@@ -26,7 +26,6 @@ import org.elasticsearch.logstashbridge.ingest.ProcessorFactoryBridge;
 import org.elasticsearch.logstashbridge.ingest.ProcessorParametersBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestCommonPluginBridge;
 import org.elasticsearch.logstashbridge.plugins.IngestPluginBridge;
-import org.elasticsearch.logstashbridge.plugins.IngestUserAgentPluginBridge;
 import org.elasticsearch.logstashbridge.plugins.RedactPluginBridge;
 import org.elasticsearch.logstashbridge.script.ScriptServiceBridge;
 import org.elasticsearch.logstashbridge.threadpool.ThreadPoolBridge;
@@ -113,8 +112,8 @@ public class EventProcessorBuilder {
                 IngestCommonPluginBridge.TRIM_PROCESSOR_TYPE,
                 IngestCommonPluginBridge.URL_DECODE_PROCESSOR_TYPE,
                 IngestCommonPluginBridge.UPPERCASE_PROCESSOR_TYPE,
-                IngestCommonPluginBridge.URI_PARTS_PROCESSOR_TYPE));
-        this.addProcessorsFromPlugin(IngestUserAgentPluginBridge::new);
+                IngestCommonPluginBridge.URI_PARTS_PROCESSOR_TYPE,
+                IngestCommonPluginBridge.USER_AGENT_PROCESSOR_TYPE));
         this.addProcessorsFromPlugin(RedactPluginBridge::new);
     }
 

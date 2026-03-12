@@ -452,6 +452,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch-logging")
                 include jarPackageNamed("elasticsearch-x-content")
                 include jarPackageNamed("elasticsearch-geo")
+                include jarPackageNamed("elasticsearch-user-agent-api")
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
                 include jarPackageNamed("hppc")
@@ -466,8 +467,8 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch-web-utils")
             }
 
-            from(buildElasticsearchLocalDistro.module("ingest-user-agent")) {
-                include jarPackageNamed("ingest-user-agent")
+            from(buildElasticsearchLocalDistro.module("user-agent")) {
+                include jarPackageNamed("user-agent")
             }
 
             from(shadeElasticsearchIngestGeoIpModule)
