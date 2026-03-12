@@ -279,7 +279,6 @@ task buildElasticsearchLocalDistro(type: Exec) {
     })
     ext.lib = localDistroResult.map { "${it}/lib" }
     ext.module = { moduleName -> localDistroResult.map { "${it}/modules/${moduleName}"} }
-    ext.libBuildDir = { libName -> "${esSource}/libs/${libName}/build/distributions" }
 
     workingDir esSource
     commandLine "./gradlew", "--stacktrace", "localDistro"
@@ -405,25 +404,6 @@ task shadeElasticsearchGrokImplementation(type: com.github.jengelman.gradle.plug
     relocate('org.joni', "${ingestGrokPluginShadeNamespace}.org.joni")
     relocate('org.jcodings', "${ingestGrokPluginShadeNamespace}.org.jcodings")
 
-    exclude '**/module-info.class'
-}
-
-/**
- * Shades the Elasticsearch user-agent-api lib (built as part of localDistro).
- */
-task shadeElasticsearchUserAgentApi(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
-    description "Shades the Elasticsearch user-agent-api library"
-
-    dependsOn buildElasticsearchLocalDistro
-
-    def userAgentApiLibDir = buildElasticsearchLocalDistro.libBuildDir("user-agent-api")
-    inputs.dir userAgentApiLibDir
-    from(fileTree(dir: userAgentApiLibDir, include: ["*.jar"]))
-
-    archiveFileName = "user-agent-api-shaded.jar"
-    destinationDirectory = file("${buildDir}/shaded")
-
-    mergeServiceFiles()
     exclude '**/module-info.class'
 }
 
