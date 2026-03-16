@@ -812,6 +812,27 @@ test {
     }
 }
 
+task generateTestCertificates(type: Exec) {
+    def sslTestCertsDir = "${projectDir}/utils/ssl-certs-generator"
+
+    workingDir sslTestCertsDir
+    commandLine './generate.sh'
+
+    def commonOutputFile = Paths.get("${buildDir}/generateTestCertificates.log")
+    file(commonOutputFile.parent).mkdirs()
+    def commonOutputStream = Files.newOutputStream(commonOutputFile)
+
+    standardOutput = commonOutputStream
+    errorOutput = commonOutputStream
+
+    inputs.file("${sslTestCertsDir}/generate.sh")
+    inputs.file("${sslTestCertsDir}/openssl.cnf")
+
+    outputs.dir("${sslTestCertsDir}/generated")
+    outputs.file(commonOutputFile)
+}
+processTestResources.dependsOn(generateTestCertificates)
+
 task geoipTestResources {
     def output = "${project.rootDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/geoip/databases"
 
