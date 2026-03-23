@@ -742,7 +742,7 @@ describe LogStash::Filters::ElasticIntegration do
       let(:base_message) { "This #{version} version of plugin embedded Ingest node components from Elasticsearch #{plugin_major_version}.#{plugin_minor_version}" }
       let(:expected_message) { }
 
-      before(:each) { plugin.tap(&:check_versions_alignment) }
+      before(:each) { plugin.send(:check_versions_alignment) }
 
       it "informs which version of ES the plugin is built from" do
         expected_message =
