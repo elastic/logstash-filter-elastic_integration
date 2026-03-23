@@ -28,10 +28,14 @@ set_required_jdk() {
 ###
 # Build the plugin, to do so we need Logstash source
 build_logstash() {
+  set +o nounset
+  local branch="${TARGET_BRANCH:-main}"
+  set -o nounset
+
   if [[ -d /usr/local/git-references/git-github-com-elastic-logstash-git ]]; then
-      retry -t 5 -- git clone -v --reference /usr/local/git-references/git-github-com-elastic-logstash-git -- https://github.com/elastic/logstash.git .
+      retry -t 5 -- git clone -v --reference /usr/local/git-references/git-github-com-elastic-logstash-git --branch "$branch" -- https://github.com/elastic/logstash.git .
   else
-      retry -t 5 -- git clone --single-branch https://github.com/elastic/logstash.git
+      retry -t 5 -- git clone --single-branch --branch "$branch" https://github.com/elastic/logstash.git
   fi
 
   cd logstash && ./gradlew clean bootstrap assemble installDefaultGems && cd ..
