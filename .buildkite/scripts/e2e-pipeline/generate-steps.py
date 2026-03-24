@@ -55,6 +55,21 @@ def generate_steps_for_main_branch(versions) -> list:
     return steps
 
 
+def generate_steps_for_target_branch(versions, target_branch) -> list:
+    steps: list = []
+    releases = versions.get("releases", {})
+    full_stack_version = None
+    for version in releases.values():
+        if version is not None and version.startswith(f"{target_branch}."):
+            full_stack_version = version
+            break
+    if full_stack_version is None:
+        print(f"ERROR: No release version found matching branch '{target_branch}' in versions yaml", file=sys.stderr)
+        sys.exit(1)
+    steps.append(generate_test_step(full_stack_version, target_branch, "false"))
+    return steps
+
+
 if __name__ == "__main__":
     structure = {
         "agents": {
@@ -78,8 +93,17 @@ if __name__ == "__main__":
     #       - manual kick off will be on PR or entire main branch, can be decided with BUILDKITE_BRANCH
     bk_source = os.getenv("BUILDKITE_SOURCE")
     bk_branch = os.getenv("BUILDKITE_BRANCH")
-    steps = generate_steps_for_scheduler(versions_yaml) if (bk_source == "schedule" or bk_branch == "main") \
-        else generate_steps_for_main_branch(versions_yaml)
+    target_branch = os.getenv("TARGET_BRANCH")
+
+    if bk_source == "schedule" or bk_branch == "main":
+        # a scheduler runs on all branches
+        steps = generate_steps_for_scheduler(versions_yaml)
+    elif bk_source == "ui" and bk_branch and bk_branch.startswith("pull/") and target_branch:
+        # a manual kick off on a PR branch
+        steps = generate_steps_for_target_branch(versions_yaml, target_branch)
+    else:
+        # a run on the target branch
+        steps = generate_steps_for_main_branch(versions_yaml)
 
     group_desc = f"E2E steps"
     key_desc = "e2e-steps"
