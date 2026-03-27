@@ -804,6 +804,7 @@ tasks.withType(JavaCompile) {
 
 test {
     useJUnitPlatform()
+    systemProperty 'ssl.test.certs.dir', "${projectDir}/utils/ssl-certs-generator/generated"
     testLogging {
         exceptionFormat "full"
         outputs.upToDateWhen { false }
@@ -812,7 +813,7 @@ test {
 }
 
 task generateTestCertificates(type: Exec) {
-    def sslTestCertsDir = "${projectDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs"
+    def sslTestCertsDir = "${projectDir}/utils/ssl-certs-generator"
 
     workingDir sslTestCertsDir
     commandLine './generate.sh'
