@@ -1,3 +1,6 @@
+## 8.19.4
+  - Includes `elasticsearch-logging` module [#441](https://github.com/elastic/logstash-filter-elastic_integration/pull/441)
+
 ## 8.19.3
   - Upgrades `tools.jackson.core` transient dependency to 3.1.0 [#419](https://github.com/elastic/logstash-filter-elastic_integration/pull/419)
 
