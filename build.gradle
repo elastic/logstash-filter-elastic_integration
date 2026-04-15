@@ -1010,4 +1010,5 @@ task unitSpecs(dependsOn: bundleInstall) {
 clean {
     delete "${projectDir}/*.gem"
     delete "build"
+    delete "${projectDir}/utils/ssl-certs-generator/generated"
 }
