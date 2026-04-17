@@ -372,7 +372,7 @@ task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugi
 
     dependsOn buildElasticsearchLocalDistro
 
-    from(buildElasticsearchLocalDistro.module("ingest-geoip").orElse(objects.fileCollection()))
+    from(buildElasticsearchLocalDistro.module("ip-location").orElse(objects.fileCollection()))
 
     archiveFileName = 'ingest-geoip-shaded.jar'
     destinationDirectory = file("${buildDir}/shaded")
@@ -454,6 +454,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("elasticsearch-x-content")
                 include jarPackageNamed("elasticsearch-geo")
                 include jarPackageNamed("elasticsearch-user-agent-api")
+                include jarPackageNamed("elasticsearch-ip-location-api")
                 include jarPackageNamed("lucene-core")
                 include jarPackageNamed("lucene-analysis-common")
                 include jarPackageNamed("hppc")
@@ -480,6 +481,11 @@ task importMinimalElasticsearch() {
             }
 
             from(shadeElasticsearchIngestGeoIpModule)
+
+            from(buildElasticsearchLocalDistro.module("ingest-ip-location")) {
+                include jarPackageNamed("ingest-ip-location")
+            }
+
             from(shadeElasticsearchRedactPlugin)
 
             from(buildElasticsearchLocalDistro.module("lang-mustache")) {
@@ -1021,4 +1027,5 @@ task unitSpecs(dependsOn: bundleInstall) {
 clean {
     delete "${projectDir}/*.gem"
     delete "build"
+    delete "vendor/jar-dependencies"
 }
