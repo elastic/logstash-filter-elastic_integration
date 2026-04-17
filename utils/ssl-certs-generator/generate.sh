@@ -5,6 +5,11 @@ cd "$(dirname "$0")"
 # This is for testing purposes only
 set -e
 
+if [[ -f generated/root.crt ]]; then
+    echo "Certificates already exist. Skipping..."
+    exit 0
+fi
+
 rm -rf generated
 mkdir generated
 cd generated

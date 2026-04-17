@@ -813,13 +813,8 @@ test {
     }
 }
 
-// For integration tests, we need to generate certs in advance to apply in ES docker container and do not clean them unless integration tests finish
-def isIntegrationTestsRunRequired = System.getenv("INTEGRATION") == "true" || System.getenv("SECURE_INTEGRATION") == "true"
-
 task generateTestCertificates(type: Exec) {
     def sslTestCertsDir = "${projectDir}/utils/ssl-certs-generator"
-
-    onlyIf { !isIntegrationTestsRunRequired }
 
     workingDir sslTestCertsDir
     commandLine './generate.sh'
@@ -1015,7 +1010,4 @@ task unitSpecs(dependsOn: bundleInstall) {
 clean {
     delete "${projectDir}/*.gem"
     delete "build"
-    if (!isIntegrationTestsRunRequired) {
-        delete "${projectDir}/utils/ssl-certs-generator/generated"
-    }
 }
