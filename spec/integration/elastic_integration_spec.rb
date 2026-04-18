@@ -6,10 +6,12 @@ require 'logstash/filters/elastic_integration'
 # requires xpack enabled & SSL enabled
 describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
+  let(:test_certs_dir) { 'utils/ssl-certs-generator/generated' }
+
   let(:es_http_client_options) {
     {
       ssl: {
-        ca_file: 'spec/fixtures/test_certs/root.crt',
+        ca_file: "#{test_certs_dir}/root.crt",
         verify: :none
       },
       socket_timeout: 60,
@@ -29,8 +31,8 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       "password" => integ_user_password,
       "ssl_enabled" => true,
       "ssl_verification_mode" => "certificate",
-      "ssl_certificate" => "spec/fixtures/test_certs/client_from_root.crt",
-      "ssl_key" => "spec/fixtures/test_certs/client_from_root.key.pkcs8",
+      "ssl_certificate" => "#{test_certs_dir}/client_from_root.crt",
+      "ssl_key" => "#{test_certs_dir}/client_from_root.key.pkcs8",
       "ssl_key_passphrase" => "12345678"
     }
   }
@@ -116,7 +118,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   context '#pipeline execution' do
     let(:settings) {
       super().merge(
-        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+        "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
       )
     }
 
@@ -1168,7 +1170,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   context '#multi-pipeline execution' do
     let(:settings) {
       super().merge(
-        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+        "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
       )
     }
 
@@ -1209,7 +1211,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   context '#failures' do
     let(:settings) {
       super().merge(
-        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+        "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
       )
     }
 
@@ -1273,7 +1275,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   context '#privileges' do
     let(:settings) {
       super().merge(
-        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+        "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
       )
     }
     # a user who doesn't have pipeline privileges
@@ -1375,7 +1377,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   context '#emulating real scenario' do
     let(:settings) {
       super().merge(
-        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+        "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
       )
     }
     let(:index_settings) {
@@ -1462,7 +1464,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         super().merge(
           # certificate is signed with localhost/127.0.0.1, should complain
           "ssl_verification_mode" => "full",
-          "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+          "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
         )
       }
 
@@ -1513,7 +1515,7 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
   context '#unsupported processors' do
     let(:settings) {
       super().merge(
-        "ssl_certificate_authorities" => "spec/fixtures/test_certs/root.crt"
+        "ssl_certificate_authorities" => "#{test_certs_dir}/root.crt"
       )
     }
 
