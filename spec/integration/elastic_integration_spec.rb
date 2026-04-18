@@ -1512,8 +1512,6 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
     end
   end
 
-<<<<<<< HEAD
-=======
   context '#unsupported processors' do
     let(:settings) {
       super().merge(
@@ -1571,5 +1569,4 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
     end
   end
 
->>>>>>> 254e669 (Autorenew SSL certs and use them everywhere (#431))
 end
