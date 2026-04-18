@@ -104,15 +104,16 @@ dependencies {
         from requiredLogstashCoreJar("guava", "jre")
     })
 
-    mockitoAgent('org.mockito:mockito-core:5.14.1') {
+    mockitoAgent('org.mockito:mockito-core:5.23.0') {
         transitive = false
     }
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.1.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.1.0'
-    testImplementation 'org.mockito:mockito-junit-jupiter:5.14.1'
-    testImplementation 'org.hamcrest:hamcrest-library:2.2'
-    testImplementation "com.github.seregamorph:hamcrest-more-matchers:0.1"
-    testImplementation 'org.wiremock:wiremock:3.12.0'
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.14.3'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.14.3'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.14.3'
+    testImplementation 'org.mockito:mockito-junit-jupiter:5.23.0'
+    testImplementation 'org.hamcrest:hamcrest-library:3.0'
+    testImplementation "com.github.seregamorph:hamcrest-more-matchers:1.0"
+    testImplementation 'org.wiremock:wiremock:3.13.2'
     testRuntimeOnly requiredLogstashCoreJar("log4j-core")
 
     geolite2('org.elasticsearch:geolite2-databases:20191119') {
@@ -804,6 +805,7 @@ tasks.withType(JavaCompile) {
 
 test {
     useJUnitPlatform()
+    systemProperty 'ssl.test.certs.dir', "${projectDir}/utils/ssl-certs-generator/generated"
     testLogging {
         exceptionFormat "full"
         outputs.upToDateWhen { false }
@@ -812,7 +814,7 @@ test {
 }
 
 task generateTestCertificates(type: Exec) {
-    def sslTestCertsDir = "${projectDir}/src/test/resources/co/elastic/logstash/filters/elasticintegration/ssl-test-certs"
+    def sslTestCertsDir = "${projectDir}/utils/ssl-certs-generator"
 
     workingDir sslTestCertsDir
     commandLine './generate.sh'
