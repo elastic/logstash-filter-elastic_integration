@@ -344,6 +344,6 @@ public class ElasticsearchRestClientWireMockTest {
     }
 
     static Path generatedCertificateMaterial(final String name) {
-        return getResourcePath(ElasticsearchRestClientWireMockTest.class, Path.of("ssl-test-certs","generated", name).toString()).orElseThrow();
+        return Path.of(System.getProperty("ssl.test.certs.dir")).resolve(name);
     }
 }
