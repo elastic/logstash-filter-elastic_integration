@@ -6,7 +6,6 @@
  */
 package co.elastic.logstash.filters.elasticintegration;
 
-import com.github.tomakehurst.wiremock.extension.responsetemplating.ResponseTemplateTransformer;
 import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import org.apache.logging.log4j.Logger;
@@ -35,7 +34,7 @@ class PreflightCheckTest {
     static WireMockExtension wireMock = WireMockExtension.newInstance()
             .options(wireMockConfig()
                     .dynamicPort()
-                    .extensions(new ResponseTemplateTransformer(false))).build();
+                    .globalTemplating(false)).build();
 
     @Test
     void checkCredentialsPrivilegesOK() throws Exception {
