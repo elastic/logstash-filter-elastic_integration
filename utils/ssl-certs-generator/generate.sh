@@ -5,6 +5,13 @@ cd "$(dirname "$0")"
 # This is for testing purposes only
 set -e
 
+# Check if both `root.crt` created by openssl and the `client_from_root.jks` created by keytool exist.
+# There might be cases where keytool is not available on the host but openssl is available.
+if [[ -f generated/root.crt ]] && [[ -f generated/client_from_root.jks ]]; then
+    echo "Certificates already exist. Skipping generation."
+    exit 0
+fi
+
 rm -rf generated
 mkdir generated
 cd generated
