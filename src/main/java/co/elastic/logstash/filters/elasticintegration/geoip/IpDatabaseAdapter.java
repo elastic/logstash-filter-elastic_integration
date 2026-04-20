@@ -10,11 +10,10 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.elasticsearch.logstashbridge.core.CheckedBiFunctionBridge;
 import org.elasticsearch.logstashbridge.geoip.AbstractExternalIpDatabaseBridge;
-import org.elasticsearch.logstashbridge.geoip.IpDatabaseBridge;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.CHMCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NoCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.NodeCache;
-import org.elasticsearch.ingest.geoip.shaded.com.maxmind.db.Reader;
+import org.elasticsearch.iplocation.shaded.com.maxmind.db.CHMCache;
+import org.elasticsearch.iplocation.shaded.com.maxmind.db.NoCache;
+import org.elasticsearch.iplocation.shaded.com.maxmind.db.NodeCache;
+import org.elasticsearch.iplocation.shaded.com.maxmind.db.Reader;
 
 import java.io.File;
 import java.io.IOException;
