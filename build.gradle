@@ -344,7 +344,7 @@ task buildElasticsearchLogstashBridge(type: Exec) {
     }
 }
 
-def ingestGeoipPluginShadeNamespace = "org.elasticsearch.ingest.geoip.shaded"
+def ipLocationModuleShadeNamespace = "org.elasticsearch.iplocation.shaded"
 
 /**
  * The StableBridge exposes GeoIP plugin internals, so it needs to relocate references to
@@ -360,24 +360,24 @@ task shadeElasticsearchStableBridge(type: com.github.jengelman.gradle.plugins.sh
     archiveFileName = "logstash-stable-bridge-shaded.jar"
     destinationDirectory = file("${buildDir}/shaded")
 
-    relocate('com.fasterxml.jackson', "${ingestGeoipPluginShadeNamespace}.com.fasterxml.jackson")
-    relocate('com.maxmind',           "${ingestGeoipPluginShadeNamespace}.com.maxmind")
+    relocate('com.fasterxml.jackson', "${ipLocationModuleShadeNamespace}.com.fasterxml.jackson")
+    relocate('com.maxmind',           "${ipLocationModuleShadeNamespace}.com.maxmind")
 
     mergeServiceFiles()
 }
 
-task shadeElasticsearchIngestGeoIpModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
-    description "Shades embedded dependencies of the Elasticsearch Ingest GeoIP module"
+task shadeElasticsearchIpLocationModule(type: com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+    description "Shades embedded dependencies of the Elasticsearch IP location module"
 
     dependsOn buildElasticsearchLocalDistro
 
     from(buildElasticsearchLocalDistro.module("ip-location").orElse(objects.fileCollection()))
 
-    archiveFileName = 'ingest-geoip-shaded.jar'
+    archiveFileName = 'ip-location-shaded.jar'
     destinationDirectory = file("${buildDir}/shaded")
 
-    relocate('com.fasterxml.jackson', "${ingestGeoipPluginShadeNamespace}.com.fasterxml.jackson")
-    relocate('com.maxmind',           "${ingestGeoipPluginShadeNamespace}.com.maxmind")
+    relocate('com.fasterxml.jackson', "${ipLocationModuleShadeNamespace}.com.fasterxml.jackson")
+    relocate('com.maxmind',           "${ipLocationModuleShadeNamespace}.com.maxmind")
 
     mergeServiceFiles()
 
@@ -433,7 +433,7 @@ task importMinimalElasticsearch() {
 
     dependsOn buildElasticsearchLocalDistro
     dependsOn shadeElasticsearchStableBridge
-    dependsOn shadeElasticsearchIngestGeoIpModule
+    dependsOn shadeElasticsearchIpLocationModule
     dependsOn shadeElasticsearchGrokImplementation
     dependsOn shadeElasticsearchRedactPlugin
 
@@ -472,8 +472,7 @@ task importMinimalElasticsearch() {
                 include jarPackageNamed("user-agent")
             }
 
-            from(shadeElasticsearchIngestGeoIpModule)
-
+            from(shadeElasticsearchIpLocationModule)
             from(buildElasticsearchLocalDistro.module("ingest-ip-location")) {
                 include jarPackageNamed("ingest-ip-location")
             }
