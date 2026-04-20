@@ -1520,12 +1520,6 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
     }
 
     unsupported_processors = {
-      'set_security_user' =>
-        '{
-            "set_security_user": {
-                "field": "user"
-             }
-        }',
       'inference' =>
         '{
             "inference": {
