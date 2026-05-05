@@ -1,4 +1,4 @@
-## UNRELEASED
+## 9.4.0
   - Include Elasticsearch web-utils JAR into the plugin to keep `registered_domain` processor dependencies [#397](https://github.com/elastic/logstash-filter-elastic_integration/pull/397)
   - Fixed `set_security_user` processor to behave consistently with other unsupported processors (`inference`, `enrich`) by tagging events with `_ingest_pipeline_failure` [#269](https://github.com/elastic/logstash-filter-elastic_integration/pull/269)
   - Apply Elasticsearch user-agent plugin refactoring [#408](https://github.com/elastic/logstash-filter-elastic_integration/pull/408)
