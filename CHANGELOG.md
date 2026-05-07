@@ -1,5 +1,5 @@
 ## 9.4.1
-  - Upgrades `tools.jackson.core` dependency to 3.1.0 [#454](https://github.com/elastic/logstash-filter-elastic_integration/pull/454)
+  - Upgrades `tools.jackson.core` dependency to 3.1.1 [#454](https://github.com/elastic/logstash-filter-elastic_integration/pull/454)
 
 ## 9.4.0
   - Include Elasticsearch web-utils JAR into the plugin to keep `registered_domain` processor dependencies [#397](https://github.com/elastic/logstash-filter-elastic_integration/pull/397)
