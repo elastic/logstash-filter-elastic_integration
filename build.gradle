@@ -460,7 +460,14 @@ task importMinimalElasticsearch() {
             }
             from(shadeElasticsearchStableBridge.outputs.files.singleFile)
             from(shadeElasticsearchGrokImplementation)
-            from(buildElasticsearchLocalDistro.module("x-pack-core"))
+            from(buildElasticsearchLocalDistro.module("x-pack-core")) {
+                // Exclude httpclient5/httpcore5 jars so the Maven-resolved versions
+                // from elasticsearch-java (via elasticsearchClient config) are used instead.
+                // This ensures we always get the patched version (CVE-2026-40542).
+                exclude jarPackageNamed("httpclient5")
+                exclude jarPackageNamed("httpcore5")
+                exclude jarPackageNamed("httpcore5-h2")
+            }
 
             from(buildElasticsearchLocalDistro.module("ingest-common")) {
                 include jarPackageNamed("ingest-common")
@@ -561,6 +568,10 @@ task verifyImportedJars() {
         // Optional compression/TLS in HTTP clients
         'org.brotli',
         'org.conscrypt',
+
+        // httpclient5/httpcore5 classes are excluded from the x-pack-core module copy
+        // and instead provided by the elasticsearchClient configuration (via elasticsearch-java)
+        'org.apache.hc',
 
         // ES internal packages not used in Logstash context
         'org.elasticsearch.cli',                    // CLI tools
