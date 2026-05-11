@@ -1,3 +1,6 @@
+## 9.3.4
+  - Include httpclient5/httpcore5 from the `elasticsearch-java` artifact [#457](https://github.com/elastic/logstash-filter-elastic_integration/pull/457)
+
 ## 9.3.3
   - Upgrades `tools.jackson.core` dependency to 3.1.1 [#453](https://github.com/elastic/logstash-filter-elastic_integration/pull/453)
 
