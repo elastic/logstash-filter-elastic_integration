@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+## 9.5.0
+  - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#460](https://github.com/elastic/logstash-filter-elastic_integration/issues/460)
+
+>>>>>>> 9a118fb (Support more java timestamp types (#461))
 ## 9.4.2
   - Include httpclient5/httpcore5 from the `elasticsearch-java` artifact [#458](https://github.com/elastic/logstash-filter-elastic_integration/pull/458)
 
