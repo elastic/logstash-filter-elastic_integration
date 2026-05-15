@@ -14,8 +14,10 @@ import org.logstash.Timestamp;
 import org.logstash.plugins.BasicEventFactory;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZonedDateTime;
 import java.util.Collection;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -83,6 +85,63 @@ class IngestDuplexMarshallerTest {
 
         validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
             assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(updatedTimestamp.toInstant())))));
+            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
+        });
+    }
+
+    @Test
+    void ingestDocToEventModifiedAtTimestampOffsetDateTimeValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"
+        ));
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
+
+        final OffsetDateTime updatedTimestamp = OffsetDateTime.parse("2023-03-12T01:17:38.135792468+01:00");
+        intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(updatedTimestamp.toInstant())))));
+            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
+        });
+    }
+
+    @Test
+    void ingestDocToEventModifiedAtTimestampUtilDateValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"
+        ));
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
+
+        final Instant instant = ZonedDateTime.parse("2023-03-12T01:17:38.135Z").toInstant(); // date only has millis resolution
+        final Date updatedTimestamp = Date.from(instant);
+
+        intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(updatedTimestamp.toInstant())))));
+            assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
+        });
+    }
+
+    @Test
+    void ingestDocToEventModifiedAtTimestampInstantValue() {
+        final Event input = BasicEventFactory.INSTANCE.newEvent(Map.of(
+                "@timestamp", "2023-01-17T23:19:04.765182352Z",
+                "@version", "3",
+                "message", "hello, world"
+        ));
+        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
+
+        final Instant updatedTimestamp =  ZonedDateTime.parse("2023-03-12T01:17:38.135792468Z").toInstant();
+
+        intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp);
+
+        validateEvent(idm.toLogstashEvent(intermediate), (output) -> {
+            assertThat(output, includesField(org.logstash.Event.TIMESTAMP).withValue(where(org.logstash.Timestamp::toInstant, is(equalTo(updatedTimestamp)))));
             assertThat(output, includesField(org.logstash.Event.VERSION).withValue(equalTo(input.getField(org.logstash.Event.VERSION))));
         });
     }
