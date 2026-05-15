@@ -1,3 +1,20 @@
+<<<<<<< HEAD
+=======
+## 9.5.0
+  - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#460](https://github.com/elastic/logstash-filter-elastic_integration/issues/460)
+
+## 9.4.2
+  - Include httpclient5/httpcore5 from the `elasticsearch-java` artifact [#458](https://github.com/elastic/logstash-filter-elastic_integration/pull/458)
+
+## 9.4.1
+  - Upgrades `tools.jackson.core` dependency to 3.1.1 [#454](https://github.com/elastic/logstash-filter-elastic_integration/pull/454)
+
+## 9.4.0
+  - Include Elasticsearch web-utils JAR into the plugin to keep `registered_domain` processor dependencies [#397](https://github.com/elastic/logstash-filter-elastic_integration/pull/397)
+  - Fixed `set_security_user` processor to behave consistently with other unsupported processors (`inference`, `enrich`) by tagging events with `_ingest_pipeline_failure` [#269](https://github.com/elastic/logstash-filter-elastic_integration/pull/269)
+  - Apply Elasticsearch user-agent plugin refactoring [#408](https://github.com/elastic/logstash-filter-elastic_integration/pull/408)
+
+>>>>>>> 9a118fb (Support more java timestamp types (#461))
 ## 9.3.4
   - Include httpclient5/httpcore5 from the `elasticsearch-java` artifact [#457](https://github.com/elastic/logstash-filter-elastic_integration/pull/457)
 
