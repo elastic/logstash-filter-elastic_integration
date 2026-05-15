@@ -96,7 +96,7 @@ class IngestDuplexMarshallerTest {
                 "@version", "3",
                 "message", "hello, world"
         ));
-        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final OffsetDateTime updatedTimestamp = OffsetDateTime.parse("2023-03-12T01:17:38.135792468+01:00");
         intermediate.setFieldValue(org.logstash.Event.TIMESTAMP, updatedTimestamp);
@@ -114,7 +114,7 @@ class IngestDuplexMarshallerTest {
                 "@version", "3",
                 "message", "hello, world"
         ));
-        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final Instant instant = ZonedDateTime.parse("2023-03-12T01:17:38.135Z").toInstant(); // date only has millis resolution
         final Date updatedTimestamp = Date.from(instant);
@@ -134,7 +134,7 @@ class IngestDuplexMarshallerTest {
                 "@version", "3",
                 "message", "hello, world"
         ));
-        final IngestDocumentBridge intermediate = idm.toIngestDocument(input);
+        final IngestDocument intermediate = idm.toIngestDocument(input);
 
         final Instant updatedTimestamp =  ZonedDateTime.parse("2023-03-12T01:17:38.135792468Z").toInstant();
 
