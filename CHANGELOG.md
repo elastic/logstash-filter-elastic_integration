@@ -1,10 +1,8 @@
-<<<<<<< HEAD
+## 8.19.6
+  - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#463](https://github.com/elastic/logstash-filter-elastic_integration/issues/463)
+
 ## 8.19.5
   - Upgrades `tools.jackson.core` dependency to 3.1.1 [#452](https://github.com/elastic/logstash-filter-elastic_integration/pull/452)
-=======
-## 9.5.0
-  - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#460](https://github.com/elastic/logstash-filter-elastic_integration/issues/460)
->>>>>>> 9a118fb (Support more java timestamp types (#461))
 
 ## 8.19.4
   - Includes `elasticsearch-logging` module [#441](https://github.com/elastic/logstash-filter-elastic_integration/pull/441)
