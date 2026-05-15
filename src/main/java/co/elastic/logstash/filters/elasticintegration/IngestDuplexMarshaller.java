@@ -18,9 +18,6 @@ import org.logstash.plugins.BasicEventFactory;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -56,8 +53,6 @@ public class IngestDuplexMarshaller {
     static final String LOGSTASH_METADATA_INGEST_DOCUMENT_METADATA = "[@metadata][" + INGEST_DOCUMENT + "]";
 
     private static final IngestDuplexMarshaller DEFAULT_INSTANCE = new IngestDuplexMarshaller(DEFAULT_LOGGER);
-
-    private static final ZoneId UTC = ZoneId.of("UTC");
 
     private IngestDuplexMarshaller(final EventFactory eventFactory,
                                    final Logger logger) {
@@ -276,8 +271,14 @@ public class IngestDuplexMarshaller {
             return internalize(externalList);
         } else if (externalObject instanceof Set<?> externalSet) {
             return internalize(externalSet);
-        } else if (externalObject instanceof ZonedDateTime zonedDateTime) {
-            return new Timestamp(zonedDateTime.toInstant());
+        } else if (externalObject instanceof java.time.Instant instant) {
+            return new Timestamp(instant);
+        } else if (externalObject instanceof java.time.chrono.ChronoZonedDateTime<?> chronoZonedDateTime) {
+            return new Timestamp(chronoZonedDateTime.toInstant());
+        } else if (externalObject instanceof java.time.OffsetDateTime offsetDateTime) {
+            return new Timestamp(offsetDateTime.toInstant());
+        } else if (externalObject instanceof java.util.Date utilDate) {
+            return new Timestamp(utilDate.toInstant());
         } else if (externalObject.getClass().isArray()) {
             return internalize(Arrays.asList((Object[]) externalObject));
         } else {
@@ -425,10 +426,14 @@ public class IngestDuplexMarshaller {
                 return new Timestamp(string);
             } else if (object instanceof Timestamp timestamp) {
                 return timestamp;
-            } else if (object instanceof Instant instant) {
+            } else if (object instanceof java.time.Instant instant) {
                 return new Timestamp(instant);
-            } else if (object instanceof ZonedDateTime zonedDateTime) {
-                return new Timestamp(zonedDateTime.toInstant());
+            } else if (object instanceof java.time.chrono.ChronoZonedDateTime<?> chronoZonedDateTime) {
+                return new Timestamp(chronoZonedDateTime.toInstant());
+            } else if (object instanceof java.time.OffsetDateTime offsetDateTime) {
+                return new Timestamp(offsetDateTime.toInstant());
+            } else if (object instanceof java.util.Date utilDate) {
+                return new Timestamp(utilDate.toInstant());
             } else {
                 final Timestamp bruteForceTimestamp = new Timestamp(object.toString());
                 logger.debug(() -> String.format("Successful brute-force parsing of timestamp-like object `%s` (%s) into `%s`", object, object.getClass(), bruteForceTimestamp));
