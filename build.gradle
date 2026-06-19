@@ -581,6 +581,7 @@ task verifyImportedJars() {
         // ES internal packages not used in Logstash context
         'org.elasticsearch.cli',                    // CLI tools
         'org.elasticsearch.entitlement',            // Entitlement system
+        'org.elasticsearch.foreign',
         'org.elasticsearch.nativeaccess',           // Native access
         'org.elasticsearch.plugin.analysis',        // Analysis plugins
         'org.elasticsearch.plugin.settings',        // Plugin settings
