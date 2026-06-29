@@ -1,3 +1,6 @@
+## 9.5.1
+  - Update jackson dependency to 3.1.4 [#467](https://github.com/elastic/logstash-filter-elastic_integration/pull/467)
+
 ## UNRELEASED
   - Applies Elasticsearch geoip module relocation changes [#445](https://github.com/elastic/logstash-filter-elastic_integration/pull/445)
 
