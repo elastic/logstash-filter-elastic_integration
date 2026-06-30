@@ -59,8 +59,8 @@ configurations {
 // TODO: remove this once elasticsearch-java 9.x starts consuming tools.jackson 3.1.1+
 configurations.all {
     resolutionStrategy {
-        force 'tools.jackson.core:jackson-core:3.1.1'
-        force 'tools.jackson.core:jackson-databind:3.1.1'
+        force 'tools.jackson.core:jackson-core:3.1.4'
+        force 'tools.jackson.core:jackson-databind:3.1.4'
     }
 }
 

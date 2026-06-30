@@ -1,3 +1,6 @@
+## 9.3.6
+  - Update jackson dependency to 3.1.4 [#470](https://github.com/elastic/logstash-filter-elastic_integration/pull/470)
+
 ## 9.3.5
   - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#464](https://github.com/elastic/logstash-filter-elastic_integration/issues/464)
 
