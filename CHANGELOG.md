@@ -1,8 +1,6 @@
-## UNRELEASED
-  - Applies Elasticsearch geoip module relocation changes [#445](https://github.com/elastic/logstash-filter-elastic_integration/pull/445)
-
 ## 9.5.0
   - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#460](https://github.com/elastic/logstash-filter-elastic_integration/issues/460)
+  - Applies Elasticsearch geoip module relocation changes [#445](https://github.com/elastic/logstash-filter-elastic_integration/pull/445)
 
 ## 9.4.2
   - Include httpclient5/httpcore5 from the `elasticsearch-java` artifact [#458](https://github.com/elastic/logstash-filter-elastic_integration/pull/458)
