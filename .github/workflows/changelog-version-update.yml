@@ -29,8 +29,14 @@ on:
         required: false
         type: string
 
+permissions:
+  contents: none
+
 jobs:
   changelog:
+    permissions:
+      contents: write
+      pull-requests: write
     uses: logstash-plugins/.github/.github/workflows/pr-prepare.yml@main
     with:
       command: ${{ inputs.command }}
