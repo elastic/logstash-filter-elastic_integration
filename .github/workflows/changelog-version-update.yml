@@ -30,11 +30,13 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: none
 
 jobs:
   changelog:
+    permissions:
+      contents: write
+      pull-requests: write
     uses: logstash-plugins/.github/.github/workflows/pr-prepare.yml@main
     with:
       command: ${{ inputs.command }}
