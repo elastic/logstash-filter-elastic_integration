@@ -210,6 +210,7 @@ class ElasticsearchRestClientBuilderTest {
                 ArgumentCaptor.forClass(RestClientBuilder.HttpClientConfigCallback.class);
 
         final RestClientBuilder mockRestClientBuilder = mock(RestClientBuilder.class);
+        when(mockRestClientBuilder.setPathPrefix(any())).thenReturn(mockRestClientBuilder);
         when(mockRestClientBuilder.setHttpClientConfigCallback(callbackCaptor.capture()))
                 .thenReturn(mockRestClientBuilder);
         when(mockRestClientBuilder.build())
