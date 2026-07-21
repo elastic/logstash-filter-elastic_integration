@@ -1,5 +1,5 @@
 ## UNRELEASED
-  - Set SO_TIMEOUT on IOReactor to ensure NIO connections have a baseline socket timeout
+  - Set SO_TIMEOUT on IOReactor to ensure NIO connections have a baseline socket timeout [#480](https://github.com/elastic/logstash-filter-elastic_integration/pull/480)
     - Prevent indefinite hangs when connection pool restore fails to apply the request-level timeout
 
 ## 9.5.0
