@@ -1,3 +1,10 @@
+## 9.5.2
+  - Set SO_TIMEOUT on IOReactor to ensure NIO connections have a baseline socket timeout [#480](https://github.com/elastic/logstash-filter-elastic_integration/pull/480)
+    - Prevent indefinite hangs when connection pool restore fails to apply the request-level timeout
+
+## 9.5.1
+  - Sync up with Elasticsearch 9.5 branch to pull latest dependencies [#476](https://github.com/elastic/logstash-filter-elastic_integration/pull/476)
+
 ## 9.5.0
   - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#460](https://github.com/elastic/logstash-filter-elastic_integration/issues/460)
   - Applies Elasticsearch geoip module relocation changes [#445](https://github.com/elastic/logstash-filter-elastic_integration/pull/445)
