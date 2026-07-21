@@ -17,6 +17,7 @@ import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.conn.ssl.TrustAllStrategy;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.apache.http.message.BasicHeader;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.ssl.SSLContextBuilder;
@@ -191,6 +192,12 @@ public class ElasticsearchRestClientBuilder {
             if (Objects.nonNull(this.userAgentHeaderValue)) {
                 httpClientBuilder.setUserAgent(this.userAgentHeaderValue);
             }
+
+            httpClientBuilder.setDefaultIOReactorConfig(
+                IOReactorConfig.custom()
+                    .setSoTimeout(RestClientBuilder.DEFAULT_SOCKET_TIMEOUT_MILLIS)
+                    .build()
+            );
         }).build();
     }
 
