@@ -70,7 +70,7 @@ spec:
       teams:
         logstash:
           access_level: MANAGE_BUILD_AND_READ
-        ingest-fp:
+        Streams:
           access_level: MANAGE_BUILD_AND_READ
         ingest-eng-prod:
           access_level: MANAGE_BUILD_AND_READ
@@ -122,7 +122,7 @@ spec:
       teams:
         logstash:
           access_level: MANAGE_BUILD_AND_READ
-        ingest-fp:
+        Streams:
           access_level: MANAGE_BUILD_AND_READ
         ingest-eng-prod:
           access_level: MANAGE_BUILD_AND_READ
@@ -172,7 +172,7 @@ spec:
       teams:
         logstash:
           access_level: MANAGE_BUILD_AND_READ
-        ingest-fp:
+        Streams:
           access_level: MANAGE_BUILD_AND_READ
         ingest-eng-prod:
           access_level: MANAGE_BUILD_AND_READ
