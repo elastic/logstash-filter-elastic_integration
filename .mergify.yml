@@ -46,51 +46,6 @@ pull_request_rules:
         message: |
           This pull request has not been merged yet. Could you please review and merge it @{{ assignee | join(', @') }}? 🙏
 
-  - name: backport patches to 8.16 branch
-    conditions:
-      - merged
-      - base=main
-      - label=backport-8.16
-    actions:
-      backport:
-        assignees:
-          - "{{ author }}"
-        branches:
-          - "8.16"
-        labels:
-          - "backport"
-        title: "[{{ destination_branch }}] {{ title }} (backport #{{ number }})"
-
-  - name: backport patches to 8.17 branch
-    conditions:
-      - merged
-      - base=main
-      - label=backport-8.17
-    actions:
-      backport:
-        assignees:
-          - "{{ author }}"
-        branches:
-          - "8.17"
-        labels:
-          - "backport"
-        title: "[{{ destination_branch }}] {{ title }} (backport #{{ number }})"
-
-  - name: backport patches to 8.18 branch
-    conditions:
-      - merged
-      - base=main
-      - label=backport-8.18
-    actions:
-      backport:
-        assignees:
-          - "{{ author }}"
-        branches:
-          - "8.18"
-        labels:
-          - "backport"
-        title: "[{{ destination_branch }}] {{ title }} (backport #{{ number }})"
-
   - name: backport patches to 8.19 branch
     conditions:
       - merged
@@ -100,26 +55,6 @@ pull_request_rules:
       backport:
         branches:
           - "8.19"
-
-  - name: backport patches to 9.0 branch
-    conditions:
-      - merged
-      - base=main
-      - label=backport-9.0
-    actions:
-      backport:
-        branches:
-          - "9.0"
-
-  - name: backport patches to 9.1 branch
-    conditions:
-      - merged
-      - base=main
-      - label=backport-9.1
-    actions:
-      backport:
-        branches:
-          - "9.1"
 
   - name: backport patches to 9.2 branch
     conditions:
@@ -140,3 +75,13 @@ pull_request_rules:
       backport:
         branches:
           - "9.3"
+
+  - name: backport patches to 9.4 branch
+    conditions:
+      - merged
+      - base=main
+      - label=backport-9.4
+    actions:
+      backport:
+        branches:
+          - "9.4"
