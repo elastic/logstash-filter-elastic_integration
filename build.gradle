@@ -608,6 +608,7 @@ task verifyImportedJars() {
         'org.apache.lucene.queries.function',       // Function queries
 
         // ES features not used in Logstash ingest
+        'org.elasticsearch.columnar',
         'org.elasticsearch.exponentialhistogram',   // Histogram aggregations
         'org.elasticsearch.simdvec',                // SIMD vectors
         'org.elasticsearch.tdigest',                // T-Digest aggregations
