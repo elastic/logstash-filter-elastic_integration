@@ -1,3 +1,6 @@
+## 9.5.4
+  - Require httpclient5 5.6.4 or later version [#501](https://github.com/elastic/logstash-filter-elastic_integration/pull/501)
+
 ## 9.5.3
   - Update jackson dependency to 3.1.6 [#499](https://github.com/elastic/logstash-filter-elastic_integration/pull/499)
 
