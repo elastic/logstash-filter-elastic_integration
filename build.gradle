@@ -84,14 +84,6 @@ dependencies {
             version { strictly('[9.0, 10.0[') }
         }
     }
-
-    constraints {
-        // remove once elasticsearch-java pulls httpclient5 >= 5.6.4
-        elasticsearchClient('org.apache.httpcomponents.client5:httpclient5') {
-            version { strictly('[5.6.4,5.7[') }
-        }
-    }
-
     elasticsearchMinimalCore fileTree(dir: { importMinimalElasticsearch.jars }, include: ["*.jar"])
 
     // Logstash core and its known-provided and required dependencies
