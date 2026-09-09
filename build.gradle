@@ -616,6 +616,7 @@ task verifyImportedJars() {
         'org.elasticsearch.legacygeo',              // Legacy geo
         'org.elasticsearch.lz4',                    // LZ4 compression lib
         'org.elasticsearch.lucene.store',           // lucene store management
+        'org.elasticsearch.simdjson',
         'org.HdrHistogram',                         // HDR Histogram
         'net.jpountz.lz4',                          // LZ4 Java
         'net.jpountz.util',
