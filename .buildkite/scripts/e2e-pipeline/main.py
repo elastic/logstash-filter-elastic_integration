@@ -53,6 +53,7 @@ def main(skip_setup=False, integrations=[]):
                 failed_packages.append(package)
 
         util.show_containers_logs(["logstash-", "elasticsearch-", "elastic-agent-"])
+        util.show_independent_agent_port_state()
         util.show_elastic_package_logs(working_dir)
 
     if len(failed_packages) > 0:

@@ -44,6 +44,34 @@ def show_containers_logs(container_prefixes):
             print(f"  {log_line}")
         print(f"{separator}\n")
 
+def show_independent_agent_port_state():
+    """Print port bindings of all stopped elastic-package independent agent containers.
+
+    The elastic-package 'adding service container internal ports to context' step
+    fails silently when expected ports are missing. This shows the container's actual
+    port state at teardown time to diagnose port-mapping regressions (e.g. port conflicts
+    with the stack's fleet-server on 8220).
+    """
+    client = docker.from_env()
+    containers = client.containers.list(all=True)
+    ep_agent_containers = [c for c in containers if "elastic-package-agent" in c.name]
+    if not ep_agent_containers:
+        print("No independent elastic-package agent containers found.")
+        return
+    for container in ep_agent_containers:
+        separator = "=" * 80
+        print(f"\n{separator}")
+        print(f"Independent agent container: {container.name}  status: {container.status}")
+        print(separator)
+        attrs = container.attrs or {}
+        ports = attrs.get("NetworkSettings", {}).get("Ports", {})
+        if ports:
+            for internal_port, bindings in ports.items():
+                print(f"  {internal_port} -> {bindings}")
+        else:
+            print("  (no port bindings — this is likely the cause of the setup error)")
+        print(separator)
+
 def show_elastic_package_logs(working_dir: str):
     """Print log files written by elastic-package for independent test agent containers."""
     log_dir = os.path.join(working_dir, "integrations", "build", "container-logs")
