@@ -46,7 +46,7 @@ class PluginTest:
         # `elastic-package test system` deploys current package
         # emits the data stream events, the process finishes when the package sends all available events
         # note that `elastic-package test pipeline` is for validation purpose only
-        result = subprocess.run(["elastic-package", "test", "system"], universal_newlines=True,
+        result = subprocess.run(["elastic-package", "test", "system", "-v"], universal_newlines=True,
                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         if result.returncode != 0:
             # elastic-package also checks ES index if event is arrived, and compares with exp
