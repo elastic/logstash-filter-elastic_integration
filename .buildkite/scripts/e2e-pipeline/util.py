@@ -44,19 +44,64 @@ def show_containers_logs(container_prefixes):
             print(f"  {log_line}")
         print(f"{separator}\n")
 
-def show_independent_agent_port_state():
-    """Print port bindings of all stopped elastic-package independent agent containers.
+def monitor_agent_containers(stop_event):
+    """Poll Docker every 0.5 s and log the port state of any elastic-package independent agent
+    containers the moment they appear.
 
-    The elastic-package 'adding service container internal ports to context' step
-    fails silently when expected ports are missing. This shows the container's actual
-    port state at teardown time to diagnose port-mapping regressions (e.g. port conflicts
-    with the stack's fleet-server on 8220).
+    Must run in a background daemon thread started *before* launching elastic-package, because
+    the container is fully removed by Docker Compose teardown before our post-run diagnostic code
+    executes. Polling while elastic-package is live is the only window where we can see the port
+    bindings that cause 'adding service container internal ports to context' to fail.
+    """
+    try:
+        client = docker.from_env()
+    except Exception as e:
+        print(f"[agent-monitor] Cannot connect to Docker: {e}", flush=True)
+        return
+
+    seen_ids = set()
+    while not stop_event.is_set():
+        try:
+            for c in client.containers.list(all=True):
+                if "elastic-package-agent" in c.name and c.id not in seen_ids:
+                    seen_ids.add(c.id)
+                    try:
+                        c.reload()
+                        attrs = c.attrs or {}
+                        ports = attrs.get("NetworkSettings", {}).get("Ports", {})
+                        labels = attrs.get("Config", {}).get("Labels", {}) or {}
+                        compose_project = next(
+                            (v for k, v in labels.items() if "compose.project" in k), "unknown"
+                        )
+                        separator = "-" * 60
+                        print(f"\n{separator}", flush=True)
+                        print(f"[agent-monitor] LIVE container: {c.name}  status: {c.status}", flush=True)
+                        print(f"[agent-monitor] Compose project: {compose_project}", flush=True)
+                        if ports:
+                            for internal_port, bindings in ports.items():
+                                print(f"[agent-monitor]   {internal_port} -> {bindings}", flush=True)
+                        else:
+                            print("[agent-monitor]   NO PORT BINDINGS — likely root cause of setup failure",
+                                  flush=True)
+                        print(separator, flush=True)
+                    except Exception as ex:
+                        print(f"[agent-monitor] Error inspecting {c.name}: {ex}", flush=True)
+        except Exception as e:
+            print(f"[agent-monitor] Scan error: {e}", flush=True)
+        stop_event.wait(0.5)
+
+def show_independent_agent_port_state():
+    """Fallback: print port bindings of any elastic-package agent containers still present.
+
+    NOTE: elastic-package removes the independent agent container via 'docker-compose down'
+    before our post-run diagnostic runs, so this function usually finds nothing. The live
+    monitor_agent_containers() background thread is the reliable path to see port state.
     """
     client = docker.from_env()
     containers = client.containers.list(all=True)
     ep_agent_containers = [c for c in containers if "elastic-package-agent" in c.name]
     if not ep_agent_containers:
-        print("No independent elastic-package agent containers found.")
+        print("No independent elastic-package agent containers found (already removed by Docker Compose teardown).")
         return
     for container in ep_agent_containers:
         separator = "=" * 80

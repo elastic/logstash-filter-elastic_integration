@@ -4,6 +4,7 @@ A class to validate the Integration Plugin with a given integration package
 import subprocess
 import threading
 import time
+import util
 from logstash_stats import LogstashStats
 
 class PluginTest:
@@ -44,6 +45,17 @@ class PluginTest:
     def on(self, package: str) -> None:
         print(f"Testing the package: {package}")
 
+        # Background monitor captures independent agent container port state while it is still
+        # alive. elastic-package removes the container via docker-compose down before our
+        # post-run diagnostic code runs, so we must observe it concurrently.
+        stop_monitor = threading.Event()
+        monitor_thread = threading.Thread(
+            target=util.monitor_agent_containers,
+            args=(stop_monitor,),
+            daemon=True,
+        )
+        monitor_thread.start()
+
         # `elastic-package test system` deploys current package
         # emits the data stream events, the process finishes when the package sends all available events
         # note that `elastic-package test pipeline` is for validation purpose only
@@ -64,6 +76,9 @@ class PluginTest:
         reader.start()
         proc.wait()
         reader.join()
+
+        stop_monitor.set()
+        monitor_thread.join(timeout=5)
 
         result = subprocess.CompletedProcess(
             proc.args, proc.returncode, stdout="".join(captured_lines), stderr=""
