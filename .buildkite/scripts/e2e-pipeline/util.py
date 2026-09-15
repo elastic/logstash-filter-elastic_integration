@@ -70,19 +70,32 @@ def monitor_agent_containers(stop_event):
                         attrs = c.attrs or {}
                         ports = attrs.get("NetworkSettings", {}).get("Ports", {})
                         labels = attrs.get("Config", {}).get("Labels", {}) or {}
-                        compose_project = next(
-                            (v for k, v in labels.items() if "compose.project" in k), "unknown"
-                        )
+                        compose_project = labels.get("com.docker.compose.project", "unknown")
+                        compose_files = labels.get("com.docker.compose.project.config_files", "")
                         separator = "-" * 60
                         print(f"\n{separator}", flush=True)
                         print(f"[agent-monitor] LIVE container: {c.name}  status: {c.status}", flush=True)
                         print(f"[agent-monitor] Compose project: {compose_project}", flush=True)
+                        print(f"[agent-monitor] Compose file(s): {compose_files}", flush=True)
                         if ports:
                             for internal_port, bindings in ports.items():
                                 print(f"[agent-monitor]   {internal_port} -> {bindings}", flush=True)
                         else:
                             print("[agent-monitor]   NO PORT BINDINGS — likely root cause of setup failure",
                                   flush=True)
+                        # Read the generated Docker Compose to see what ports were (not) configured
+                        for compose_file in compose_files.split(","):
+                            compose_file = compose_file.strip()
+                            if compose_file and os.path.isfile(compose_file):
+                                print(f"[agent-monitor] --- Docker Compose: {compose_file} ---", flush=True)
+                                try:
+                                    with open(compose_file, "r", errors="replace") as f:
+                                        for line in f:
+                                            print(f"[agent-monitor]   {line}", end="", flush=True)
+                                except Exception as read_ex:
+                                    print(f"[agent-monitor]   (could not read: {read_ex})", flush=True)
+                                print(f"[agent-monitor] --- end of {os.path.basename(compose_file)} ---",
+                                      flush=True)
                         print(separator, flush=True)
                     except Exception as ex:
                         print(f"[agent-monitor] Error inspecting {c.name}: {ex}", flush=True)

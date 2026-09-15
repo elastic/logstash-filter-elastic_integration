@@ -137,6 +137,14 @@ class Bootstrap:
         # elastic-package creates a profile under home directory
         config_example_file = os.path.join(self.__get_profile_path(), "config.yml.example")
         config_file = os.path.join(self.__get_profile_path(), "config.yml")
+        # Print the example config so we can see all available profile settings in CI logs
+        print(f"=== elastic-package profile config.yml.example ===")
+        try:
+            with open(config_example_file, "r") as f:
+                print(f.read())
+        except Exception as e:
+            print(f"Could not read config.yml.example: {e}")
+        print(f"=== end of config.yml.example ===")
         self.__create_config_file(config_example_file, config_file)
         util.run_or_raise_error(["elastic-package", "profiles", "use", "e2e"],
                                 "Error occurred while creating a profile. Check logs for details.")
