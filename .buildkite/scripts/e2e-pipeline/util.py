@@ -81,21 +81,30 @@ def monitor_agent_containers(stop_event):
                             for internal_port, bindings in ports.items():
                                 print(f"[agent-monitor]   {internal_port} -> {bindings}", flush=True)
                         else:
-                            print("[agent-monitor]   NO PORT BINDINGS — likely root cause of setup failure",
-                                  flush=True)
-                        # Read the generated Docker Compose to see what ports were (not) configured
-                        for compose_file in compose_files.split(","):
-                            compose_file = compose_file.strip()
-                            if compose_file and os.path.isfile(compose_file):
-                                print(f"[agent-monitor] --- Docker Compose: {compose_file} ---", flush=True)
-                                try:
-                                    with open(compose_file, "r", errors="replace") as f:
-                                        for line in f:
-                                            print(f"[agent-monitor]   {line}", end="", flush=True)
-                                except Exception as read_ex:
-                                    print(f"[agent-monitor]   (could not read: {read_ex})", flush=True)
-                                print(f"[agent-monitor] --- end of {os.path.basename(compose_file)} ---",
+                            print("[agent-monitor]   NO PORT BINDINGS", flush=True)
+
+                        # Connect to the elastic-package stack network so the independent agent
+                        # can resolve fleet-server/kibana/elasticsearch by hostname.
+                        # The docker-agent-base.yml has no networks: section, so the container
+                        # is on an isolated network and cannot reach fleet-server:8220.
+                        # We must do this BEFORE the health check passes (~6 s) so the agent
+                        # enrolls in Fleet in time.
+                        try:
+                            stack_nets = [n for n in client.networks.list()
+                                          if "elastic-package-stack" in n.name and "_default" in n.name]
+                            if stack_nets:
+                                stack_net = stack_nets[0]
+                                stack_net.connect(c.id)
+                                c.reload()
+                                updated_ports = c.attrs.get("NetworkSettings", {}).get("Ports", {})
+                                print(f"[agent-monitor] Connected to {stack_net.name}", flush=True)
+                                print(f"[agent-monitor] NetworkSettings.Ports after connect: {updated_ports}",
                                       flush=True)
+                            else:
+                                print("[agent-monitor] No elastic-package stack network found", flush=True)
+                        except Exception as net_ex:
+                            print(f"[agent-monitor] Network connect error: {net_ex}", flush=True)
+
                         print(separator, flush=True)
                     except Exception as ex:
                         print(f"[agent-monitor] Error inspecting {c.name}: {ex}", flush=True)

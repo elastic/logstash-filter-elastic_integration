@@ -123,6 +123,13 @@ class Bootstrap:
                     # Logstash is disabled by default, remove the comment
                     line = line.lstrip('#').lstrip()
                 outfile.write(line)
+            # Workaround for elastic-package v0.126.4: the generated docker-agent-base.yml has
+            # no `ports:` section, so addInternalPorts() fails with a setup error.  Adding a
+            # port here causes elastic-package to inject a ports mapping into the independent
+            # agent's Docker Compose, giving addInternalPorts something to find.
+            # Port 49200 is arbitrary — nothing needs to listen on it inside the container.
+            outfile.write("stack.agent.ports:\n")
+            outfile.write('  - "127.0.0.1::49200"\n')
 
     def __setup_elastic_package_profile(self) -> None:
         # Although profile doesn't exist, profile delete process will get succeeded.
