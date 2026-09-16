@@ -2,7 +2,9 @@
 A class to validate the Integration Plugin with a given integration package
 """
 import subprocess
+import threading
 import time
+import util
 from logstash_stats import LogstashStats
 
 class PluginTest:
@@ -43,19 +45,50 @@ class PluginTest:
     def on(self, package: str) -> None:
         print(f"Testing the package: {package}")
 
+        # Background monitor captures independent agent container port state while it is still
+        # alive. elastic-package removes the container via docker-compose down before our
+        # post-run diagnostic code runs, so we must observe it concurrently.
+        stop_monitor = threading.Event()
+        monitor_thread = threading.Thread(
+            target=util.monitor_agent_containers,
+            args=(stop_monitor,),
+            daemon=True,
+        )
+        monitor_thread.start()
+
         # `elastic-package test system` deploys current package
         # emits the data stream events, the process finishes when the package sends all available events
         # note that `elastic-package test pipeline` is for validation purpose only
-        result = subprocess.run(["elastic-package", "test", "system"], universal_newlines=True, stdout=subprocess.PIPE)
+        proc = subprocess.Popen(
+            ["elastic-package", "test", "system", "-v"],
+            universal_newlines=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        captured_lines = []
+
+        def _stream(stream):
+            for line in stream:
+                print(line, end="", flush=True)
+                captured_lines.append(line)
+
+        reader = threading.Thread(target=_stream, args=(proc.stdout,))
+        reader.start()
+        proc.wait()
+        reader.join()
+
+        stop_monitor.set()
+        monitor_thread.join(timeout=5)
+
+        result = subprocess.CompletedProcess(
+            proc.args, proc.returncode, stdout="".join(captured_lines), stderr=""
+        )
+
         if result.returncode != 0:
             # elastic-package also checks ES index if event is arrived, and compares with exp
             # sometimes tests may fail because of multiple reasons: timeout,
             # ecs needs to be disabled since event already has `event.original`, etc...
             print(f"Internal failure happened with {package}, process return code: {result.returncode}.")
-
-            if result.stdout:
-                # print line by line for better visibility
-                for result_line in result.stdout.splitlines(): print(f"{result_line}")
 
         # although there was an error, le's check how LS performed and make sure errors weren't because of Logstash
         time.sleep(2) # make sure LS processes the event way to downstream ES
