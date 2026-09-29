@@ -123,6 +123,13 @@ class Bootstrap:
                     # Logstash is disabled by default, remove the comment
                     line = line.lstrip('#').lstrip()
                 outfile.write(line)
+            # Workaround for elastic-package v0.126.4: the generated docker-agent-base.yml has
+            # no `ports:` section, so addInternalPorts() fails with a setup error.  Adding a
+            # port here causes elastic-package to inject a ports mapping into the independent
+            # agent's Docker Compose, giving addInternalPorts something to find.
+            # Port 49200 is arbitrary — nothing needs to listen on it inside the container.
+            outfile.write("stack.agent.ports:\n")
+            outfile.write('  - "127.0.0.1::49200"\n')
 
     def __setup_elastic_package_profile(self) -> None:
         # Although profile doesn't exist, profile delete process will get succeeded.
@@ -137,6 +144,14 @@ class Bootstrap:
         # elastic-package creates a profile under home directory
         config_example_file = os.path.join(self.__get_profile_path(), "config.yml.example")
         config_file = os.path.join(self.__get_profile_path(), "config.yml")
+        # Print the example config so we can see all available profile settings in CI logs
+        print(f"=== elastic-package profile config.yml.example ===")
+        try:
+            with open(config_example_file, "r") as f:
+                print(f.read())
+        except Exception as e:
+            print(f"Could not read config.yml.example: {e}")
+        print(f"=== end of config.yml.example ===")
         self.__create_config_file(config_example_file, config_file)
         util.run_or_raise_error(["elastic-package", "profiles", "use", "e2e"],
                                 "Error occurred while creating a profile. Check logs for details.")
