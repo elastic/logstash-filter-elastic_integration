@@ -26,6 +26,7 @@ def generate_test_step(stack_version, branch, snapshot) -> dict:
         "env": {
             "SNAPSHOT": snapshot,
             "ELASTIC_STACK_VERSION": stack_version,
+            "ELASTIC_PACKAGE_KIBANA_SKIP_UPLOAD_PACKAGE_VALIDATION": true
         }
     }
     # we are not going to set branch if job kicked of through webhook (PR merge or manual PR run)
