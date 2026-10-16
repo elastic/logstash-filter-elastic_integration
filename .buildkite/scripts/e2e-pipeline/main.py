@@ -4,6 +4,7 @@
 
 import argparse
 import os
+import traceback
 from bootstrap import Bootstrap
 from plugin_test import PluginTest
 import util
@@ -27,9 +28,9 @@ class BootstrapContextManager:
         self.bootstrap.run_elastic_stack(self.skip_setup)
         return self.bootstrap
 
-    def __exit__(self, exc_type, exc_value, traceback):
+    def __exit__(self, exc_type, exc_value, tb):
         if exc_type is not None:
-            traceback.print_exception(exc_type, exc_value, traceback)
+            traceback.print_exception(exc_type, exc_value, tb)
 
         if self.bootstrap:
             self.bootstrap.stop_elastic_stack()
@@ -52,6 +53,8 @@ def main(skip_setup=False, integrations=[]):
                 failed_packages.append(package)
 
         util.show_containers_logs(["logstash-", "elasticsearch-", "elastic-agent-"])
+        util.show_independent_agent_port_state()
+        util.show_elastic_package_logs(working_dir)
 
     if len(failed_packages) > 0:
         raise Exception(f"Following packages failed: {failed_packages}")
