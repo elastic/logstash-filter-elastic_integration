@@ -1,5 +1,8 @@
+## 8.19.12
+  - Sync up with Elasticsearch 8.19 branch to pull latest dependencies [#516](https://github.com/elastic/logstash-filter-elastic_integration/pull/516)
+
 ## 8.19.11
-  - Sync up with Elasticsearch 8.19 branch to pull latest dependencies, including Jackson 2.21.7 [#PR_NUMBER](https://github.com/elastic/logstash-filter-elastic_integration/pull/PR_NUMBER)
+  - Sync up with Elasticsearch 8.19 branch to pull latest dependencies, including Jackson 2.21.7 [#512](https://github.com/elastic/logstash-filter-elastic_integration/pull/512)
 
 ## 8.19.10
   - Update jackson dependency to 3.1.6 [#497](https://github.com/elastic/logstash-filter-elastic_integration/pull/497)
