@@ -1,5 +1,8 @@
+## 9.4.10
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#515](https://github.com/elastic/logstash-filter-elastic_integration/pull/515)
+
 ## 9.4.9
-  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies, including Jackson 2.21.7 [#PR_NUMBER](https://github.com/elastic/logstash-filter-elastic_integration/pull/PR_NUMBER)
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies, including Jackson 2.21.7 [#511](https://github.com/elastic/logstash-filter-elastic_integration/pull/511)
 
 ## 9.4.8
   - Require httpclient5 5.6.4 or later version [#502](https://github.com/elastic/logstash-filter-elastic_integration/pull/502)
