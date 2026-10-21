@@ -1,5 +1,6 @@
 ## 9.6.0
   - Embeds Ingest Node components from Elasticsearch 9.6 [#517](https://github.com/elastic/logstash-filter-elastic_integration/pull/517)
+  - Update jackson dependency to 3.1.8 [#520](https://github.com/elastic/logstash-filter-elastic_integration/pull/520)
 
 ## 9.5.2
   - Set SO_TIMEOUT on IOReactor to ensure NIO connections have a baseline socket timeout [#480](https://github.com/elastic/logstash-filter-elastic_integration/pull/480)
