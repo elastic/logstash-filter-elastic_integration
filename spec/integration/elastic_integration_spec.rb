@@ -720,6 +720,10 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("tags")).to include("_ingest_pipeline_failure")
+          # on ingest pipeline failure the plugin intentionally leaves [@metadata][target_ingest_pipeline]
+          # unset (nil); setting it to "_none" was considered but not adopted. Configure the downstream
+          # elasticsearch output with `pipeline => "_none"` if you want to avoid re-running the pipeline in ES.
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to be_nil
         end
       end
 
@@ -1242,6 +1246,10 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
           expect(metadata_failure_reason["exception"].nil?).to be_falsey
           expect(metadata_failure_reason["message"].nil?).to be_falsey
           expect(metadata_failure_reason["message"]).to eql expected_message
+          # on ingest pipeline failure the plugin intentionally leaves [@metadata][target_ingest_pipeline]
+          # unset (nil); setting it to "_none" was considered but not adopted. Configure the downstream
+          # elasticsearch output with `pipeline => "_none"` if you want to avoid re-running the pipeline in ES.
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to be_nil
         end
       end
 
@@ -1266,6 +1274,10 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         subject.multi_filter(events).each do |event|
           expect(event.get("[@metadata][_ingest_pipeline_failure][exception]").nil?).to be_falsey
           expect(event.get("[@metadata][_ingest_pipeline_failure][exception]")).to eql "org.elasticsearch.ingest.IngestProcessorException"
+          # on ingest pipeline failure the plugin intentionally leaves [@metadata][target_ingest_pipeline]
+          # unset (nil); setting it to "_none" was considered but not adopted. Configure the downstream
+          # elasticsearch output with `pipeline => "_none"` if you want to avoid re-running the pipeline in ES.
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to be_nil
         end
       end
 
@@ -1342,6 +1354,10 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
 
         subject.multi_filter(events).each do |event|
           expect(event.get("[@metadata][_ingest_pipeline_failure][message]")).to include("action [indices:admin/index_template/simulate_index] is unauthorized for user [ls_integration_tests_user]")
+          # on ingest pipeline failure the plugin intentionally leaves [@metadata][target_ingest_pipeline]
+          # unset (nil); setting it to "_none" was considered but not adopted. Configure the downstream
+          # elasticsearch output with `pipeline => "_none"` if you want to avoid re-running the pipeline in ES.
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to be_nil
         end
       end
     end
@@ -1447,7 +1463,10 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
       subject.multi_filter(events).each do |event|
         if event.get("tags")
           expect(event.get("tags")).to include("_ingest_pipeline_failure")
-          expect(event.get("[@metadata][target_ingest_pipeline]")).to eql '_none'
+          # on ingest pipeline failure the plugin intentionally leaves [@metadata][target_ingest_pipeline]
+          # unset (nil); setting it to "_none" was considered but not adopted. Configure the downstream
+          # elasticsearch output with `pipeline => "_none"` if you want to avoid re-running the pipeline in ES.
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to be_nil
         end
       end
     end
@@ -1557,6 +1576,10 @@ describe 'Logstash executes ingest pipeline', :secure_integration => true do
         subject.multi_filter(events).each do |event|
           failure_reason = event.get("[@metadata][_ingest_pipeline_failure]")
           expect(failure_reason).to be_truthy
+          # on ingest pipeline failure the plugin intentionally leaves [@metadata][target_ingest_pipeline]
+          # unset (nil); setting it to "_none" was considered but not adopted. Configure the downstream
+          # elasticsearch output with `pipeline => "_none"` if you want to avoid re-running the pipeline in ES.
+          expect(event.get("[@metadata][target_ingest_pipeline]")).to be_nil
         end
       end
     end
