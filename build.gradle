@@ -335,7 +335,7 @@ task buildElasticsearchLogstashBridge(type: Exec) {
 
     ext.buildRoot = esBuildDir
     workingDir esSource
-    commandLine "./gradlew", ":lib:logstash-bridge:build"
+    commandLine "./gradlew", ":lib:logstash-bridge:assemble"
 
     ignoreExitValue true // handled in doLast
     doLast {
