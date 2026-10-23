@@ -120,6 +120,10 @@ install_go
 build_logstash
 build_plugin
 
+echo "Show docker compose version"
+docker version
+docker-compose version
+docker compose version
 ###
 # Install E2E prerequisites and run E2E tests
 python3 -mpip install -r .buildkite/scripts/e2e-pipeline/requirements.txt
