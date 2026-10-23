@@ -6,6 +6,11 @@ export PATH="/opt/buildkite-agent/.rbenv/bin:/opt/buildkite-agent/.pyenv/bin:$PA
 eval "$(rbenv init -)"
 eval "$(pyenv init -)"
 
+# Build elastic-package from this repo/ref instead of using the latest release.
+# Unset ELASTIC_PACKAGE_REF to go back to the released binary.
+export ELASTIC_PACKAGE_REPO="${ELASTIC_PACKAGE_REPO:-https://github.com/mrodm/elastic-package.git}"
+export ELASTIC_PACKAGE_REF="${ELASTIC_PACKAGE_REF:-show_error_container_setup}"
+
 ###
 # Checkout the target branch if defined
 checkout_target_branch() {
@@ -68,9 +73,13 @@ install_go() {
 
   # Use the Go version pinned by the elastic-package ref being built,
   # falling back to main's .go-version. GO_VERSION overrides both.
+  local repo_path
+  repo_path="${ELASTIC_PACKAGE_REPO:-https://github.com/elastic/elastic-package.git}"
+  repo_path="${repo_path#https://github.com/}"
+  repo_path="${repo_path%.git}"
   local go_version="$GO_VERSION"
   if [ -z "$go_version" ]; then
-    go_version="$(curl -fsSL "https://raw.githubusercontent.com/elastic/elastic-package/${ELASTIC_PACKAGE_REF}/.go-version" || true)"
+    go_version="$(curl -fsSL "https://raw.githubusercontent.com/${repo_path}/${ELASTIC_PACKAGE_REF}/.go-version" || true)"
   fi
   if [ -z "$go_version" ]; then
     go_version="$(curl -fsSL "https://raw.githubusercontent.com/elastic/elastic-package/main/.go-version")"
