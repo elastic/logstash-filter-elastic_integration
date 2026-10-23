@@ -93,6 +93,27 @@ install_go() {
 }
 
 ###
+# Install a known-good Docker Compose version into ~/.docker/cli-plugins,
+# which takes precedence over the (broken v2.24.7) binary baked into the
+# agent image. Mirrors elastic/elastic-package's own CI setup in
+# .buildkite/scripts/install_deps.sh (with_docker_compose_plugin).
+install_docker_compose() {
+  local docker_compose_version="${DOCKER_COMPOSE_VERSION:-v2.25.0}"
+
+  local platform hw_type
+  platform="$(uname | tr '[:upper:]' '[:lower:]')"
+  hw_type="$(uname -m)"
+
+  local docker_config="$HOME/.docker/cli-plugins"
+  mkdir -p "$docker_config"
+
+  echo "Installing Docker Compose ${docker_compose_version}"
+  retry -t 5 -- curl -sSL -o "${docker_config}/docker-compose" "https://github.com/docker/compose/releases/download/${docker_compose_version}/docker-compose-${platform}-${hw_type}"
+  chmod +x "${docker_config}/docker-compose"
+  docker compose version
+}
+
+###
 # Build the plugin, to do so we need Logstash source
 build_logstash() {
   set +o nounset
@@ -117,6 +138,7 @@ build_plugin() {
 checkout_target_branch
 set_required_jdk
 install_go
+install_docker_compose
 build_logstash
 build_plugin
 
