@@ -57,7 +57,25 @@ class Bootstrap:
             raise ValueError(f"Unsupported {sys.platform}, E2E can on {platforms} only")
         self.distro = "darwin_amd64.tar.gz" if sys.platform == "darwin" else "linux_amd64.tar.gz"
 
+    def __build_elastic_package_from_source(self, ref: str) -> None:
+        repo = os.environ.get("ELASTIC_PACKAGE_REPO", "https://github.com/elastic/elastic-package.git")
+        print(f"Building elastic-package from source: {repo} @ {ref}")
+        util.run_or_raise_error(["retry", "-t", "3", "--", "git", "clone", "--depth", "1", "--single-branch",
+                                 "--branch", ref, repo, "elastic-package-src"],
+                                f"Error occurred while cloning elastic-package ref {ref}. Check logs for details.")
+        # Output lands in the cwd as `elastic-package`, same place the release
+        # tarball extraction leaves it, so the rest of the setup is unchanged.
+        util.run_or_raise_error(["go", "build", "-C", "elastic-package-src",
+                                 "-o", os.path.join(os.getcwd(), "elastic-package"), "."],
+                                "Error occurred while building elastic-package from source. Check logs for details.")
+        print(f"elastic-package is successfully built from {repo} @ {ref}.")
+
     def __download_elastic_package(self) -> None:
+        ref = os.environ.get("ELASTIC_PACKAGE_REF", "").strip()
+        if ref:
+            self.__build_elastic_package_from_source(ref)
+            return
+
         response = util.call_url_with_retry(self.ELASTIC_PACKAGE_DISTRO_URL)
         release_info = response.json()
 
