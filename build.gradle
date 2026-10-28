@@ -56,11 +56,11 @@ configurations {
     implementation.extendsFrom(logstashCore, elasticsearchMinimalCore, elasticsearchClient)
 }
 
-// TODO: remove this once elasticsearch-java 9.x starts consuming tools.jackson 3.1.1+
+// TODO: remove this once elasticsearch-java 9.x starts consuming suitable version
 configurations.all {
     resolutionStrategy {
-        force 'tools.jackson.core:jackson-core:3.1.4'
-        force 'tools.jackson.core:jackson-databind:3.1.4'
+        force 'tools.jackson.core:jackson-core:3.1.8'
+        force 'tools.jackson.core:jackson-databind:3.1.8'
     }
 }
 
@@ -84,6 +84,14 @@ dependencies {
             version { strictly('[9.0, 10.0[') }
         }
     }
+
+    constraints {
+        // remove once elasticsearch-java pulls httpclient5 >= 5.6.4
+        elasticsearchClient('org.apache.httpcomponents.client5:httpclient5') {
+            version { strictly('[5.6.4,5.7[') }
+        }
+    }
+
     elasticsearchMinimalCore fileTree(dir: { importMinimalElasticsearch.jars }, include: ["*.jar"])
 
     // Logstash core and its known-provided and required dependencies
@@ -327,7 +335,7 @@ task buildElasticsearchLogstashBridge(type: Exec) {
 
     ext.buildRoot = esBuildDir
     workingDir esSource
-    commandLine "./gradlew", ":lib:logstash-bridge:build"
+    commandLine "./gradlew", ":lib:logstash-bridge:assemble"
 
     ignoreExitValue true // handled in doLast
     doLast {

@@ -1,3 +1,25 @@
+## 9.4.11
+  - Update jackson dependency to 3.1.8 [#521](https://github.com/elastic/logstash-filter-elastic_integration/pull/521)
+
+## 9.4.10
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#515](https://github.com/elastic/logstash-filter-elastic_integration/pull/515)
+
+## 9.4.9
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies, including Jackson 2.21.7 [#511](https://github.com/elastic/logstash-filter-elastic_integration/pull/511)
+
+## 9.4.8
+  - Require httpclient5 5.6.4 or later version [#502](https://github.com/elastic/logstash-filter-elastic_integration/pull/502)
+
+## 9.4.7
+  - Update jackson dependency to 3.1.6 [#498](https://github.com/elastic/logstash-filter-elastic_integration/pull/498)
+
+## 9.4.6
+  - Set SO_TIMEOUT on IOReactor to ensure NIO connections have a baseline socket timeout [#480](https://github.com/elastic/logstash-filter-elastic_integration/pull/480)
+    - Prevent indefinite hangs when connection pool restore fails to apply the request-level timeout
+
+## 9.4.5
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#477](https://github.com/elastic/logstash-filter-elastic_integration/pull/477)
+
 ## 9.4.4
   - Update jackson dependency to 3.1.4 [#469](https://github.com/elastic/logstash-filter-elastic_integration/pull/469)
 

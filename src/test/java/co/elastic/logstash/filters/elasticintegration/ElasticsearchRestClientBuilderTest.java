@@ -12,11 +12,13 @@ import org.apache.http.HttpRequest;
 import org.apache.http.HttpRequestInterceptor;
 import org.apache.http.message.BasicHttpRequest;
 import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
+import org.apache.http.impl.nio.reactor.IOReactorConfig;
 import org.elasticsearch.client.RestClient;
 import org.elasticsearch.client.RestClientBuilder;
 import org.hamcrest.Matchers;
 import org.mockito.Mockito;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -32,7 +34,9 @@ import org.mockito.ArgumentCaptor;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.stringContainsInOrder;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentCaptor.forClass;
@@ -199,6 +203,45 @@ class ElasticsearchRestClientBuilderTest {
         }
     }
 
+
+    @Test
+    public void testBuildSetsIOReactorSoTimeout() {
+        final ArgumentCaptor<RestClientBuilder.HttpClientConfigCallback> callbackCaptor =
+                ArgumentCaptor.forClass(RestClientBuilder.HttpClientConfigCallback.class);
+
+        final RestClientBuilder mockRestClientBuilder = mock(RestClientBuilder.class);
+        when(mockRestClientBuilder.setPathPrefix(any())).thenReturn(mockRestClientBuilder);
+        when(mockRestClientBuilder.setHttpClientConfigCallback(callbackCaptor.capture()))
+                .thenReturn(mockRestClientBuilder);
+        when(mockRestClientBuilder.build())
+                .thenReturn(RestClient.builder(new HttpHost("localhost", 9200)).build());
+
+        final ElasticsearchRestClientBuilder builder =
+                ElasticsearchRestClientBuilder.forURLs(
+                        Collections.singleton(parseURL("https://localhost:9200/")),
+                        (hosts) -> mockRestClientBuilder);
+
+        try (RestClient restClient = builder.build()) {
+            final RestClientBuilder.HttpClientConfigCallback callback = callbackCaptor.getValue();
+            assertThat(callback, is(notNullValue()));
+
+            final ArgumentCaptor<IOReactorConfig> ioReactorConfigCaptor =
+                    ArgumentCaptor.forClass(IOReactorConfig.class);
+            final HttpAsyncClientBuilder mockHttpClientBuilder = mock(HttpAsyncClientBuilder.class);
+            when(mockHttpClientBuilder.setSSLContext(any())).thenReturn(mockHttpClientBuilder);
+            when(mockHttpClientBuilder.setDefaultIOReactorConfig(ioReactorConfigCaptor.capture()))
+                    .thenReturn(mockHttpClientBuilder);
+
+            callback.customizeHttpClient(mockHttpClientBuilder);
+
+            final IOReactorConfig capturedConfig = ioReactorConfigCaptor.getValue();
+            assertThat(capturedConfig, is(notNullValue()));
+            assertThat(capturedConfig.getSoTimeout(),
+                    is(equalTo(RestClientBuilder.DEFAULT_SOCKET_TIMEOUT_MILLIS)));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private static URL parseURL(final String urlSpec) {
         try {
