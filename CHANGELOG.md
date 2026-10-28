@@ -1,3 +1,6 @@
+## 9.4.12
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#PR_NUMBER](https://github.com/elastic/logstash-filter-elastic_integration/pull/PR_NUMBER)
+
 ## 9.4.11
   - Update jackson dependency to 3.1.8 [#521](https://github.com/elastic/logstash-filter-elastic_integration/pull/521)
 
