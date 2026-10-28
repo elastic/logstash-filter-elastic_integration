@@ -1,5 +1,5 @@
 ## 9.4.12
-  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#PR_NUMBER](https://github.com/elastic/logstash-filter-elastic_integration/pull/PR_NUMBER)
+  - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#539](https://github.com/elastic/logstash-filter-elastic_integration/pull/539)
 
 ## 9.4.11
   - Update jackson dependency to 3.1.8 [#521](https://github.com/elastic/logstash-filter-elastic_integration/pull/521)
@@ -24,7 +24,7 @@
   - Sync up with Elasticsearch 9.4 branch to pull latest dependencies [#477](https://github.com/elastic/logstash-filter-elastic_integration/pull/477)
 
 ## 9.4.4
-  - Update jackson dependency to 3.1.4 [#469](https://github.com/elastic/logstash-filter-elastic_integration/pull/469)
+  - Update jackson dependency to 3.1.4 [#467](https://github.com/elastic/logstash-filter-elastic_integration/pull/467)
 
 ## 9.4.3
   - Fixes an issue where a field set by an integration pipeline to `java.util.Date` value-object representing a timestamp could not be converted to a timestamp [#462](https://github.com/elastic/logstash-filter-elastic_integration/issues/462)
