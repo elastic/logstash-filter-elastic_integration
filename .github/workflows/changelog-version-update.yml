@@ -37,7 +37,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
-    uses: logstash-plugins/.github/.github/workflows/pr-prepare.yml@main
+    uses: logstash-plugins/.github/.github/workflows/pr-prepare.yml@22e45824577b108d1270e2e538bccf3853615693 # main (no releases)
     with:
       command: ${{ inputs.command }}
       pr_number: ${{ inputs.pr_number }}
